@@ -1,0 +1,9 @@
+# DARE CLI Rust workspace — default reviewers
+
+/Cargo.toml @dewtech/dare-cli
+/Cargo.lock @dewtech/dare-cli
+/rust-toolchain.toml @dewtech/dare-cli
+/rustfmt.toml @dewtech/dare-cli
+/crates/ @dewtech/dare-cli
+/docs/compatibility/rust-msrv.md @dewtech/dare-cli
+/LICENSE @dewtech/dare-cli

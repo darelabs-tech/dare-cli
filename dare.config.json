@@ -1,0 +1,10 @@
+{
+  "name": "dare-cli",
+  "version": "0.1.0-alpha.0",
+  "structure": "backend",
+  "backend": "rust-axum",
+  "ide": "cursor",
+  "graphrag": "sqlite",
+  "mcp": false,
+  "notes": "Microplano 002: workspace Cargo ativo. Ralph Loop = cargo build/test/clippy. DEC-001 resolvido. Scripts Node governance-001.yml permanecem para docs/scripts/governance."
+}

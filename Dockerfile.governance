@@ -1,0 +1,10 @@
+FROM node:20-bookworm-slim
+
+WORKDIR /repo
+
+COPY docs ./docs
+COPY scripts/governance ./scripts/governance
+COPY package.json ./package.json
+COPY dare.config.json ./dare.config.json
+
+CMD ["node", "scripts/governance/verify-all.mjs"]

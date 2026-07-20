@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0",
+  "package_name": "@dewtech/dare-cli",
+  "package_version": "3.18.1",
+  "source": "npm",
+  "resolved_url": "https://registry.npmjs.org/@dewtech/dare-cli/-/dare-cli-3.18.1.tgz",
+  "content_hash_alg": "sha256",
+  "content_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "recorded_at": "2026-07-20T22:00:00Z",
+  "recorded_by": "dare-labs",
+  "verification_command": "node scripts/governance/verify-baseline.mjs",
+  "notes": null
+}

@@ -1,0 +1,25 @@
+name: governance-001
+on:
+  push:
+    paths:
+      - "docs/**"
+      - "scripts/governance/**"
+      - ".github/workflows/governance-001.yml"
+  pull_request:
+    paths:
+      - "docs/**"
+      - "scripts/governance/**"
+      - ".github/workflows/governance-001.yml"
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: node scripts/governance/verify-all.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: baseline-manifest
+          path: docs/compatibility/baseline-manifest.json

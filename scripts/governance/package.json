@@ -1,0 +1,11 @@
+{
+  "name": "dare-governance-verify",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "audit": "npm audit --audit-level=high"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

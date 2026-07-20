@@ -1,0 +1,14 @@
+{
+  "name": "dare-cli",
+  "version": "0.0.1-alpha.0",
+  "private": true,
+  "description": "DARE CLI Rust rewrite — cycle 0 governance uses Node Ralph gates until Cargo workspace (microplano 002 / DEC-001)",
+  "scripts": {
+    "build": "node --check scripts/governance/verify-structure.mjs && node --check scripts/governance/verify-all.mjs && node --check scripts/governance/verify-baseline.mjs && node --check scripts/governance/verify-adr-frontmatter.mjs && node --check scripts/governance/verify-no-secrets.mjs",
+    "test": "node scripts/governance/run-tests.mjs",
+    "lint": "node scripts/governance/verify-structure.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,13 @@
+services:
+  dare-cli-smoke:
+    build:
+      context: .
+      dockerfile: Dockerfile.rust
+    env_file:
+      - .env.rust.example
+    healthcheck:
+      test: ["CMD", "dare", "--version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s

@@ -1,0 +1,96 @@
+{
+  "version": 1,
+  "updatedAt": "2026-07-20T23:35:46.798Z",
+  "tasks": {
+    "mp002-001": {
+      "status": "DONE",
+      "output": "Dockerfile.rust + docker-compose.rust.yml + .env.rust.example; compose config exit 0.",
+      "duration": 2955,
+      "dependsOn": []
+    },
+    "mp002-002": {
+      "status": "DONE",
+      "output": "Workspace 1.85.0 + 5 skeletons + LICENSE/CODEOWNERS/CONTRIBUTING/rust-msrv/DEC-002; cargo check OK.",
+      "duration": 2365,
+      "dependsOn": []
+    },
+    "mp002-003": {
+      "status": "DONE",
+      "output": "dare-core: CoreError, validate_nonempty_name, init_test_subscriber; 3 unit tests OK.",
+      "duration": 3732,
+      "dependsOn": [
+        "mp002-002"
+      ]
+    },
+    "mp002-004": {
+      "status": "DONE",
+      "output": "dare-contracts: schema_version placeholder; test OK.",
+      "duration": 1822,
+      "dependsOn": [
+        "mp002-003"
+      ]
+    },
+    "mp002-005": {
+      "status": "DONE",
+      "output": "dare-assets: assets_layer_ping; tests ping_ok/empty_err OK.",
+      "duration": 2110,
+      "dependsOn": [
+        "mp002-003"
+      ]
+    },
+    "mp002-006": {
+      "status": "DONE",
+      "output": "dare-config: config_layer_ping; tests OK.",
+      "duration": 2172,
+      "dependsOn": [
+        "mp002-003",
+        "mp002-004"
+      ]
+    },
+    "mp002-007": {
+      "status": "DONE",
+      "output": "dare-cli clap help/version; cli_smoke 4/4; dep_graph OK; release build OK; dare 0.1.0-alpha.0.",
+      "duration": 2046,
+      "dependsOn": [
+        "mp002-003",
+        "mp002-004",
+        "mp002-005",
+        "mp002-006"
+      ]
+    },
+    "mp002-008": {
+      "status": "DONE",
+      "output": "workspace.lints + cargo fmt --check + clippy -D warnings OK.",
+      "duration": 7586,
+      "dependsOn": [
+        "mp002-007"
+      ]
+    },
+    "mp002-009": {
+      "status": "DONE",
+      "output": "dare.config.json backend=rust-axum; Ralph cargo gates; governance Node CI preserved.",
+      "duration": 1028,
+      "dependsOn": [
+        "mp002-007"
+      ]
+    },
+    "mp002-010": {
+      "status": "DONE",
+      "output": "cargo audit clean after bump tracing-subscriber 0.3.23 + anyhow 1.0.104; Security gate 002 RS-01..08; no build target global.",
+      "duration": 2848,
+      "dependsOn": [
+        "mp002-008",
+        "mp002-009"
+      ]
+    },
+    "mp002-011": {
+      "status": "DONE",
+      "output": "CI rust-workspace-002.yml; TASKS-002 11/11; DEC-003 RF-14 placeholder; unlocks microplano 003.",
+      "duration": 1100,
+      "dependsOn": [
+        "mp002-001",
+        "mp002-010"
+      ]
+    }
+  }
+}

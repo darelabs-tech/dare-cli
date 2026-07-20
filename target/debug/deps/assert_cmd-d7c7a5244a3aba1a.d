@@ -1,0 +1,15 @@
+C:\projetos-dewtech\identidade visual\dare-labs\dare-cli\target\debug\deps\libassert_cmd-d7c7a5244a3aba1a.rmeta: C:\Users\wande\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\assert_cmd-2.0.17\src\lib.rs C:\Users\wande\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\assert_cmd-2.0.17\src\macros.rs C:\Users\wande\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\assert_cmd-2.0.17\src\assert.rs C:\Users\wande\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\assert_cmd-2.0.17\src\cargo.rs C:\Users\wande\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\assert_cmd-2.0.17\src\cmd.rs C:\Users\wande\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\assert_cmd-2.0.17\src\output.rs C:\Users\wande\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\assert_cmd-2.0.17\src\color.rs C:\projetos-dewtech\identidade\ visual\dare-labs\dare-cli\target\debug\build\assert_cmd-6a7596980d7224d3\out/current_target.txt C:\Users\wande\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\assert_cmd-2.0.17\src\../README.md
+
+C:\projetos-dewtech\identidade visual\dare-labs\dare-cli\target\debug\deps\assert_cmd-d7c7a5244a3aba1a.d: C:\Users\wande\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\assert_cmd-2.0.17\src\lib.rs C:\Users\wande\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\assert_cmd-2.0.17\src\macros.rs C:\Users\wande\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\assert_cmd-2.0.17\src\assert.rs C:\Users\wande\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\assert_cmd-2.0.17\src\cargo.rs C:\Users\wande\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\assert_cmd-2.0.17\src\cmd.rs C:\Users\wande\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\assert_cmd-2.0.17\src\output.rs C:\Users\wande\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\assert_cmd-2.0.17\src\color.rs C:\projetos-dewtech\identidade\ visual\dare-labs\dare-cli\target\debug\build\assert_cmd-6a7596980d7224d3\out/current_target.txt C:\Users\wande\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\assert_cmd-2.0.17\src\../README.md
+
+C:\Users\wande\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\assert_cmd-2.0.17\src\lib.rs:
+C:\Users\wande\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\assert_cmd-2.0.17\src\macros.rs:
+C:\Users\wande\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\assert_cmd-2.0.17\src\assert.rs:
+C:\Users\wande\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\assert_cmd-2.0.17\src\cargo.rs:
+C:\Users\wande\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\assert_cmd-2.0.17\src\cmd.rs:
+C:\Users\wande\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\assert_cmd-2.0.17\src\output.rs:
+C:\Users\wande\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\assert_cmd-2.0.17\src\color.rs:
+C:\projetos-dewtech\identidade\ visual\dare-labs\dare-cli\target\debug\build\assert_cmd-6a7596980d7224d3\out/current_target.txt:
+C:\Users\wande\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\assert_cmd-2.0.17\src\../README.md:
+
+# env-dep:OUT_DIR=C:\\projetos-dewtech\\identidade visual\\dare-labs\\dare-cli\\target\\debug\\build\\assert_cmd-6a7596980d7224d3\\out

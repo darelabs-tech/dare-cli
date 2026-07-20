@@ -1,0 +1,12 @@
+# builder
+FROM rust:1.85.0-bookworm AS builder
+WORKDIR /src
+COPY Cargo.toml Cargo.lock rust-toolchain.toml ./
+COPY crates ./crates
+RUN cargo build --release -p dare-cli
+
+# runtime
+FROM debian:bookworm-slim
+COPY --from=builder /src/target/release/dare /usr/local/bin/dare
+ENTRYPOINT ["dare"]
+CMD ["--version"]
