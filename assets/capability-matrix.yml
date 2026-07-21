@@ -1,0 +1,591 @@
+version: 1
+exceptions: []
+capabilities:
+  - id: dare-ai
+    title: "dare-ai"
+    description: "Capability IDE for dare-ai"
+    instructions: |
+      Use the /dare-ai slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/dare-ai.md
+      cursor: .cursor/commands/dare-ai.md
+      codex: .codex/skills/dare-ai/SKILL.md
+      antigravity: .antigravity/commands/dare-ai.md
+    assets: []
+  - id: dare-ax
+    title: "dare-ax"
+    description: "Capability IDE for dare-ax"
+    instructions: |
+      Use the /dare-ax slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/dare-ax.md
+      cursor: .cursor/commands/dare-ax.md
+      codex: .codex/skills/dare-ax/SKILL.md
+      antigravity: .antigravity/commands/dare-ax.md
+    assets: []
+  - id: dare-bench
+    title: "dare-bench"
+    description: "Capability IDE for dare-bench"
+    instructions: |
+      Use the /dare-bench slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/dare-bench.md
+      cursor: .cursor/commands/dare-bench.md
+      codex: .codex/skills/dare-bench/SKILL.md
+      antigravity: .antigravity/commands/dare-bench.md
+    assets: []
+  - id: dare-blueprint
+    title: "dare-blueprint"
+    description: "Capability IDE for dare-blueprint"
+    instructions: |
+      Use the /dare-blueprint slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/dare-blueprint.md
+      cursor: .cursor/commands/dare-blueprint.md
+      codex: .codex/skills/dare-blueprint/SKILL.md
+      antigravity: .antigravity/commands/dare-blueprint.md
+    assets: []
+  - id: dare-bootstrap
+    title: "dare-bootstrap"
+    description: "Capability IDE for dare-bootstrap"
+    instructions: |
+      Use the /dare-bootstrap slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/dare-bootstrap.md
+      cursor: .cursor/commands/dare-bootstrap.md
+      codex: .codex/skills/dare-bootstrap/SKILL.md
+      antigravity: .antigravity/commands/dare-bootstrap.md
+    assets: []
+  - id: dare-bugfix-design
+    title: "dare-bugfix-design"
+    description: "Capability IDE for dare-bugfix-design"
+    instructions: |
+      Use the /dare-bugfix-design slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/dare-bugfix-design.md
+      cursor: .cursor/commands/dare-bugfix-design.md
+      codex: .codex/skills/dare-bugfix-design/SKILL.md
+      antigravity: .antigravity/commands/dare-bugfix-design.md
+    assets: []
+  - id: dare-dag
+    title: "dare-dag"
+    description: "Capability IDE for dare-dag"
+    instructions: |
+      Use the /dare-dag slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/dare-dag.md
+      cursor: .cursor/commands/dare-dag.md
+      codex: .codex/skills/dare-dag/SKILL.md
+      antigravity: .antigravity/commands/dare-dag.md
+    assets: []
+  - id: dare-dag-build
+    title: "dare-dag-build"
+    description: "Capability IDE for dare-dag-build"
+    instructions: |
+      Use the /dare-dag-build slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/dare-dag-build.md
+      cursor: .cursor/commands/dare-dag-build.md
+      codex: .codex/skills/dare-dag-build/SKILL.md
+      antigravity: .antigravity/commands/dare-dag-build.md
+    assets: []
+  - id: dare-dag-run
+    title: "dare-dag-run"
+    description: "Capability IDE for dare-dag-run"
+    instructions: |
+      Use the /dare-dag-run slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/dare-dag-run.md
+      cursor: .cursor/commands/dare-dag-run.md
+      codex: .codex/skills/dare-dag-run/SKILL.md
+      antigravity: .antigravity/commands/dare-dag-run.md
+    assets: []
+  - id: dare-dag-runner
+    title: "dare-dag-runner"
+    description: "Capability IDE for dare-dag-runner"
+    instructions: |
+      Use the /dare-dag-runner slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/dare-dag-runner.md
+      cursor: .cursor/commands/dare-dag-runner.md
+      codex: .codex/skills/dare-dag-runner/SKILL.md
+      antigravity: .antigravity/commands/dare-dag-runner.md
+    assets: []
+  - id: dare-dag-viz
+    title: "dare-dag-viz"
+    description: "Capability IDE for dare-dag-viz"
+    instructions: |
+      Use the /dare-dag-viz slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/dare-dag-viz.md
+      cursor: .cursor/commands/dare-dag-viz.md
+      codex: .codex/skills/dare-dag-viz/SKILL.md
+      antigravity: .antigravity/commands/dare-dag-viz.md
+    assets: []
+  - id: dare-dashboard
+    title: "dare-dashboard"
+    description: "Capability IDE for dare-dashboard"
+    instructions: |
+      Use the /dare-dashboard slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/dare-dashboard.md
+      cursor: .cursor/commands/dare-dashboard.md
+      codex: .codex/skills/dare-dashboard/SKILL.md
+      antigravity: .antigravity/commands/dare-dashboard.md
+    assets: []
+  - id: dare-design
+    title: "dare-design"
+    description: "Capability IDE for dare-design"
+    instructions: |
+      Use the /dare-design slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/dare-design.md
+      cursor: .cursor/commands/dare-design.md
+      codex: .codex/skills/dare-design/SKILL.md
+      antigravity: .antigravity/commands/dare-design.md
+    assets: []
+  - id: dare-discover
+    title: "dare-discover"
+    description: "Capability IDE for dare-discover"
+    instructions: |
+      Use the /dare-discover slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/dare-discover.md
+      cursor: .cursor/commands/dare-discover.md
+      codex: .codex/skills/dare-discover/SKILL.md
+      antigravity: .antigravity/commands/dare-discover.md
+    assets: []
+  - id: dare-dna
+    title: "dare-dna"
+    description: "Capability IDE for dare-dna"
+    instructions: |
+      Use the /dare-dna slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/dare-dna.md
+      cursor: .cursor/commands/dare-dna.md
+      codex: .codex/skills/dare-dna/SKILL.md
+      antigravity: .antigravity/commands/dare-dna.md
+    assets: []
+  - id: dare-docker
+    title: "dare-docker"
+    description: "Capability IDE for dare-docker"
+    instructions: |
+      Use the /dare-docker slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/dare-docker.md
+      cursor: .cursor/commands/dare-docker.md
+      codex: .codex/skills/dare-docker/SKILL.md
+      antigravity: .antigravity/commands/dare-docker.md
+    assets: []
+  - id: dare-execute
+    title: "dare-execute"
+    description: "Capability IDE for dare-execute"
+    instructions: |
+      Use the /dare-execute slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/dare-execute.md
+      cursor: .cursor/commands/dare-execute.md
+      codex: .codex/skills/dare-execute/SKILL.md
+      antigravity: .antigravity/commands/dare-execute.md
+    assets: []
+  - id: dare-feature-design
+    title: "dare-feature-design"
+    description: "Capability IDE for dare-feature-design"
+    instructions: |
+      Use the /dare-feature-design slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/dare-feature-design.md
+      cursor: .cursor/commands/dare-feature-design.md
+      codex: .codex/skills/dare-feature-design/SKILL.md
+      antigravity: .antigravity/commands/dare-feature-design.md
+    assets: []
+  - id: dare-frontend-design
+    title: "dare-frontend-design"
+    description: "Capability IDE for dare-frontend-design"
+    instructions: |
+      Use the /dare-frontend-design slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/dare-frontend-design.md
+      cursor: .cursor/commands/dare-frontend-design.md
+      codex: .codex/skills/dare-frontend-design/SKILL.md
+      antigravity: .antigravity/commands/dare-frontend-design.md
+    assets: []
+  - id: dare-graph
+    title: "dare-graph"
+    description: "Capability IDE for dare-graph"
+    instructions: |
+      Use the /dare-graph slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/dare-graph.md
+      cursor: .cursor/commands/dare-graph.md
+      codex: .codex/skills/dare-graph/SKILL.md
+      antigravity: .antigravity/commands/dare-graph.md
+    assets: []
+  - id: dare-guard
+    title: "dare-guard"
+    description: "Capability IDE for dare-guard"
+    instructions: |
+      Use the /dare-guard slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/dare-guard.md
+      cursor: .cursor/commands/dare-guard.md
+      codex: .codex/skills/dare-guard/SKILL.md
+      antigravity: .antigravity/commands/dare-guard.md
+    assets: []
+  - id: dare-hooks
+    title: "dare-hooks"
+    description: "Capability IDE for dare-hooks"
+    instructions: |
+      Use the /dare-hooks slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/dare-hooks.md
+      cursor: .cursor/commands/dare-hooks.md
+      codex: .codex/skills/dare-hooks/SKILL.md
+      antigravity: .antigravity/commands/dare-hooks.md
+    assets: []
+  - id: dare-info
+    title: "dare-info"
+    description: "Capability IDE for dare-info"
+    instructions: |
+      Use the /dare-info slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/dare-info.md
+      cursor: .cursor/commands/dare-info.md
+      codex: .codex/skills/dare-info/SKILL.md
+      antigravity: .antigravity/commands/dare-info.md
+    assets: []
+  - id: dare-init
+    title: "dare-init"
+    description: "Capability IDE for dare-init"
+    instructions: |
+      Use the /dare-init slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/dare-init.md
+      cursor: .cursor/commands/dare-init.md
+      codex: .codex/skills/dare-init/SKILL.md
+      antigravity: .antigravity/commands/dare-init.md
+    assets: []
+  - id: dare-laravel-api
+    title: "dare-laravel-api"
+    description: "Capability IDE for dare-laravel-api"
+    instructions: |
+      Use the /dare-laravel-api slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/dare-laravel-api.md
+      cursor: .cursor/commands/dare-laravel-api.md
+      codex: .codex/skills/dare-laravel-api/SKILL.md
+      antigravity: .antigravity/commands/dare-laravel-api.md
+    assets: []
+  - id: dare-layered-design
+    title: "dare-layered-design"
+    description: "Capability IDE for dare-layered-design"
+    instructions: |
+      Use the /dare-layered-design slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/dare-layered-design.md
+      cursor: .cursor/commands/dare-layered-design.md
+      codex: .codex/skills/dare-layered-design/SKILL.md
+      antigravity: .antigravity/commands/dare-layered-design.md
+    assets: []
+  - id: dare-llm-integration
+    title: "dare-llm-integration"
+    description: "Capability IDE for dare-llm-integration"
+    instructions: |
+      Use the /dare-llm-integration slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/dare-llm-integration.md
+      cursor: .cursor/commands/dare-llm-integration.md
+      codex: .codex/skills/dare-llm-integration/SKILL.md
+      antigravity: .antigravity/commands/dare-llm-integration.md
+    assets: []
+  - id: dare-migrate
+    title: "dare-migrate"
+    description: "Capability IDE for dare-migrate"
+    instructions: |
+      Use the /dare-migrate slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/dare-migrate.md
+      cursor: .cursor/commands/dare-migrate.md
+      codex: .codex/skills/dare-migrate/SKILL.md
+      antigravity: .antigravity/commands/dare-migrate.md
+    assets: []
+  - id: dare-patterns
+    title: "dare-patterns"
+    description: "Capability IDE for dare-patterns"
+    instructions: |
+      Use the /dare-patterns slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/dare-patterns.md
+      cursor: .cursor/commands/dare-patterns.md
+      codex: .codex/skills/dare-patterns/SKILL.md
+      antigravity: .antigravity/commands/dare-patterns.md
+    assets: []
+  - id: dare-quality-telemetry
+    title: "dare-quality-telemetry"
+    description: "Capability IDE for dare-quality-telemetry"
+    instructions: |
+      Use the /dare-quality-telemetry slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/dare-quality-telemetry.md
+      cursor: .cursor/commands/dare-quality-telemetry.md
+      codex: .codex/skills/dare-quality-telemetry/SKILL.md
+      antigravity: .antigravity/commands/dare-quality-telemetry.md
+    assets: []
+  - id: dare-realtime
+    title: "dare-realtime"
+    description: "Capability IDE for dare-realtime"
+    instructions: |
+      Use the /dare-realtime slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/dare-realtime.md
+      cursor: .cursor/commands/dare-realtime.md
+      codex: .codex/skills/dare-realtime/SKILL.md
+      antigravity: .antigravity/commands/dare-realtime.md
+    assets: []
+  - id: dare-refine
+    title: "dare-refine"
+    description: "Capability IDE for dare-refine"
+    instructions: |
+      Use the /dare-refine slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/dare-refine.md
+      cursor: .cursor/commands/dare-refine.md
+      codex: .codex/skills/dare-refine/SKILL.md
+      antigravity: .antigravity/commands/dare-refine.md
+    assets: []
+  - id: dare-reverse
+    title: "dare-reverse"
+    description: "Capability IDE for dare-reverse"
+    instructions: |
+      Use the /dare-reverse slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/dare-reverse.md
+      cursor: .cursor/commands/dare-reverse.md
+      codex: .codex/skills/dare-reverse/SKILL.md
+      antigravity: .antigravity/commands/dare-reverse.md
+    assets: []
+  - id: dare-review
+    title: "dare-review"
+    description: "Capability IDE for dare-review"
+    instructions: |
+      Use the /dare-review slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/dare-review.md
+      cursor: .cursor/commands/dare-review.md
+      codex: .codex/skills/dare-review/SKILL.md
+      antigravity: .antigravity/commands/dare-review.md
+    assets: []
+  - id: dare-rust-leptos
+    title: "dare-rust-leptos"
+    description: "Capability IDE for dare-rust-leptos"
+    instructions: |
+      Use the /dare-rust-leptos slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/dare-rust-leptos.md
+      cursor: .cursor/commands/dare-rust-leptos.md
+      codex: .codex/skills/dare-rust-leptos/SKILL.md
+      antigravity: .antigravity/commands/dare-rust-leptos.md
+    assets: []
+  - id: dare-rust-workspace
+    title: "dare-rust-workspace"
+    description: "Capability IDE for dare-rust-workspace"
+    instructions: |
+      Use the /dare-rust-workspace slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/dare-rust-workspace.md
+      cursor: .cursor/commands/dare-rust-workspace.md
+      codex: .codex/skills/dare-rust-workspace/SKILL.md
+      antigravity: .antigravity/commands/dare-rust-workspace.md
+    assets: []
+  - id: dare-security
+    title: "dare-security"
+    description: "Capability IDE for dare-security"
+    instructions: |
+      Use the /dare-security slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/dare-security.md
+      cursor: .cursor/commands/dare-security.md
+      codex: .codex/skills/dare-security/SKILL.md
+      antigravity: .antigravity/commands/dare-security.md
+    assets: []
+  - id: dare-skill
+    title: "dare-skill"
+    description: "Capability IDE for dare-skill"
+    instructions: |
+      Use the /dare-skill slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/dare-skill.md
+      cursor: .cursor/commands/dare-skill.md
+      codex: .codex/skills/dare-skill/SKILL.md
+      antigravity: .antigravity/commands/dare-skill.md
+    assets: []
+  - id: dare-steering
+    title: "dare-steering"
+    description: "Capability IDE for dare-steering"
+    instructions: |
+      Use the /dare-steering slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/dare-steering.md
+      cursor: .cursor/commands/dare-steering.md
+      codex: .codex/skills/dare-steering/SKILL.md
+      antigravity: .antigravity/commands/dare-steering.md
+    assets: []
+  - id: dare-tasks
+    title: "dare-tasks"
+    description: "Capability IDE for dare-tasks"
+    instructions: |
+      Use the /dare-tasks slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/dare-tasks.md
+      cursor: .cursor/commands/dare-tasks.md
+      codex: .codex/skills/dare-tasks/SKILL.md
+      antigravity: .antigravity/commands/dare-tasks.md
+    assets: []
+  - id: dare-telemetry
+    title: "dare-telemetry"
+    description: "Capability IDE for dare-telemetry"
+    instructions: |
+      Use the /dare-telemetry slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/dare-telemetry.md
+      cursor: .cursor/commands/dare-telemetry.md
+      codex: .codex/skills/dare-telemetry/SKILL.md
+      antigravity: .antigravity/commands/dare-telemetry.md
+    assets: []
+  - id: dare-update
+    title: "dare-update"
+    description: "Capability IDE for dare-update"
+    instructions: |
+      Use the /dare-update slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/dare-update.md
+      cursor: .cursor/commands/dare-update.md
+      codex: .codex/skills/dare-update/SKILL.md
+      antigravity: .antigravity/commands/dare-update.md
+    assets: []
+  - id: dare-validate
+    title: "dare-validate"
+    description: "Capability IDE for dare-validate"
+    instructions: |
+      Use the /dare-validate slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/dare-validate.md
+      cursor: .cursor/commands/dare-validate.md
+      codex: .codex/skills/dare-validate/SKILL.md
+      antigravity: .antigravity/commands/dare-validate.md
+    assets: []
+  - id: dare-welcome
+    title: "dare-welcome"
+    description: "Capability IDE for dare-welcome"
+    instructions: |
+      Use the /dare-welcome slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/dare-welcome.md
+      cursor: .cursor/commands/dare-welcome.md
+      codex: .codex/skills/dare-welcome/SKILL.md
+      antigravity: .antigravity/commands/dare-welcome.md
+    assets: []
+  - id: skill-fastapi-api
+    title: "skill-fastapi-api"
+    description: "Capability IDE for skill-fastapi-api"
+    instructions: |
+      Use the /skill-fastapi-api slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/skill-fastapi-api.md
+      cursor: .cursor/commands/skill-fastapi-api.md
+      codex: .codex/skills/skill-fastapi-api/SKILL.md
+      antigravity: .antigravity/commands/skill-fastapi-api.md
+    assets: []
+  - id: skill-go-gin-api
+    title: "skill-go-gin-api"
+    description: "Capability IDE for skill-go-gin-api"
+    instructions: |
+      Use the /skill-go-gin-api slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/skill-go-gin-api.md
+      cursor: .cursor/commands/skill-go-gin-api.md
+      codex: .codex/skills/skill-go-gin-api/SKILL.md
+      antigravity: .antigravity/commands/skill-go-gin-api.md
+    assets: []
+  - id: skill-mcp-server
+    title: "skill-mcp-server"
+    description: "Capability IDE for skill-mcp-server"
+    instructions: |
+      Use the /skill-mcp-server slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/skill-mcp-server.md
+      cursor: .cursor/commands/skill-mcp-server.md
+      codex: .codex/skills/skill-mcp-server/SKILL.md
+      antigravity: .antigravity/commands/skill-mcp-server.md
+    assets: []
+  - id: skill-nestjs-api
+    title: "skill-nestjs-api"
+    description: "Capability IDE for skill-nestjs-api"
+    instructions: |
+      Use the /skill-nestjs-api slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/skill-nestjs-api.md
+      cursor: .cursor/commands/skill-nestjs-api.md
+      codex: .codex/skills/skill-nestjs-api/SKILL.md
+      antigravity: .antigravity/commands/skill-nestjs-api.md
+    assets: []
+  - id: skill-rails-api
+    title: "skill-rails-api"
+    description: "Capability IDE for skill-rails-api"
+    instructions: |
+      Use the /skill-rails-api slash command when appropriate.
+    cli_commands: []
+    outputs:
+      claude: .claude/commands/skill-rails-api.md
+      cursor: .cursor/commands/skill-rails-api.md
+      codex: .codex/skills/skill-rails-api/SKILL.md
+      antigravity: .antigravity/commands/skill-rails-api.md
+    assets: []

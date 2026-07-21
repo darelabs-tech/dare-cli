@@ -14,6 +14,7 @@ Registro append-only de decisões de governança dos microplanos DARE CLI.
 | DEC-008 | 2026-07-21 | Persisted contracts: flatten nested, yaml_serde 0.10.4 as serde_yaml, 2MiB cap, no garde | ADR-002 | Tech Lead DARE CLI | active |
 | DEC-009 | 2026-07-21 | Config: CLI>env>file>default; dry-run zero-write; schemaVersion só com flag; JSON Pointer | ADR-002 | Tech Lead DARE CLI | active |
 | DEC-010 | 2026-07-21 | Assets: rust-embed + assets/manifest.yml SHA-256; templates canónicos; .claude external | n/a | Tech Lead DARE CLI | active |
+| DEC-011 | 2026-07-21 | Capabilities ADR-007: matrix 49 Claude; tipos em dare-assets; harness crate defer 011+ | ADR-007 | Tech Lead DARE CLI | active |
 
 ## Notas
 
@@ -27,3 +28,4 @@ Registro append-only de decisões de governança dos microplanos DARE CLI.
 - **DEC-008:** microplano 007 — flatten nested + `extra` maps; **`yaml_serde` 0.10.4** as `serde_yaml`; cap 2 MiB; JSON canónico; YAML igualdade semântica; `CONTRACTS_SCHEMA_VERSION=0.1.0-contracts`; sem garde (008); docs em [`persisted-contracts.md`](compatibility/persisted-contracts.md).
 - **DEC-009:** microplano 008 — precedência **CLI > env `DARE_*` > ficheiro > default**; allowlist env; `enabled:false` skip deep; dry-run sem writes; apply com `backup`+atomic; `schemaVersion` só com `MigrateOptions.write_schema_version`; diagnóstico JSON Pointer; docs em [`config-and-migrations.md`](compatibility/config-and-migrations.md).
 - **DEC-010:** microplano 009 — `assets/` + `manifest.yml` SHA-256; embed `rust-embed` 8.7.2; `verify_embedded_assets` / `materialize_to`; templates canónicos; `.claude/commands` não apagados (external); docs em [`assets-inventory.md`](compatibility/assets-inventory.md).
+- **DEC-011:** microplano 010 — `capability-matrix.yml` com 49 capabilities Claude (ADR-007); validate + render; tipos em `dare-assets` até crate harness nos adapters; docs em [`capabilities-canonical.md`](compatibility/capabilities-canonical.md).

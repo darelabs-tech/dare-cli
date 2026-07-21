@@ -24,3 +24,7 @@ assets:
     path: templates/HOOKS-ADAPTER.md
     sha256: c9d81bad1aebdc57b909d262e0f78dcb7dc619b0b168a3793f550582806ce3bb
     kind: canonical
+  - id: capability-matrix
+    path: capability-matrix.yml
+    sha256: 664368843ff5647f30ad686b8bc6a6bcdeb361673ae59d53fbb52a0e00fd811b
+    kind: canonical
