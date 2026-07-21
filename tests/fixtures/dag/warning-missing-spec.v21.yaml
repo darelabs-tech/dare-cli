@@ -1,0 +1,9 @@
+title: "Missing spec warning"
+version: "1.0.0"
+tasks:
+  - id: task-001
+    title: One
+    depends_on: []
+    complexity: LOW
+    subtask_prompt: has prompt
+    spec_file: EXECUTION/does-not-exist.md

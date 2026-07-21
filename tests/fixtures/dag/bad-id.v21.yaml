@@ -1,0 +1,8 @@
+title: "Bad id"
+version: "1.0.0"
+tasks:
+  - id: Bad_ID
+    title: One
+    depends_on: []
+    complexity: LOW
+    subtask_prompt: x

@@ -1,0 +1,13 @@
+title: "Cycle"
+version: "1.0.0"
+tasks:
+  - id: task-001
+    title: A
+    depends_on: [task-002]
+    complexity: LOW
+    subtask_prompt: a
+  - id: task-002
+    title: B
+    depends_on: [task-001]
+    complexity: LOW
+    subtask_prompt: b

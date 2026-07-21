@@ -1,0 +1,8 @@
+title: "Missing dep"
+version: "1.0.0"
+tasks:
+  - id: task-001
+    title: One
+    depends_on: [task-999]
+    complexity: LOW
+    subtask_prompt: x

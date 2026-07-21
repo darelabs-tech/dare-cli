@@ -8,6 +8,7 @@ members = [
     "crates/dare-assets",
     "crates/dare-harness",
     "crates/dare-project",
+    "crates/dare-dag",
 ]
 
 [workspace.package]
@@ -41,6 +42,7 @@ dare-config = { path = "crates/dare-config" }
 dare-assets = { path = "crates/dare-assets" }
 dare-harness = { path = "crates/dare-harness" }
 dare-project = { path = "crates/dare-project" }
+dare-dag = { path = "crates/dare-dag" }
 
 [workspace.lints.rust]
 unused = "warn"

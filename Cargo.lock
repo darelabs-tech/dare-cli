@@ -285,6 +285,7 @@ dependencies = [
  "dare-config",
  "dare-contracts",
  "dare-core",
+ "dare-dag",
  "dare-harness",
  "dare-project",
  "predicates",
@@ -331,6 +332,17 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "uuid",
+]
+
+[[package]]
+name = "dare-dag"
+version = "0.1.0-alpha.0"
+dependencies = [
+ "dare-contracts",
+ "dare-core",
+ "serde",
+ "serde_json",
+ "tempfile",
 ]
 
 [[package]]

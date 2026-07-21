@@ -36,6 +36,32 @@ impl<'a> OutputRenderer<'a> {
         Ok(())
     }
 
+    /// Emit a domain report where top-level JSON `ok` mirrors `ok` (validate).
+    pub fn write_report(
+        &self,
+        human_message: &str,
+        data: Value,
+        ok: bool,
+    ) -> Result<(), CoreError> {
+        if self.ctx.json {
+            let envelope = json!({
+                "correlation_id": self.ctx.correlation_id,
+                "data": data,
+                "ok": ok,
+            });
+            let line = to_canonical_json_string(&envelope)?;
+            writeln!(io::stdout(), "{line}").map_err(|e| CoreError::io(e.to_string()))?;
+        } else {
+            let msg = if self.ctx.color_enabled_for_stdout() {
+                human_message.to_string()
+            } else {
+                strip_ansi(human_message)
+            };
+            writeln!(io::stdout(), "{msg}").map_err(|e| CoreError::io(e.to_string()))?;
+        }
+        Ok(())
+    }
+
     /// JSON: error envelope to stdout. Human: message to stderr.
     /// Returns process exit code.
     pub fn write_error(&self, err: &CoreError) -> i32 {

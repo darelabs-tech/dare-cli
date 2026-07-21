@@ -2,4 +2,5 @@
 
 pub mod discover;
 pub mod info;
+pub mod validate;
 pub mod welcome;

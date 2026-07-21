@@ -391,3 +391,139 @@ fn discover_install_json_schema() {
     assert_eq!(data["schemaVersion"], 1);
     assert_eq!(data["mode"], "install");
 }
+
+fn fixture_dag(name: &str) -> String {
+    let mut p = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    p.push("../../tests/fixtures/dag");
+    p.push(name);
+    std::fs::read_to_string(&p).unwrap_or_else(|e| panic!("read {}: {e}", p.display()))
+}
+
+fn validate_project_with_dag(dag_yaml: &str, with_spec: bool) -> tempfile::TempDir {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(dir.path().join("dare.config.json"), "{}").unwrap();
+    std::fs::create_dir_all(dir.path().join("DARE")).unwrap();
+    std::fs::write(dir.path().join("DARE/dare-dag.yaml"), dag_yaml).unwrap();
+    if with_spec {
+        std::fs::create_dir_all(dir.path().join("DARE/EXECUTION")).unwrap();
+        std::fs::write(dir.path().join("DARE/EXECUTION/task-001.md"), "#").unwrap();
+    }
+    dir
+}
+
+#[test]
+fn validate_ok_fixture() {
+    let dir = validate_project_with_dag(&fixture_dag("valid.v21.yaml"), true);
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args(["validate", "--no-color"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("validate: ok"));
+}
+
+#[test]
+fn validate_cycle_exit_1() {
+    let dir = validate_project_with_dag(&fixture_dag("cycle.v21.yaml"), false);
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args(["validate", "--no-color"])
+        .assert()
+        .code(1)
+        .stdout(predicate::str::contains("FAILED"));
+}
+
+#[test]
+fn validate_strict_warning() {
+    let dir = validate_project_with_dag(&fixture_dag("warning-missing-spec.v21.yaml"), false);
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args(["validate", "--strict", "--no-color"])
+        .assert()
+        .code(1);
+}
+
+#[test]
+fn validate_warning_without_strict() {
+    let dir = validate_project_with_dag(&fixture_dag("warning-missing-spec.v21.yaml"), false);
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args(["validate", "--no-color"])
+        .assert()
+        .success();
+}
+
+#[test]
+fn validate_missing_dag_not_found() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(dir.path().join("dare.config.json"), "{}").unwrap();
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args(["validate", "--no-color"])
+        .assert()
+        .code(3);
+}
+
+#[test]
+fn validate_json_schema() {
+    let dir = validate_project_with_dag(&fixture_dag("valid.v21.yaml"), true);
+    let assert = Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args(["validate", "--json", "--no-color"])
+        .assert()
+        .success();
+    let out = String::from_utf8_lossy(&assert.get_output().stdout);
+    let v: Value = serde_json::from_str(out.trim()).expect("json");
+    assert_eq!(v["ok"], true);
+    assert_eq!(v["data"]["schemaVersion"], 1);
+    assert_eq!(v["data"]["mode"], "validate");
+}
+
+#[test]
+fn validate_json_failure_has_issues() {
+    let dir = validate_project_with_dag(&fixture_dag("cycle.v21.yaml"), false);
+    let assert = Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args(["validate", "--json", "--no-color"])
+        .assert()
+        .code(1);
+    let out = String::from_utf8_lossy(&assert.get_output().stdout);
+    let v: Value = serde_json::from_str(out.trim()).expect("json");
+    assert_eq!(v["ok"], false);
+    assert!(v["data"]["issues"].as_array().unwrap().len() >= 1);
+}
+
+#[test]
+fn validate_zero_writes() {
+    let dir = validate_project_with_dag(&fixture_dag("valid.v21.yaml"), true);
+    fn listing(base: &std::path::Path) -> Vec<String> {
+        let mut out = Vec::new();
+        fn walk(base: &std::path::Path, cur: &std::path::Path, out: &mut Vec<String>) {
+            if let Ok(rd) = std::fs::read_dir(cur) {
+                for e in rd.flatten() {
+                    let p = e.path();
+                    let rel = p
+                        .strip_prefix(base)
+                        .unwrap()
+                        .to_string_lossy()
+                        .replace('\\', "/");
+                    out.push(rel);
+                    if p.is_dir() {
+                        walk(base, &p, out);
+                    }
+                }
+            }
+        }
+        walk(base, base, &mut out);
+        out.sort();
+        out
+    }
+    let before = listing(dir.path());
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args(["validate", "--no-color"])
+        .assert()
+        .success();
+    let after = listing(dir.path());
+    assert_eq!(before, after);
+}

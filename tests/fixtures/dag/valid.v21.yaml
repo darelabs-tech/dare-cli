@@ -1,0 +1,9 @@
+title: "Valid fixture"
+version: "1.0.0"
+tasks:
+  - id: task-001
+    title: One
+    depends_on: []
+    complexity: LOW
+    subtask_prompt: do thing
+    spec_file: EXECUTION/task-001.md

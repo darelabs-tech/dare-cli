@@ -9,6 +9,7 @@ use std::process::ExitCode;
 use clap::{Parser, Subcommand};
 use commands::discover::run_discover;
 use commands::info::{collect_info, format_human, report_to_json};
+use commands::validate::run_validate;
 use commands::welcome::{render_welcome, WelcomeOptions};
 use dare_assets::{
     load_capability_matrix_from_str, validate_capability_matrix, verify_embedded_assets,
@@ -78,6 +79,15 @@ enum Commands {
         /// Abort install when stack conflicts are present.
         #[arg(long)]
         strict_conflicts: bool,
+    },
+    /// Validate DARE/dare-dag.yaml (read-only).
+    Validate {
+        /// Path to dare-dag.yaml (default: DARE/dare-dag.yaml under project root).
+        #[arg(long)]
+        dag: Option<PathBuf>,
+        /// Treat warnings as failures.
+        #[arg(long)]
+        strict: bool,
     },
     /// Asset inventory / embed checks (microplano 009).
     Assets {
@@ -260,12 +270,22 @@ fn main() -> ExitCode {
     }
 
     match Cli::try_parse() {
-        Ok(cli) => match run(cli) {
-            Ok((msg, data)) => {
-                let _ = renderer.write_success(&msg, data);
-                ExitCode::SUCCESS
+        Ok(cli) => match cli.command {
+            Some(Commands::Validate { dag, strict }) => run_validate(dag, strict, &renderer),
+            other => {
+                let cli = Cli {
+                    json: cli.json,
+                    no_color: cli.no_color,
+                    command: other,
+                };
+                match run(cli) {
+                    Ok((msg, data)) => {
+                        let _ = renderer.write_success(&msg, data);
+                        ExitCode::SUCCESS
+                    }
+                    Err(e) => exit(renderer.write_error(&e)),
+                }
             }
-            Err(e) => exit(renderer.write_error(&e)),
         },
         Err(e) => {
             if e.kind() == clap::error::ErrorKind::DisplayHelp
@@ -446,6 +466,7 @@ fn run(cli: Cli) -> Result<(String, serde_json::Value), CoreError> {
                 ok_msg(format!("harness antigravity validate: ok ({n} commands)"))
             }
         },
+        Some(Commands::Validate { .. }) => unreachable!("validate handled in main"),
     }
 }
 

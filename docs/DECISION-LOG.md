@@ -24,6 +24,7 @@ Registro append-only de decisões de governança dos microplanos DARE CLI.
 | DEC-018 | 2026-07-21 | dare info: schemaVersion 1; read-only; root walk; TASKS lexico; assets verify | — | Tech Lead DARE CLI | active |
 | DEC-019 | 2026-07-21 | dare discover --check: dare-project; schema 1; exit codes 004; install stub exit 1→019 | — | Tech Lead DARE CLI | active |
 | DEC-020 | 2026-07-21 | dare discover install: InstallPlan/rollback; conflicts warn+continue; --strict-conflicts; schema InstallReport 1 | — | Tech Lead DARE CLI | active |
+| DEC-021 | 2026-07-21 | dare validate: crate dare-dag; ValidationReport schema 1; exit 1+report; parse Config=4; strict | — | Tech Lead DARE CLI | active |
 
 ## Notas
 
@@ -44,3 +45,4 @@ Registro append-only de decisões de governança dos microplanos DARE CLI.
 - **DEC-018:** microplano 017 — `dare info`: `schemaVersion` 1 camelCase; zero mutações; root walk; TASKS.md / TASKS-* lexico; docs [`cli-info.md`](compatibility/cli-info.md).
 - **DEC-019:** microplano 018 — `dare discover --check`: crate `dare-project`; schema 1; stacks node/rust/python; monorepo/harness; exit codes alinhados a 004 (diff vs Design Apêndice D); sem `--check` → Internal exit 1 (install 019); docs [`cli-discover-check.md`](compatibility/cli-discover-check.md).
 - **DEC-020:** microplano 019 — `dare discover` install: `InstallPlan`/`InstallReport` schema 1; conflicts warn+install; `--strict-conflicts`/`--force`/`--dry-run`; rollback journal; docs [`cli-discover-install.md`](compatibility/cli-discover-install.md).
+- **DEC-021:** microplano 020 — `dare validate`: crate `dare-dag`; `ValidationReport` schema 1; falha de regras → exit 1 + report (envelope `ok`=`data.ok`); YAML parse → Config exit 4; `--strict`; zero writes; docs [`cli-validate.md`](compatibility/cli-validate.md).
