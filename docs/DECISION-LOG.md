@@ -20,6 +20,7 @@ Registro append-only de decisões de governança dos microplanos DARE CLI.
 | DEC-014 | 2026-07-21 | Adapter Codex: AGENTS.md + skills; .agents share; UPDATE_HARNESS_IDES includes codex | ADR-007 | Tech Lead DARE CLI | active |
 | DEC-015 | 2026-07-21 | Adapter Antigravity: rules + commands + shared .agents/skills; frontmatter validate | ADR-007 | Tech Lead DARE CLI | active |
 | DEC-016 | 2026-07-21 | Release alpha: 5 targets GH Actions; SHA256SUMS+SBOM; install.sh/ps1; optional cosign | ADR-008 | Tech Lead DARE CLI | active |
+| DEC-017 | 2026-07-21 | dare welcome: TTY banner; --no-banner / DARE_NO_BANNER; no dare new; snapshots | — | Tech Lead DARE CLI | active |
 
 ## Notas
 

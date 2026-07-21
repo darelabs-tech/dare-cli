@@ -1,11 +1,13 @@
 //! DARE Framework CLI (native Rust rewrite).
 
+mod commands;
 mod output;
 
 use std::path::PathBuf;
 use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
+use commands::welcome::{render_welcome, WelcomeOptions};
 use dare_assets::{
     load_capability_matrix_from_str, validate_capability_matrix, verify_embedded_assets,
     EmbeddedAssets,
@@ -45,6 +47,12 @@ struct Cli {
 
 #[derive(Debug, Subcommand)]
 enum Commands {
+    /// Show banner (TTY) and DARE quick-start guide.
+    Welcome {
+        /// Skip ASCII banner even on TTY.
+        #[arg(long)]
+        no_banner: bool,
+    },
     /// Asset inventory / embed checks (microplano 009).
     Assets {
         #[command(subcommand)]
@@ -234,9 +242,14 @@ fn main() -> ExitCode {
 fn run(cli: Cli) -> Result<String, CoreError> {
     match cli.command {
         None => Ok(
-            "DARE CLI ready. Try: dare assets verify | dare config load | dare capabilities validate | dare harness claude validate"
+            "DARE CLI ready. Try: dare welcome | dare assets verify | dare config load | dare harness claude validate"
                 .into(),
         ),
+        Some(Commands::Welcome { no_banner }) => Ok(render_welcome(&WelcomeOptions {
+            no_banner,
+            no_color: cli.no_color,
+            stdout_is_tty: None,
+        })),
         Some(Commands::Assets {
             action: AssetsCmd::Verify,
         }) => {

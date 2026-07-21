@@ -61,3 +61,25 @@ fn cli_unknown_flag_json_stdout_no_ansi() {
     sorted.sort();
     assert_eq!(keys, sorted);
 }
+
+#[test]
+fn welcome_no_banner_no_dare_new() {
+    Command::new(cargo_bin("dare"))
+        .args(["welcome", "--no-banner", "--no-color"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Quick start"))
+        .stdout(predicate::str::contains("dare design"))
+        .stdout(predicate::str::contains("dare new").not());
+}
+
+#[test]
+fn welcome_env_no_banner() {
+    Command::new(cargo_bin("dare"))
+        .env("DARE_NO_BANNER", "1")
+        .args(["welcome", "--no-color"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("____").not())
+        .stdout(predicate::str::contains("Quick start"));
+}
