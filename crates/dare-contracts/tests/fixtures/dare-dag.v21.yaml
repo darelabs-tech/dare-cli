@@ -1,0 +1,13 @@
+title: "Fixture DAG v21"
+version: "1.0.0"
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+tasks:
+  - id: task-001
+    title: Example
+    depends_on: []
+    complexity: LOW
+    subtask_prompt: do thing
+    spec_file: EXECUTION/task-001.md

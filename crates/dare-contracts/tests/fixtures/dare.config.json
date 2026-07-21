@@ -1,0 +1,5 @@
+{
+  "ide": "cursor",
+  "project": { "enabled": true, "name": "demo" },
+  "customExtension": { "x": 1 }
+}

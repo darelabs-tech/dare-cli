@@ -1,0 +1,11 @@
+nodes:
+  - id: task:task-001
+    type: task
+    label: Example
+    description: ""
+edges:
+  - id: "depends_on:task:task-001->task:task-002"
+    source_id: task:task-001
+    target_id: task:task-002
+    type: depends_on
+    weight: 1.0

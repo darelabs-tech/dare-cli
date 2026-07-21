@@ -1,0 +1,8 @@
+{
+  "dag": { "done": 1, "pending": 0 },
+  "gates": {},
+  "cost": {},
+  "bestOfN": {},
+  "guard": {},
+  "drift": {}
+}

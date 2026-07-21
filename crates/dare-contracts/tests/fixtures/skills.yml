@@ -1,0 +1,5 @@
+version: "1"
+skills:
+  - id: dare-ax
+    version: "1.0.0"
+  - id: dare-security

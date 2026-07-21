@@ -1,0 +1,8 @@
+task-001:
+  title: Legacy task
+  depends_on: []
+  complexity: MED
+task-002:
+  title: Child
+  depends_on: [task-001]
+  complexity: LOW

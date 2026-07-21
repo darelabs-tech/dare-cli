@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "releases": [
+    { "version": "3.8.2", "notes": "baseline" }
+  ]
+}
