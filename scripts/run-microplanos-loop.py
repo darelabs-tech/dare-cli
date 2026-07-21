@@ -9,25 +9,38 @@ Papéis:
   - Script  → descobre microplanos, valida artefatos, avança fases, commit/push
   - Agente  → executa cada slash command com o prompt emitido por --next
 
-Uso (teste n=3 → 008, 009, 010) — dentro do Cursor / Claude Code:
+Uso (microplanos 011 → 056 até o fim) — dentro do Cursor / Claude Code:
 
-  python scripts/run-microplanos-loop.py init --start 8 --count 3
-  python scripts/run-microplanos-loop.py next          # imprime a fase atual
+  python scripts/run-microplanos-loop.py init
+  python scripts/run-microplanos-loop.py init --start 11 --end 56
+  python scripts/run-microplanos-loop.py next
   # …agente executa o slash command…
-  python scripts/run-microplanos-loop.py complete      # valida artefato e avança
-  # repetir next/complete até status = done
+  python scripts/run-microplanos-loop.py complete
+  # repetir até status = done
   python scripts/run-microplanos-loop.py status
 
 Opções:
-  --no-push   no commit final de cada microplano, não faz push
-  --dry-run   complete/commit não alteram git
+  --start N      primeiro microplano (default: 11)
+  --end N        último microplano inclusive (default: 56); omitir = até o último ficheiro
+  --count N      limite opcional (sobrescreve --end se ambos forem passados via slice)
+  --only 11,12   lista CSV explícita
+  --no-push      no commit final de cada microplano, não faz push
+  --dry-run      complete/commit não alteram git
+  --no-cleanup   não remove target/ nem worktrees após cada ciclo
+
+Após cada microplano (fase commit), limpa disco:
+  - pastas `target/` no repo (artefactos Cargo)
+  - `%TEMP%/cursor-sandbox-cache` (e via CARGO_TARGET_DIR)
+  - git worktrees extras + `git worktree prune`
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
+import shutil
 import subprocess
 import sys
 from dataclasses import asdict, dataclass
@@ -295,6 +308,193 @@ def run_git(args: list[str], check: bool = True) -> subprocess.CompletedProcess[
     )
 
 
+def _dir_size_mb(path: Path) -> float:
+    total = 0
+    try:
+        for p in path.rglob("*"):
+            if p.is_file():
+                try:
+                    total += p.stat().st_size
+                except OSError:
+                    pass
+    except OSError:
+        return 0.0
+    return total / (1024 * 1024)
+
+
+def find_target_dirs() -> list[Path]:
+    """Pastas `target/` sob o repo + CARGO_TARGET_DIR relacionado."""
+    found: list[Path] = []
+    seen: set[Path] = set()
+
+    def add(path: Path) -> None:
+        try:
+            resolved = path.resolve()
+        except OSError:
+            return
+        if resolved in seen or not path.is_dir():
+            return
+        seen.add(resolved)
+        found.append(path)
+
+    add(REPO_ROOT / "target")
+
+    git_dir = (REPO_ROOT / ".git").resolve()
+    for p in REPO_ROOT.rglob("target"):
+        if p.name != "target" or not p.is_dir():
+            continue
+        try:
+            if git_dir in p.resolve().parents or p.resolve() == git_dir:
+                continue
+        except OSError:
+            continue
+        add(p)
+
+    cargo_td = os.environ.get("CARGO_TARGET_DIR", "").strip()
+    if cargo_td:
+        td = Path(cargo_td)
+        if td.is_dir():
+            try:
+                td.resolve().relative_to(REPO_ROOT.resolve())
+                add(td)
+            except ValueError:
+                lowered = str(td).lower()
+                if "dare-cli" in lowered or "cargo-target" in lowered:
+                    add(td)
+
+    return found
+
+
+def _cursor_sandbox_cache_roots() -> list[Path]:
+    """Localiza a raiz `cursor-sandbox-cache` (Temp + derivado de CARGO_TARGET_DIR)."""
+    candidates: list[Path] = []
+    seen: set[Path] = set()
+
+    def add_root(path: Path) -> None:
+        try:
+            resolved = path.resolve()
+        except OSError:
+            return
+        if resolved in seen:
+            return
+        if path.is_dir() and path.name.lower() == "cursor-sandbox-cache":
+            seen.add(resolved)
+            candidates.append(path)
+
+    temp = os.environ.get("TEMP") or os.environ.get("TMP") or ""
+    local_app = os.environ.get("LOCALAPPDATA") or ""
+    for base in filter(None, [temp, local_app and str(Path(local_app) / "Temp")]):
+        add_root(Path(base) / "cursor-sandbox-cache")
+
+    cargo_td = os.environ.get("CARGO_TARGET_DIR", "").strip()
+    if cargo_td:
+        cur = Path(cargo_td)
+        # sobe até encontrar o diretório chamado cursor-sandbox-cache
+        for parent in [cur, *cur.parents]:
+            if parent.name.lower() == "cursor-sandbox-cache":
+                add_root(parent)
+                break
+
+    return candidates
+
+
+def cleanup_cursor_sandbox_cache(dry_run: bool) -> None:
+    """Remove o cache Cursor sandbox (costuma ser o maior consumidor de HD)."""
+    roots = _cursor_sandbox_cache_roots()
+    if not roots:
+        print("[cleanup] nenhum cursor-sandbox-cache encontrado")
+        return
+
+    for root in roots:
+        size = _dir_size_mb(root)
+        print(f"[cleanup] removendo cursor-sandbox-cache (~{size:.1f} MiB): {root}")
+        if dry_run:
+            continue
+        try:
+            shutil.rmtree(root, ignore_errors=False)
+            print(f"[cleanup] removido: {root}")
+        except OSError as e:
+            print(f"[cleanup] falha ao remover {root}: {e}", file=sys.stderr)
+            shutil.rmtree(root, ignore_errors=True)
+            if not root.exists():
+                print(f"[cleanup] removido (best-effort): {root}")
+            else:
+                # tenta limpar conteúdo se a raiz estiver bloqueada
+                for child in list(root.iterdir()) if root.is_dir() else []:
+                    if child.is_dir():
+                        shutil.rmtree(child, ignore_errors=True)
+                    else:
+                        try:
+                            child.unlink()
+                        except OSError:
+                            pass
+                print(f"[cleanup] conteúdo limpo best-effort em: {root}")
+
+
+def cleanup_worktrees(dry_run: bool) -> None:
+    """Remove worktrees extras (não o main) e faz prune."""
+    listed = run_git(["worktree", "list", "--porcelain"], check=False)
+    if listed.returncode != 0:
+        print(f"[cleanup] git worktree list falhou: {listed.stderr.strip()}")
+        return
+
+    main_path = REPO_ROOT.resolve()
+    worktrees: list[Path] = []
+    for line in listed.stdout.splitlines():
+        if line.startswith("worktree "):
+            worktrees.append(Path(line[len("worktree ") :]).resolve())
+
+    extras = [w for w in worktrees if w != main_path]
+    if not extras:
+        print("[cleanup] nenhum git worktree extra")
+    else:
+        for wt in extras:
+            print(f"[cleanup] removendo worktree: {wt}")
+            if dry_run:
+                continue
+            rm = run_git(["worktree", "remove", "--force", str(wt)], check=False)
+            if rm.returncode != 0:
+                print(
+                    f"[cleanup] worktree remove avisou: "
+                    f"{rm.stderr.strip() or rm.stdout.strip()}"
+                )
+                if wt.exists():
+                    shutil.rmtree(wt, ignore_errors=True)
+
+    if dry_run:
+        print("[dry-run] git worktree prune")
+        return
+    pruned = run_git(["worktree", "prune", "-v"], check=False)
+    if pruned.stdout.strip():
+        print(f"[cleanup] prune:\n{pruned.stdout.strip()}")
+    else:
+        print("[cleanup] git worktree prune ok")
+
+
+def cleanup_disk(dry_run: bool = False) -> None:
+    """Liberta HD após um ciclo: target/ + cursor-sandbox-cache + worktrees."""
+    print("[cleanup] a limpar artefactos de disco do ciclo…")
+
+    targets = find_target_dirs()
+    if not targets:
+        print("[cleanup] nenhuma pasta target/ encontrada")
+    for t in targets:
+        size = _dir_size_mb(t)
+        print(f"[cleanup] removendo target/ (~{size:.1f} MiB): {t}")
+        if dry_run:
+            continue
+        try:
+            shutil.rmtree(t, ignore_errors=False)
+            print(f"[cleanup] removido: {t}")
+        except OSError as e:
+            print(f"[cleanup] falha ao remover {t}: {e}", file=sys.stderr)
+            shutil.rmtree(t, ignore_errors=True)
+
+    cleanup_cursor_sandbox_cache(dry_run=dry_run)
+    cleanup_worktrees(dry_run=dry_run)
+    print("[cleanup] ciclo de limpeza concluído")
+
+
 def do_commit_push(mp: Microplano, push: bool, dry_run: bool) -> None:
     msg = f"feat(mp{mp.nnn}): concluir microplano {mp.label}"
     st = run_git(["status", "--porcelain"], check=False)
@@ -328,7 +528,15 @@ def cmd_init(args: argparse.Namespace) -> None:
         wanted = {int(x.strip()) for x in args.only.split(",") if x.strip()}
         selected = [m for m in all_mps if m.number in wanted]
     else:
-        selected = [m for m in all_mps if m.number >= args.start][: args.count]
+        start = args.start
+        end = args.end
+        if end == 0:
+            end = None
+        selected = [m for m in all_mps if m.number >= start]
+        if end is not None:
+            selected = [m for m in selected if m.number <= end]
+        if args.count is not None:
+            selected = selected[: args.count]
 
     if not selected:
         print("Nenhum microplano selecionado.", file=sys.stderr)
@@ -341,6 +549,12 @@ def cmd_init(args: argparse.Namespace) -> None:
         "microplanos_dir": str(directory.resolve()),
         "push": not args.no_push,
         "dry_run": bool(args.dry_run),
+        "cleanup": not args.no_cleanup,
+        "range": {
+            "start": selected[0].number,
+            "end": selected[-1].number,
+            "total": len(selected),
+        },
         "index": 0,
         "phase": "design",
         "queue": [asdict(m) for m in selected],
@@ -354,7 +568,13 @@ def cmd_init(args: argparse.Namespace) -> None:
 
     print("Loop inicializado (slash commands / sessao IDE — sem API key).")
     print(f"Estado: {STATE_PATH}")
-    print(f"Fila ({len(selected)}): {[m.label for m in selected]}")
+    print(
+        f"Fila ({len(selected)}): {selected[0].label} … {selected[-1].label}"
+    )
+    if len(selected) <= 12:
+        print(f"  ids: {[m.label for m in selected]}")
+    else:
+        print(f"  ids: {[m.label for m in selected[:4]]} … {[m.label for m in selected[-3:]]}")
     print(f"Fase atual: design -> {SLASH['design']}")
     print(f"Prompt: {prompt_path}")
     print()
@@ -366,7 +586,10 @@ def cmd_status(_: argparse.Namespace) -> None:
     state = load_state()
     mp = current_mp(state)
     print(f"index={state['index']}/{len(state['queue'])} phase={state['phase']}")
-    print(f"push={state.get('push')} dry_run={state.get('dry_run')}")
+    rng = state.get("range") or {}
+    if rng:
+        print(f"range={rng.get('start')}..{rng.get('end')} total={rng.get('total')}")
+    print(f"push={state.get('push')} dry_run={state.get('dry_run')} cleanup={state.get('cleanup', True)}")
     if mp is None:
         print("STATUS: done — fila vazia")
         return
@@ -456,6 +679,11 @@ def cmd_complete(args: argparse.Namespace) -> None:
 
     if phase == "commit":
         do_commit_push(mp, push=push, dry_run=dry_run)
+        do_cleanup = state.get("cleanup", True) and not args.no_cleanup
+        if do_cleanup:
+            cleanup_disk(dry_run=dry_run)
+        else:
+            print("[cleanup] pulado (--no-cleanup)")
         advance(state, mp, phase)
         nxt = current_mp(load_state())
         if nxt is None:
@@ -502,7 +730,8 @@ def cmd_run_agent_help(_: argparse.Namespace) -> None:
 # Como rodar este loop NO CURSOR (slash commands, sem API key)
 
 1. No terminal do projeto:
-   python scripts/run-microplanos-loop.py init --start 8 --count 3
+   python scripts/run-microplanos-loop.py init
+   # default: --start 11 --end 56 (46 microplanos até o fim)
 
 2. No chat do agente Cursor, cole:
 
@@ -511,9 +740,11 @@ def cmd_run_agent_help(_: argparse.Namespace) -> None:
    usando o arquivo de entrada citado. Não use CURSOR_API_KEY nem cursor-sdk.
    Ao terminar a fase, rode: python scripts/run-microplanos-loop.py complete
    Depois leia de novo .microplano-loop-next.md e continue até o status done.
-   Após cada microplano a fase commit faz git commit+push via script.
+   Após cada microplano a fase commit faz git commit+push via script,
+   depois limpa `target/` e git worktrees (use --no-cleanup para pular).
 
 3. Acompanhe: python scripts/run-microplanos-loop.py status
+   Limpeza manual: python scripts/run-microplanos-loop.py cleanup
 """.strip()
     )
 
@@ -528,12 +759,33 @@ def build_parser() -> argparse.ArgumentParser:
         sp.add_argument("--microplanos-dir", type=Path, default=DEFAULT_MICROPLANOS_DIR)
         sp.add_argument("--no-push", action="store_true")
         sp.add_argument("--dry-run", action="store_true")
+        sp.add_argument(
+            "--no-cleanup",
+            action="store_true",
+            help="Nao remove target/ nem worktrees apos cada ciclo",
+        )
 
-    sp = sub.add_parser("init", help="Inicializa fila (ex.: 008–010)")
+    sp = sub.add_parser("init", help="Inicializa fila (default: 011–056)")
     add_common(sp)
-    sp.add_argument("--start", type=int, default=8)
-    sp.add_argument("--count", type=int, default=3)
-    sp.add_argument("--only", default="", help="CSV de números, ex. 8,9,10")
+    sp.add_argument("--start", type=int, default=11, help="Primeiro microplano (default: 11)")
+    sp.add_argument(
+        "--end",
+        nargs="?",
+        const=0,
+        default=56,
+        type=int,
+        help=(
+            "Ultimo microplano inclusive (default: 56). "
+            "Passe --end sem valor (ou --end 0) para ir ate o ultimo ficheiro."
+        ),
+    )
+    sp.add_argument(
+        "--count",
+        type=int,
+        default=None,
+        help="Limite opcional de quantidade (apos aplicar start/end)",
+    )
+    sp.add_argument("--only", default="", help="CSV de números, ex. 11,12,13")
     sp.set_defaults(func=cmd_init)
 
     sp = sub.add_parser("next", help="Emite a fase/slash atuais")
@@ -544,10 +796,22 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--force", action="store_true", help="Avança sem validar artefato")
     sp.add_argument("--no-push", action="store_true")
     sp.add_argument("--dry-run", action="store_true")
+    sp.add_argument(
+        "--no-cleanup",
+        action="store_true",
+        help="Nao remove target/ nem worktrees neste complete de commit",
+    )
     sp.set_defaults(func=cmd_complete)
 
     sp = sub.add_parser("status", help="Mostra progresso")
     sp.set_defaults(func=cmd_status)
+
+    sp = sub.add_parser(
+        "cleanup",
+        help="Remove target/ e worktrees agora (sem avancar fases)",
+    )
+    sp.add_argument("--dry-run", action="store_true")
+    sp.set_defaults(func=lambda a: cleanup_disk(dry_run=a.dry_run))
 
     sp = sub.add_parser("help-agent", help="Texto para colar no chat do Cursor")
     sp.set_defaults(func=cmd_run_agent_help)
