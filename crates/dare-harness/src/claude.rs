@@ -168,6 +168,34 @@ mod tests {
     use tempfile::tempdir;
 
     #[test]
+    fn detect_empty_and_generate_managed() {
+        let dir = tempdir().unwrap();
+        let root = ProjectRoot::new(dir.path()).unwrap();
+        let d = detect_claude(&root).unwrap();
+        assert!(!d.claude_md);
+        assert!(!d.claude_dir);
+        generate_claude_md(&root, false).unwrap();
+        let d2 = detect_claude(&root).unwrap();
+        assert!(d2.claude_md);
+        let content = read_to_string(&root, &SafeRelativePath::new(CLAUDE_MD_REL).unwrap()).unwrap();
+        assert!(content.starts_with(MANAGED_PREFIX));
+        assert!(content.contains("dare harness claude"));
+        assert!(content.contains(".claude/commands/"));
+    }
+
+    #[test]
+    fn preserve_unmanaged_claude_md() {
+        let dir = tempdir().unwrap();
+        let root = ProjectRoot::new(dir.path()).unwrap();
+        let rel = SafeRelativePath::new(CLAUDE_MD_REL).unwrap();
+        atomic_write(&root, &rel, b"# my custom CLAUDE.md\nkeep me\n").unwrap();
+        generate_claude_md(&root, false).unwrap();
+        let content = read_to_string(&root, &rel).unwrap();
+        assert!(content.contains("my custom CLAUDE.md"));
+        assert!(!content.starts_with(MANAGED_PREFIX));
+    }
+
+    #[test]
     fn install_validate_roundtrip_force() {
         let dir = tempdir().unwrap();
         let root = ProjectRoot::new(dir.path()).unwrap();
@@ -193,5 +221,44 @@ mod tests {
         assert_eq!(n, 48);
         let content = read_to_string(&root, &rel).unwrap();
         assert!(content.contains("custom user command"));
+    }
+
+    #[test]
+    fn validate_reports_missing_sample() {
+        let dir = tempdir().unwrap();
+        let root = ProjectRoot::new(dir.path()).unwrap();
+        let err = validate_install(&root).unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains("claude commands missing"));
+        assert!(msg.contains("(49):") || msg.contains("missing (49)"));
+    }
+
+    #[test]
+    fn settings_managed_and_post_tool_use() {
+        let dir = tempdir().unwrap();
+        let root = ProjectRoot::new(dir.path()).unwrap();
+        write_settings_json(&root, true).unwrap();
+        let rel = SafeRelativePath::new(SETTINGS_REL).unwrap();
+        let raw = read_to_string(&root, &rel).unwrap();
+        let v: Value = serde_json::from_str(&raw).unwrap();
+        assert_eq!(v.get("_dare_managed"), Some(&json!(true)));
+        let hooks = &v["hooks"]["PostToolUse"][0];
+        assert_eq!(hooks["matcher"], "Write");
+        assert_eq!(hooks["hooks"][0]["type"], "command");
+        let cmd = hooks["hooks"][0]["command"].as_str().unwrap();
+        assert!(cmd.contains("Ralph Loop"));
+        assert!(cmd.contains("cargo test --workspace"));
+    }
+
+    #[test]
+    fn preserve_unmanaged_settings() {
+        let dir = tempdir().unwrap();
+        let root = ProjectRoot::new(dir.path()).unwrap();
+        let rel = SafeRelativePath::new(SETTINGS_REL).unwrap();
+        atomic_write(&root, &rel, b"{\"custom\":true}\n").unwrap();
+        write_settings_json(&root, false).unwrap();
+        let content = read_to_string(&root, &rel).unwrap();
+        assert!(content.contains("\"custom\":true"));
+        assert!(!content.contains("_dare_managed"));
     }
 }

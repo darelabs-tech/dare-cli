@@ -102,3 +102,30 @@ fn capabilities_validate_ok() {
         .stdout(predicate::str::contains("capabilities validate: ok"))
         .stdout(predicate::str::contains("49"));
 }
+
+#[test]
+fn harness_claude_install_validate_detect() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let root = dir.path().to_str().expect("utf8 path");
+
+    Command::new(cargo_bin("dare"))
+        .args(["harness", "claude", "install", "--force", "--root", root])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("harness claude install: wrote 49"));
+
+    Command::new(cargo_bin("dare"))
+        .args(["harness", "claude", "validate", "--root", root])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("harness claude validate: ok"))
+        .stdout(predicate::str::contains("49"));
+
+    Command::new(cargo_bin("dare"))
+        .args(["harness", "claude", "detect", "--root", root])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("claude_md=true"))
+        .stdout(predicate::str::contains("claude_dir=true"));
+}
+

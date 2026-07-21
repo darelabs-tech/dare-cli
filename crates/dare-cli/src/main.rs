@@ -139,6 +139,7 @@ enum ClaudeCmd {
     Install {
         #[arg(long)]
         root: Option<PathBuf>,
+        /// Overwrite unmanaged CLAUDE.md / commands / settings (default: preserve).
         #[arg(long)]
         force: bool,
     },
