@@ -1,0 +1,11 @@
+services:
+  dare-ci-smoke:
+    build:
+      context: .
+      dockerfile: Dockerfile.rust
+    command: ["--version"]
+    healthcheck:
+      test: ["CMD", "dare", "--version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

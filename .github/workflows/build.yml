@@ -1,0 +1,106 @@
+name: build
+
+on:
+  pull_request:
+    paths:
+      - "crates/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - "rustfmt.toml"
+      - "deny.toml"
+      - "scripts/ci/**"
+      - ".github/workflows/build.yml"
+  push:
+    paths:
+      - "crates/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - "rustfmt.toml"
+      - "deny.toml"
+      - "scripts/ci/**"
+      - ".github/workflows/build.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-24.04-arm
+          - target: x86_64-apple-darwin
+            os: macos-13
+          - target: aarch64-apple-darwin
+            os: macos-14
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: toolchain
+        uses: dtolnay/rust-toolchain@1.85.0
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: cache
+        uses: Swatinem/rust-cache@v2.7.8
+        with:
+          shared-key: ${{ matrix.target }}
+
+      - name: build
+        run: cargo build --release -p dare-cli --target ${{ matrix.target }}
+
+      - name: resolve binary path
+        id: bin
+        shell: bash
+        run: |
+          if [ "${{ matrix.target }}" = "x86_64-pc-windows-msvc" ]; then
+            echo "path=target/${{ matrix.target }}/release/dare.exe" >> "$GITHUB_OUTPUT"
+          else
+            echo "path=target/${{ matrix.target }}/release/dare" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: smoke (unix)
+        if: runner.os != 'Windows'
+        run: bash scripts/ci/smoke-dare.sh "${{ steps.bin.outputs.path }}"
+
+      - name: smoke (windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./scripts/ci/smoke-dare.ps1 -Bin "${{ steps.bin.outputs.path }}"
+
+      - name: stage artifact and checksum (unix)
+        if: runner.os != 'Windows'
+        run: |
+          mkdir -p bin
+          cp "${{ steps.bin.outputs.path }}" "bin/$(basename "${{ steps.bin.outputs.path }}")"
+          sha256sum "${{ steps.bin.outputs.path }}" > dare.sha256
+
+      - name: stage artifact and checksum (windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path bin | Out-Null
+          Copy-Item "${{ steps.bin.outputs.path }}" bin\
+          $hash = (Get-FileHash -Algorithm SHA256 "${{ steps.bin.outputs.path }}").Hash.ToLower()
+          Set-Content -Path dare.sha256 -Value $hash -NoNewline
+
+      - name: upload artifact
+        uses: actions/upload-artifact@v4.6.0
+        with:
+          name: dare-${{ matrix.target }}
+          path: |
+            bin
+            dare.sha256
+          retention-days: 7

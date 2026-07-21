@@ -1,0 +1,61 @@
+name: ci
+
+on:
+  pull_request:
+    paths:
+      - "crates/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - "rustfmt.toml"
+      - "deny.toml"
+      - ".github/workflows/ci.yml"
+  push:
+    paths:
+      - "crates/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - "rustfmt.toml"
+      - "deny.toml"
+      - ".github/workflows/ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: toolchain
+        uses: dtolnay/rust-toolchain@1.85.0
+        with:
+          components: rustfmt, clippy
+
+      - name: cache
+        uses: Swatinem/rust-cache@v2.7.8
+
+      - name: fmt
+        run: cargo fmt --check
+
+      - name: clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: test
+        run: cargo test --workspace
+
+      - name: install-audit
+        # 0.21.2 fails on advisory-db CVSS 4.0; pin 0.22.0 (DEC-004)
+        run: cargo install cargo-audit --version 0.22.0 --locked
+
+      - name: audit
+        run: cargo audit
+
+      - name: install-deny
+        run: cargo install cargo-deny --version 0.18.6 --locked
+
+      - name: deny
+        run: cargo deny check

@@ -1,0 +1,37 @@
+# --- Rust ---
+/target/
+**/*.rs.bk
+*.pdb
+
+# --- Node / npm (governance scripts) ---
+node_modules/
+npm-debug.log*
+yarn-error.log*
+.pnpm-store/
+
+# --- Env / secrets ---
+.env
+.env.*
+!.env.*.example
+!.env.governance.example
+!.env.rust.example
+
+# --- DARE CLI local runtime ---
+.dare/
+DARE/.canvas.md
+
+# --- IDE / OS ---
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# --- Archives / local dumps ---
+*.zip
+*.log
+tmp/
+temp/
