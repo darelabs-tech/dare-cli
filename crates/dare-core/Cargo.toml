@@ -16,3 +16,4 @@ camino = { workspace = true }
 tempfile = { workspace = true }
 fs4 = { workspace = true }
 sha2 = { workspace = true }
+kill_tree = { workspace = true }

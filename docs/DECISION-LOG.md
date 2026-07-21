@@ -10,6 +10,7 @@ Registro append-only de decisões de governança dos microplanos DARE CLI.
 | DEC-004 | 2026-07-20 | CI cross-platform: matrix 5 runners, pins audit/deny, checksums; remoção planejada rust-workspace-002 | n/a | Tech Lead DARE CLI | active |
 | DEC-005 | 2026-07-20 | Erros/tracing/saída CLI: ErrorKind exit 1–5, JSON err→stdout, --json/--no-color, redact, uuid | ADR-002 | Tech Lead DARE CLI | active |
 | DEC-006 | 2026-07-20 | Path safety: jail ProjectRoot, symlink deny-escape, .dare/backups, fs4 try_lock, camino | n/a | Tech Lead DARE CLI | active |
+| DEC-007 | 2026-07-21 | Process safety: std::process (no tokio), env denylist, kill_tree 0.2.4, exit 124/cancel -1 | n/a | Tech Lead DARE CLI | active |
 
 ## Notas
 
@@ -19,3 +20,4 @@ Registro append-only de decisões de governança dos microplanos DARE CLI.
 - **DEC-004:** workflows `ci.yml` + `build.yml`; runners `ubuntu-latest`, `ubuntu-24.04-arm`, `macos-13`, `macos-14`, `windows-latest`; cache `Swatinem/rust-cache@v2.7.8`; `cargo-audit@0.22.0` e `cargo-deny@0.18.6` (pins Blueprint 0.21.2/0.18.2 incompatíveis com advisory-db CVSS 4.0 no MSRV 1.85); checksums SHA-256 MUST técnico; SBOM fora; remoção de `rust-workspace-002.yml` no fechamento mp003-008; detalhes em [`ci-cross-platform.md`](compatibility/ci-cross-platform.md).
 - **DEC-005:** microplano 004 — `ErrorKind`/`exit_code` (1–5; ≥6 reservado); JSON erro em stdout + exit≠0 (T-01); human erro em stderr; flags `--json`/`--no-color` + `NO_COLOR`; `redact` sem crate regex; `uuid` 1.16.0; `anstream` 0.6.18; `tracing` 0.1.44 + `tracing-subscriber` env-filter; `InvalidArgument`→`InvalidInput`; envelope sem `schema_version`; docs em [`cli-output-and-errors.md`](compatibility/cli-output-and-errors.md).
 - **DEC-006:** microplano 005 — `ProjectRoot`/`SafeRelativePath`; mensagem escape canónica; symlink/junction deny-if-outside; backups `.dare/backups/<utc>-<sha8>/…`; `atomic_write`; `FileLock` via **fs4 1.1.0** (`try_lock`, não 0.12.1 — versão inexistente no crates.io); `camino 1.1.9`, `tempfile 3.20.0`, `sha2 0.10.9`; docs em [`path-safety.md`](compatibility/path-safety.md).
+- **DEC-007:** microplano 006 — `SafeCommand` argv-only; denylist `SECRET|TOKEN|KEY|PASSWORD`; truncate 4000 chars; timeout→`ProcessOutput` 124; cancel→`-1`; **`std::process`** (Classe B vs Mestre `tokio::process`); `kill_tree` **0.2.4**; mock runner; docs em [`process-safety.md`](compatibility/process-safety.md).
