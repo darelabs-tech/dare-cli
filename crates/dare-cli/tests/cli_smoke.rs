@@ -213,3 +213,181 @@ fn harness_antigravity_install_validate_detect() {
         .success()
         .stdout(predicate::str::contains("rules=true"));
 }
+
+#[test]
+fn info_human_tempdir() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path().to_str().expect("utf8");
+    Command::new(cargo_bin("dare"))
+        .args(["info", "--root", root, "--no-color"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("read-only"))
+        .stdout(predicate::str::contains("version:"));
+}
+
+#[test]
+fn info_json_schema() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path().to_str().expect("utf8");
+    let assert = Command::new(cargo_bin("dare"))
+        .args(["info", "--json", "--root", root, "--no-color"])
+        .assert()
+        .success();
+    let out = String::from_utf8_lossy(&assert.get_output().stdout);
+    let v: Value = serde_json::from_str(out.trim()).expect("json envelope");
+    assert_eq!(v["ok"], true);
+    let data = &v["data"];
+    assert_eq!(data["schemaVersion"], 1);
+    assert!(data["assetsOk"].is_boolean());
+    assert!(data["version"].as_str().unwrap_or("").contains('.'));
+}
+
+fn fixture(name: &str) -> std::path::PathBuf {
+    std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../tests/fixtures")
+        .join(name)
+}
+
+#[test]
+fn discover_check_human_node() {
+    let node = fixture("existing-node-project");
+    let path = node.to_str().expect("utf8");
+    Command::new(cargo_bin("dare"))
+        .args(["discover", "--check", "-d", path, "--no-color"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("check (zero mutations)"))
+        .stdout(predicate::str::contains("node"));
+}
+
+#[test]
+fn discover_check_json_schema() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(dir.path().join("package.json"), "{}").unwrap();
+    let path = dir.path().to_str().expect("utf8");
+    let assert = Command::new(cargo_bin("dare"))
+        .args(["discover", "--check", "--json", "-d", path, "--no-color"])
+        .assert()
+        .success();
+    let out = String::from_utf8_lossy(&assert.get_output().stdout);
+    let v: Value = serde_json::from_str(out.trim()).expect("json envelope");
+    assert_eq!(v["ok"], true);
+    let data = &v["data"];
+    assert_eq!(data["schemaVersion"], 1);
+    assert_eq!(data["mode"], "check");
+}
+
+#[test]
+fn discover_dir_missing_exits_3() {
+    Command::new(cargo_bin("dare"))
+        .args([
+            "discover",
+            "--check",
+            "-d",
+            "__dare_missing_dir_9f3a2b__",
+            "--no-color",
+        ])
+        .assert()
+        .failure()
+        .code(3);
+}
+
+#[test]
+fn discover_install_node_fixture() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(dir.path().join("package.json"), "{}").unwrap();
+    let path = dir.path().to_str().expect("utf8");
+    Command::new(cargo_bin("dare"))
+        .args(["discover", "-d", path, "--no-color"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("mode: install"));
+    assert!(dir.path().join("dare.config.json").is_file());
+    assert!(dir.path().join("DARE").join("README.md").is_file());
+}
+
+#[test]
+fn discover_install_idempotent() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(dir.path().join("package.json"), "{}").unwrap();
+    let path = dir.path().to_str().expect("utf8");
+    Command::new(cargo_bin("dare"))
+        .args(["discover", "-d", path, "--no-color"])
+        .assert()
+        .success();
+    Command::new(cargo_bin("dare"))
+        .args(["discover", "-d", path, "--no-color"])
+        .assert()
+        .success();
+}
+
+#[test]
+fn discover_check_still_read_only() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(dir.path().join("package.json"), "{}").unwrap();
+    let before: Vec<_> = std::fs::read_dir(dir.path())
+        .unwrap()
+        .flatten()
+        .map(|e| e.file_name())
+        .collect();
+    let path = dir.path().to_str().expect("utf8");
+    Command::new(cargo_bin("dare"))
+        .args(["discover", "--check", "-d", path, "--no-color"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("zero mutations"));
+    let after: Vec<_> = std::fs::read_dir(dir.path())
+        .unwrap()
+        .flatten()
+        .map(|e| e.file_name())
+        .collect();
+    assert_eq!(before, after);
+}
+
+#[test]
+fn discover_strict_conflicts_exits_4() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(dir.path().join("package.json"), "{}").unwrap();
+    std::fs::write(
+        dir.path().join("Cargo.toml"),
+        "[package]\nname=\"x\"\nversion=\"0.0.0\"\n",
+    )
+    .unwrap();
+    let path = dir.path().to_str().expect("utf8");
+    Command::new(cargo_bin("dare"))
+        .args(["discover", "--strict-conflicts", "-d", path, "--no-color"])
+        .assert()
+        .failure()
+        .code(4);
+    assert!(!dir.path().join("dare.config.json").exists());
+}
+
+#[test]
+fn discover_dry_run_no_writes() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(dir.path().join("package.json"), "{}").unwrap();
+    let path = dir.path().to_str().expect("utf8");
+    Command::new(cargo_bin("dare"))
+        .args(["discover", "--dry-run", "-d", path, "--no-color"])
+        .assert()
+        .success();
+    assert!(!dir.path().join("dare.config.json").exists());
+}
+
+#[test]
+fn discover_install_json_schema() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(dir.path().join("package.json"), "{}").unwrap();
+    let path = dir.path().to_str().expect("utf8");
+    let assert = Command::new(cargo_bin("dare"))
+        .args(["discover", "--json", "-d", path, "--no-color"])
+        .assert()
+        .success();
+    let out = String::from_utf8_lossy(&assert.get_output().stdout);
+    let v: Value = serde_json::from_str(out.trim()).expect("json envelope");
+    assert_eq!(v["ok"], true);
+    let data = &v["data"];
+    assert_eq!(data["schemaVersion"], 1);
+    assert_eq!(data["mode"], "install");
+}

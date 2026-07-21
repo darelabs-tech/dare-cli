@@ -16,6 +16,7 @@ dare-contracts = { workspace = true }
 dare-config = { workspace = true }
 dare-assets = { workspace = true }
 dare-harness = { workspace = true }
+dare-project = { workspace = true }
 clap = { workspace = true }
 tracing-subscriber = { workspace = true }
 serde = { workspace = true }

@@ -21,6 +21,9 @@ Registro append-only de decisões de governança dos microplanos DARE CLI.
 | DEC-015 | 2026-07-21 | Adapter Antigravity: rules + commands + shared .agents/skills; frontmatter validate | ADR-007 | Tech Lead DARE CLI | active |
 | DEC-016 | 2026-07-21 | Release alpha: 5 targets GH Actions; SHA256SUMS+SBOM; install.sh/ps1; cosign soft-fail | ADR-008 | Tech Lead DARE CLI | active |
 | DEC-017 | 2026-07-21 | dare welcome: TTY banner; --no-banner / DARE_NO_BANNER; no dare new; snapshots | — | Tech Lead DARE CLI | active |
+| DEC-018 | 2026-07-21 | dare info: schemaVersion 1; read-only; root walk; TASKS lexico; assets verify | — | Tech Lead DARE CLI | active |
+| DEC-019 | 2026-07-21 | dare discover --check: dare-project; schema 1; exit codes 004; install stub exit 1→019 | — | Tech Lead DARE CLI | active |
+| DEC-020 | 2026-07-21 | dare discover install: InstallPlan/rollback; conflicts warn+continue; --strict-conflicts; schema InstallReport 1 | — | Tech Lead DARE CLI | active |
 
 ## Notas
 
@@ -37,3 +40,7 @@ Registro append-only de decisões de governança dos microplanos DARE CLI.
 - **DEC-011:** microplano 010 — `capability-matrix.yml` com 49 capabilities Claude (ADR-007); validate + render; tipos em `dare-assets` até crate harness nos adapters; docs em [`capabilities-canonical.md`](compatibility/capabilities-canonical.md).
 - **DEC-012:** microplano 011 — crate `dare-harness` adapter Claude (`detect`/`install`/`validate`); preserve unmanaged; CLI `dare harness claude`; docs em [`harness-claude.md`](compatibility/harness-claude.md).
 - **DEC-016:** microplano 015 — release alpha nativo: `release.yml` (5 targets, macos-13/14, cosign soft-fail), `SHA256SUMS`+`SBOM.spdx.json`, `installers/install.{sh,ps1}`, smoke `scripts/smoke-release-install.*`; ADR [`ADR-008-release-alpha-nativo.md`](adr/ADR-008-release-alpha-nativo.md); docs [`release-alpha.md`](compatibility/release-alpha.md).
+- **DEC-017:** microplano 016 — `dare welcome`: banner só TTY; `--no-banner` / `DARE_NO_BANNER`; CI-005 sem `dare new`; snapshots human/no-color; docs [`cli-welcome.md`](compatibility/cli-welcome.md).
+- **DEC-018:** microplano 017 — `dare info`: `schemaVersion` 1 camelCase; zero mutações; root walk; TASKS.md / TASKS-* lexico; docs [`cli-info.md`](compatibility/cli-info.md).
+- **DEC-019:** microplano 018 — `dare discover --check`: crate `dare-project`; schema 1; stacks node/rust/python; monorepo/harness; exit codes alinhados a 004 (diff vs Design Apêndice D); sem `--check` → Internal exit 1 (install 019); docs [`cli-discover-check.md`](compatibility/cli-discover-check.md).
+- **DEC-020:** microplano 019 — `dare discover` install: `InstallPlan`/`InstallReport` schema 1; conflicts warn+install; `--strict-conflicts`/`--force`/`--dry-run`; rollback journal; docs [`cli-discover-install.md`](compatibility/cli-discover-install.md).

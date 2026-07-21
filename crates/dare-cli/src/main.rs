@@ -7,6 +7,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
+use commands::discover::run_discover;
 use commands::info::{collect_info, format_human, report_to_json};
 use commands::welcome::{render_welcome, WelcomeOptions};
 use dare_assets::{
@@ -59,6 +60,24 @@ enum Commands {
         /// Project root hint (default: cwd, walk-up).
         #[arg(long)]
         root: Option<PathBuf>,
+    },
+    /// Brownfield project detection and DARE install.
+    Discover {
+        /// Project directory (default: cwd).
+        #[arg(long, short = 'd')]
+        dir: Option<PathBuf>,
+        /// Detect only — do not install DARE files.
+        #[arg(long)]
+        check: bool,
+        /// Overwrite managed files when installing.
+        #[arg(long)]
+        force: bool,
+        /// Plan/report without writing files.
+        #[arg(long)]
+        dry_run: bool,
+        /// Abort install when stack conflicts are present.
+        #[arg(long)]
+        strict_conflicts: bool,
     },
     /// Asset inventory / embed checks (microplano 009).
     Assets {
@@ -283,6 +302,13 @@ fn run(cli: Cli) -> Result<(String, serde_json::Value), CoreError> {
             let data = report_to_json(&report);
             Ok((human, data))
         }
+        Some(Commands::Discover {
+            dir,
+            check,
+            force,
+            dry_run,
+            strict_conflicts,
+        }) => run_discover(dir, check, force, dry_run, strict_conflicts),
         Some(Commands::Assets {
             action: AssetsCmd::Verify,
         }) => {

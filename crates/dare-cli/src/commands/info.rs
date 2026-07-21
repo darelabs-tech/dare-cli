@@ -84,25 +84,26 @@ fn read_backend(root: &ProjectRoot) -> Option<String> {
 }
 
 fn tasks_progress(root: &Path) -> TasksProgress {
-    let candidates = [
-        "DARE/TASKS.md",
-        "DARE/TASKS-016-comando-welcome.md", // fallback sample — prefer glob
-    ];
-    // Prefer DARE/TASKS.md then any TASKS-*.md
-    let mut path: Option<PathBuf> = None;
-    let tasks_md = root.join("DARE/TASKS.md");
-    if tasks_md.is_file() {
-        path = Some(tasks_md);
-    } else if let Ok(rd) = std::fs::read_dir(root.join("DARE")) {
-        for e in rd.flatten() {
-            let name = e.file_name().to_string_lossy().into_owned();
-            if name.starts_with("TASKS-") && name.ends_with(".md") {
-                path = Some(e.path());
-                break;
+    // Prefer DARE/TASKS.md; else lexicographically first DARE/TASKS-*.md
+    let path = {
+        let tasks_md = root.join("DARE/TASKS.md");
+        if tasks_md.is_file() {
+            Some(tasks_md)
+        } else {
+            let dare = root.join("DARE");
+            let mut names: Vec<String> = Vec::new();
+            if let Ok(rd) = std::fs::read_dir(&dare) {
+                for e in rd.flatten() {
+                    let name = e.file_name().to_string_lossy().into_owned();
+                    if name.starts_with("TASKS-") && name.ends_with(".md") {
+                        names.push(name);
+                    }
+                }
             }
+            names.sort();
+            names.first().map(|n| dare.join(n))
         }
-    }
-    let _ = candidates;
+    };
     let Some(p) = path else {
         return TasksProgress::default();
     };
@@ -267,5 +268,22 @@ mod tests {
         assert_eq!(before, after, "info must not create files");
         let v = report_to_json(&r);
         assert_eq!(v["schemaVersion"], 1);
+    }
+
+    #[test]
+    fn tasks_picks_lexicographic_tasks_star() {
+        let dir = tempdir().unwrap();
+        let dare = dir.path().join("DARE");
+        std::fs::create_dir_all(&dare).unwrap();
+        std::fs::write(dare.join("TASKS-b.md"), "✅ DONE\n").unwrap();
+        std::fs::write(dare.join("TASKS-a.md"), "⏳ PENDING\n").unwrap();
+        let r = collect_info(dir.path()).unwrap();
+        let src = r.tasks.source.expect("source");
+        assert!(
+            src.ends_with("TASKS-a.md"),
+            "expected lexicographic first TASKS-a.md, got {src}"
+        );
+        assert_eq!(r.tasks.pending, 2); // ⏳ + PENDING
+        assert_eq!(r.tasks.done, 0);
     }
 }
