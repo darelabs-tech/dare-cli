@@ -18,6 +18,7 @@ Registro append-only de decisões de governança dos microplanos DARE CLI.
 | DEC-012 | 2026-07-21 | Adapter Claude: dare-harness; install/validate/detect; preserve unmanaged | ADR-007 | Tech Lead DARE CLI | active |
 | DEC-013 | 2026-07-21 | Adapter Cursor: commands from matrix; .cursorrules managed; preserve | ADR-007 | Tech Lead DARE CLI | active |
 | DEC-014 | 2026-07-21 | Adapter Codex: AGENTS.md + skills; .agents share; UPDATE_HARNESS_IDES includes codex | ADR-007 | Tech Lead DARE CLI | active |
+| DEC-015 | 2026-07-21 | Adapter Antigravity: rules + commands + shared .agents/skills; frontmatter validate | ADR-007 | Tech Lead DARE CLI | active |
 
 ## Notas
 

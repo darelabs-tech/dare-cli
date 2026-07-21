@@ -14,9 +14,11 @@ use dare_config::{
     default_config, load_effective, CliOverrides, EnvOverrides, DEFAULT_CONFIG_REL,
 };
 use dare_harness::{
-    detect_claude, detect_codex, detect_cursor, generate_agents_md, generate_claude_md,
-    generate_cursorrules, install_codex_skills, install_commands, install_cursor_commands,
-    validate_codex_install, validate_cursor_install, validate_install, write_settings_json,
+    detect_antigravity, detect_claude, detect_codex, detect_cursor, ensure_workflows_dir,
+    generate_agents_md, generate_antigravityrules, generate_claude_md, generate_cursorrules,
+    install_antigravity, install_codex_skills, install_commands, install_cursor_commands,
+    validate_antigravity_install, validate_codex_install, validate_cursor_install, validate_install,
+    write_settings_json,
 };
 use dare_core::{init_tracing, CoreError, CoreResult, ExecutionContext, ProjectRoot, SafeRelativePath};
 use output::OutputRenderer;
@@ -104,6 +106,11 @@ enum HarnessIde {
         #[command(subcommand)]
         action: CodexCmd,
     },
+    /// Antigravity adapter (rules + Agent Skills).
+    Antigravity {
+        #[command(subcommand)]
+        action: AntigravityCmd,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -147,6 +154,24 @@ enum CursorCmd {
 
 #[derive(Debug, Subcommand)]
 enum CodexCmd {
+    Detect {
+        #[arg(long)]
+        root: Option<PathBuf>,
+    },
+    Install {
+        #[arg(long)]
+        root: Option<PathBuf>,
+        #[arg(long)]
+        force: bool,
+    },
+    Validate {
+        #[arg(long)]
+        root: Option<PathBuf>,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+enum AntigravityCmd {
     Detect {
         #[arg(long)]
         root: Option<PathBuf>,
@@ -319,6 +344,32 @@ fn run(cli: Cli) -> Result<String, CoreError> {
                 let project = project_root(root)?;
                 let n = validate_codex_install(&project)?;
                 Ok(format!("harness codex validate: ok ({n} skills)"))
+            }
+        },
+        Some(Commands::Harness {
+            ide: HarnessIde::Antigravity { action },
+        }) => match action {
+            AntigravityCmd::Detect { root } => {
+                let project = project_root(root)?;
+                let d = detect_antigravity(&project)?;
+                Ok(format!(
+                    "harness antigravity detect: rules={} dir={} skills={} workflows={}",
+                    d.antigravityrules, d.antigravity_dir, d.agents_skills, d.agents_workflows
+                ))
+            }
+            AntigravityCmd::Install { root, force } => {
+                let project = project_root(root)?;
+                generate_antigravityrules(&project, force)?;
+                ensure_workflows_dir(&project, force)?;
+                let n = install_antigravity(&project, force)?;
+                Ok(format!(
+                    "harness antigravity install: wrote {n} commands + skills/rules"
+                ))
+            }
+            AntigravityCmd::Validate { root } => {
+                let project = project_root(root)?;
+                let n = validate_antigravity_install(&project)?;
+                Ok(format!("harness antigravity validate: ok ({n} commands)"))
             }
         },
     }

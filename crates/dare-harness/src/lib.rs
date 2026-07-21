@@ -1,9 +1,14 @@
 //! IDE harness adapters (Claude, Cursor, Codex, Antigravity).
 
+pub mod antigravity;
 pub mod claude;
 pub mod codex;
 pub mod cursor;
 
+pub use antigravity::{
+    detect_antigravity, ensure_workflows_dir, generate_antigravityrules, install_antigravity,
+    validate_antigravity_install, validate_skill_frontmatter, AntigravityDetect,
+};
 pub use claude::{
     detect_claude, generate_claude_md, install_commands, validate_install, write_settings_json,
     ClaudeDetect,
