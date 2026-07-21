@@ -1,0 +1,205 @@
+name: release-alpha
+
+on:
+  push:
+    tags:
+      - "v*-alpha*"
+      - "v*-alpha.*"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Build and package without creating a GitHub Release"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  id-token: write
+
+env:
+  CARGO_TERM_COLOR: always
+  BIN_NAME: dare
+
+jobs:
+  build:
+    name: build-${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            archive: tar.gz
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-latest
+            archive: tar.gz
+            cross: true
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            archive: tar.gz
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            archive: tar.gz
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            archive: zip
+    steps:
+      - uses: actions/checkout@v4.2.2
+
+      - name: toolchain
+        uses: dtolnay/rust-toolchain@1.85.0
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: cache
+        uses: Swatinem/rust-cache@v2.7.8
+        with:
+          key: release-${{ matrix.target }}
+
+      - name: install cross (linux aarch64)
+        if: matrix.cross == true
+        run: cargo install cross --locked
+
+      - name: build
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ matrix.cross }}" == "true" ]]; then
+            cross build -p dare-cli --release --target ${{ matrix.target }}
+          else
+            cargo build -p dare-cli --release --target ${{ matrix.target }}
+          fi
+
+      - name: package
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME:-dev}"
+          TARGET="${{ matrix.target }}"
+          ARCHIVE="${{ matrix.archive }}"
+          OUT="dist"
+          mkdir -p "$OUT"
+          BIN="target/${TARGET}/release/${BIN_NAME}"
+          if [[ "$TARGET" == *"windows"* ]]; then
+            BIN="${BIN}.exe"
+          fi
+          STAGE="dare-${VERSION}-${TARGET}"
+          mkdir -p "$STAGE"
+          cp "$BIN" "$STAGE/"
+          if [[ "$ARCHIVE" == "zip" ]]; then
+            ARTIFACT="${STAGE}.zip"
+            if command -v zip >/dev/null 2>&1; then
+              zip -r "$OUT/$ARTIFACT" "$STAGE"
+            else
+              powershell -NoProfile -Command "Compress-Archive -Path '$STAGE' -DestinationPath '$OUT/$ARTIFACT'"
+            fi
+          else
+            ARTIFACT="${STAGE}.tar.gz"
+            tar -czf "$OUT/$ARTIFACT" "$STAGE"
+          fi
+          echo "ARTIFACT=$OUT/$ARTIFACT" >> "$GITHUB_ENV"
+
+      - name: upload artifact
+        uses: actions/upload-artifact@v4.6.0
+        with:
+          name: dare-${{ matrix.target }}
+          path: dist/*
+          if-no-files-found: error
+
+  checksums-sbom:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4.2.2
+
+      - name: download packages
+        uses: actions/download-artifact@v4.1.8
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: SHA256SUMS + SBOM
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd dist
+          find . -type f \( -name '*.tar.gz' -o -name '*.zip' \) -printf '%P\n' | sort | while read -r f; do
+            sha256sum "$f"
+          done > SHA256SUMS
+          VERSION="${GITHUB_REF_NAME:-dev}"
+          cat > SBOM.spdx.json <<EOF
+          {
+            "spdxVersion": "SPDX-2.3",
+            "dataLicense": "CC0-1.0",
+            "SPDXID": "SPDXRef-DOCUMENT",
+            "name": "dare-cli-${VERSION}",
+            "documentNamespace": "https://github.com/dewtech/dare-cli/spdx/${VERSION}",
+            "creationInfo": {
+              "created": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+              "creators": ["Tool: dare-release-alpha"]
+            },
+            "packages": [
+              {
+                "name": "dare",
+                "SPDXID": "SPDXRef-Package-dare",
+                "downloadLocation": "NOASSERTION",
+                "filesAnalyzed": false,
+                "versionInfo": "${VERSION}"
+              }
+            ]
+          }
+          EOF
+          cp ../installers/install.sh . 2>/dev/null || true
+          cp ../installers/install.ps1 . 2>/dev/null || true
+
+      - name: sign checksums (optional cosign)
+        continue-on-error: true
+        env:
+          COSIGN_YES: "true"
+        run: |
+          set -euo pipefail
+          if command -v cosign >/dev/null 2>&1 || curl -fsSL https://github.com/sigstore/cosign/releases/download/v2.4.1/cosign-linux-amd64 -o /tmp/cosign; then
+            chmod +x /tmp/cosign 2>/dev/null || true
+            COSIGN_BIN=$(command -v cosign || echo /tmp/cosign)
+            if [[ -n "${COSIGN_KEY:-}" ]]; then
+              "$COSIGN_BIN" sign-blob --key env://COSIGN_KEY --output-signature dist/SHA256SUMS.sig dist/SHA256SUMS
+            else
+              # keyless (OIDC) when permissions allow
+              "$COSIGN_BIN" sign-blob --yes --output-signature dist/SHA256SUMS.sig dist/SHA256SUMS || \
+                echo "signing skipped — no key / OIDC unavailable" > dist/SHA256SUMS.sig
+            fi
+          else
+            echo "signing skipped — cosign unavailable" > dist/SHA256SUMS.sig
+          fi
+
+      - name: upload meta
+        uses: actions/upload-artifact@v4.6.0
+        with:
+          name: dare-release-meta
+          path: |
+            dist/SHA256SUMS
+            dist/SHA256SUMS.sig
+            dist/SBOM.spdx.json
+            dist/install.sh
+            dist/install.ps1
+
+  publish:
+    needs: [build, checksums-sbom]
+    if: startsWith(github.ref, 'refs/tags/') && (github.event_name != 'workflow_dispatch' || inputs.dry_run == false)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4.1.8
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: create GitHub Release
+        uses: softprops/action-gh-release@v2.2.1
+        with:
+          draft: false
+          prerelease: true
+          files: dist/**
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

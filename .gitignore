@@ -35,3 +35,6 @@ Desktop.ini
 *.log
 tmp/
 temp/
+
+dist/
+
