@@ -12,6 +12,7 @@ Registro append-only de decisões de governança dos microplanos DARE CLI.
 | DEC-006 | 2026-07-20 | Path safety: jail ProjectRoot, symlink deny-escape, .dare/backups, fs4 try_lock, camino | n/a | Tech Lead DARE CLI | active |
 | DEC-007 | 2026-07-21 | Process safety: std::process (no tokio), env denylist, kill_tree 0.2.4, exit 124/cancel -1 | n/a | Tech Lead DARE CLI | active |
 | DEC-008 | 2026-07-21 | Persisted contracts: flatten nested, yaml_serde 0.10.4 as serde_yaml, 2MiB cap, no garde | ADR-002 | Tech Lead DARE CLI | active |
+| DEC-009 | 2026-07-21 | Config: CLI>env>file>default; dry-run zero-write; schemaVersion só com flag; JSON Pointer | ADR-002 | Tech Lead DARE CLI | active |
 
 ## Notas
 
@@ -23,3 +24,4 @@ Registro append-only de decisões de governança dos microplanos DARE CLI.
 - **DEC-006:** microplano 005 — `ProjectRoot`/`SafeRelativePath`; mensagem escape canónica; symlink/junction deny-if-outside; backups `.dare/backups/<utc>-<sha8>/…`; `atomic_write`; `FileLock` via **fs4 1.1.0** (`try_lock`, não 0.12.1 — versão inexistente no crates.io); `camino 1.1.9`, `tempfile 3.20.0`, `sha2 0.10.9`; docs em [`path-safety.md`](compatibility/path-safety.md).
 - **DEC-007:** microplano 006 — `SafeCommand` argv-only; denylist `SECRET|TOKEN|KEY|PASSWORD`; truncate 4000 chars; timeout→`ProcessOutput` 124; cancel→`-1`; **`std::process`** (Classe B vs Mestre `tokio::process`); `kill_tree` **0.2.4**; mock runner; docs em [`process-safety.md`](compatibility/process-safety.md).
 - **DEC-008:** microplano 007 — flatten nested + `extra` maps; **`yaml_serde` 0.10.4** as `serde_yaml`; cap 2 MiB; JSON canónico; YAML igualdade semântica; `CONTRACTS_SCHEMA_VERSION=0.1.0-contracts`; sem garde (008); docs em [`persisted-contracts.md`](compatibility/persisted-contracts.md).
+- **DEC-009:** microplano 008 — precedência **CLI > env `DARE_*` > ficheiro > default**; allowlist env; `enabled:false` skip deep; dry-run sem writes; apply com `backup`+atomic; `schemaVersion` só com `MigrateOptions.write_schema_version`; diagnóstico JSON Pointer; docs em [`config-and-migrations.md`](compatibility/config-and-migrations.md).
