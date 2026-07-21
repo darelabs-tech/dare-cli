@@ -152,16 +152,20 @@ enum ClaudeCmd {
 
 #[derive(Debug, Subcommand)]
 enum CursorCmd {
+    /// Detect .cursor / .cursorrules presence.
     Detect {
         #[arg(long)]
         root: Option<PathBuf>,
     },
+    /// Install managed .cursor/commands from capability matrix.
     Install {
         #[arg(long)]
         root: Option<PathBuf>,
+        /// Overwrite unmanaged .cursorrules / commands (default: preserve).
         #[arg(long)]
         force: bool,
     },
+    /// Validate installed Cursor commands vs matrix.
     Validate {
         #[arg(long)]
         root: Option<PathBuf>,

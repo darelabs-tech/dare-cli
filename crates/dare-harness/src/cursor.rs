@@ -119,11 +119,61 @@ mod tests {
     use tempfile::tempdir;
 
     #[test]
+    fn detect_empty_and_generate_managed() {
+        let dir = tempdir().unwrap();
+        let root = ProjectRoot::new(dir.path()).unwrap();
+        let d = detect_cursor(&root).unwrap();
+        assert!(!d.cursor_dir);
+        assert!(!d.cursorrules);
+        generate_cursorrules(&root, false).unwrap();
+        let d2 = detect_cursor(&root).unwrap();
+        assert!(d2.cursorrules);
+        let content = read_to_string(&root, &SafeRelativePath::new(".cursorrules").unwrap()).unwrap();
+        assert!(content.starts_with(MANAGED_PREFIX));
+        assert!(content.contains("DARE Cursor rules"));
+    }
+
+    #[test]
+    fn preserve_unmanaged_cursorrules() {
+        let dir = tempdir().unwrap();
+        let root = ProjectRoot::new(dir.path()).unwrap();
+        let rel = SafeRelativePath::new(".cursorrules").unwrap();
+        atomic_write(&root, &rel, b"# custom cursorrules\nkeep\n").unwrap();
+        generate_cursorrules(&root, false).unwrap();
+        let content = read_to_string(&root, &rel).unwrap();
+        assert!(content.contains("custom cursorrules"));
+        assert!(!content.starts_with(MANAGED_PREFIX));
+    }
+
+    #[test]
     fn install_validate_force() {
         let dir = tempdir().unwrap();
         let root = ProjectRoot::new(dir.path()).unwrap();
         generate_cursorrules(&root, true).unwrap();
         assert_eq!(install_cursor_commands(&root, true).unwrap(), 49);
         assert_eq!(validate_cursor_install(&root).unwrap(), 49);
+        let n2 = install_cursor_commands(&root, false).unwrap();
+        assert_eq!(n2, 49); // managed rewritten
+    }
+
+    #[test]
+    fn preserve_unmanaged_command() {
+        let dir = tempdir().unwrap();
+        let root = ProjectRoot::new(dir.path()).unwrap();
+        let rel = SafeRelativePath::new(".cursor/commands/dare-design.md").unwrap();
+        atomic_write(&root, &rel, b"# custom cursor command\n").unwrap();
+        let n = install_cursor_commands(&root, false).unwrap();
+        assert_eq!(n, 48);
+        let content = read_to_string(&root, &rel).unwrap();
+        assert!(content.contains("custom cursor command"));
+    }
+
+    #[test]
+    fn validate_reports_missing_sample() {
+        let dir = tempdir().unwrap();
+        let root = ProjectRoot::new(dir.path()).unwrap();
+        let msg = validate_cursor_install(&root).unwrap_err().to_string();
+        assert!(msg.contains("cursor commands missing"));
+        assert!(msg.contains("missing (49)") || msg.contains("(49):"));
     }
 }

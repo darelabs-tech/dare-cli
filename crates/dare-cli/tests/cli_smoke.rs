@@ -129,3 +129,29 @@ fn harness_claude_install_validate_detect() {
         .stdout(predicate::str::contains("claude_dir=true"));
 }
 
+#[test]
+fn harness_cursor_install_validate_detect() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let root = dir.path().to_str().expect("utf8 path");
+
+    Command::new(cargo_bin("dare"))
+        .args(["harness", "cursor", "install", "--force", "--root", root])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("harness cursor install: wrote 49"));
+
+    Command::new(cargo_bin("dare"))
+        .args(["harness", "cursor", "validate", "--root", root])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("harness cursor validate: ok"))
+        .stdout(predicate::str::contains("49"));
+
+    Command::new(cargo_bin("dare"))
+        .args(["harness", "cursor", "detect", "--root", root])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("cursor_dir=true"))
+        .stdout(predicate::str::contains("cursorrules=true"));
+}
+
