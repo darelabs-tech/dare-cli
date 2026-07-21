@@ -22,7 +22,7 @@ mod tests {
     fn ping_empty_err() {
         assert!(matches!(
             assets_layer_ping(""),
-            Err(CoreError::InvalidArgument(_))
+            Err(CoreError::InvalidInput(_))
         ));
     }
 }

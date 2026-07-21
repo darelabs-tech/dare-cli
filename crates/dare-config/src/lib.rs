@@ -24,7 +24,7 @@ mod tests {
     fn ping_empty_err() {
         assert!(matches!(
             config_layer_ping(""),
-            Err(CoreError::InvalidArgument(_))
+            Err(CoreError::InvalidInput(_))
         ));
     }
 }

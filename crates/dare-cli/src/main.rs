@@ -1,7 +1,12 @@
-//! DARE Framework CLI (native Rust rewrite) — help/version surface only.
+//! DARE Framework CLI (native Rust rewrite) — output foundation (microplano 004).
 
-use anyhow::Result;
-use clap::{CommandFactory, Parser};
+mod output;
+
+use std::process::ExitCode;
+
+use clap::Parser;
+use dare_core::{init_tracing, CoreError, ExecutionContext};
+use output::OutputRenderer;
 
 #[derive(Debug, Parser)]
 #[command(
@@ -11,13 +16,17 @@ use clap::{CommandFactory, Parser};
     disable_help_subcommand = true,
     arg_required_else_help = false
 )]
-struct Cli {}
+struct Cli {
+    /// Emit JSON envelopes on stdout (ADR-002).
+    #[arg(long, global = true)]
+    json: bool,
 
-fn main() -> Result<()> {
-    if std::env::var_os("RUST_LOG").is_some() {
-        let _ = tracing_subscriber::fmt::try_init();
-    }
+    /// Disable ANSI colors (also honors NO_COLOR).
+    #[arg(long, global = true)]
+    no_color: bool,
+}
 
+fn main() -> ExitCode {
     // Keep path deps linked (workspace architecture smoke).
     let _ = (
         dare_core::validate_nonempty_name("cli"),
@@ -26,12 +35,43 @@ fn main() -> Result<()> {
         dare_assets::assets_layer_ping("cli"),
     );
 
-    if std::env::args_os().len() <= 1 {
-        Cli::command().print_help()?;
+    let args: Vec<std::ffi::OsString> = std::env::args_os().collect();
+
+    // Pre-scan flags for context even when clap parse fails later.
+    let json = args.iter().any(|a| a == "--json");
+    let no_color = args.iter().any(|a| a == "--no-color");
+    let ctx = ExecutionContext::from_cli(json, no_color);
+    let _ = init_tracing(&ctx);
+    let renderer = OutputRenderer::new(&ctx);
+
+    if args.len() <= 1 {
+        use clap::CommandFactory;
+        let mut cmd = Cli::command();
+        if let Err(e) = cmd.print_help() {
+            let code = renderer.write_error(&CoreError::io(e.to_string()));
+            return exit(code);
+        }
         println!();
-        return Ok(());
+        return ExitCode::SUCCESS;
     }
 
-    let _cli = Cli::parse();
-    Ok(())
+    match Cli::try_parse() {
+        Ok(_cli) => ExitCode::SUCCESS,
+        Err(e) => {
+            // Help/version are clap "errors" that should still succeed.
+            if e.kind() == clap::error::ErrorKind::DisplayHelp
+                || e.kind() == clap::error::ErrorKind::DisplayVersion
+            {
+                let _ = e.print();
+                return ExitCode::SUCCESS;
+            }
+            let msg = e.to_string();
+            let code = renderer.write_error(&CoreError::usage(msg));
+            exit(code)
+        }
+    }
+}
+
+fn exit(code: i32) -> ExitCode {
+    ExitCode::from(code as u8)
 }
