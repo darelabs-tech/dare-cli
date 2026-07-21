@@ -155,3 +155,28 @@ fn harness_cursor_install_validate_detect() {
         .stdout(predicate::str::contains("cursorrules=true"));
 }
 
+#[test]
+fn harness_codex_install_validate_detect() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let root = dir.path().to_str().expect("utf8 path");
+
+    Command::new(cargo_bin("dare"))
+        .args(["harness", "codex", "install", "--force", "--root", root])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("harness codex install: wrote 49"));
+
+    Command::new(cargo_bin("dare"))
+        .args(["harness", "codex", "validate", "--root", root])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("harness codex validate: ok"))
+        .stdout(predicate::str::contains("49"));
+
+    Command::new(cargo_bin("dare"))
+        .args(["harness", "codex", "detect", "--root", root])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("agents_md=true"));
+}
+

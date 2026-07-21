@@ -182,6 +182,36 @@ mod tests {
     use tempfile::tempdir;
 
     #[test]
+    fn detect_empty_and_generate_agents_md() {
+        let dir = tempdir().unwrap();
+        let root = ProjectRoot::new(dir.path()).unwrap();
+        let d = detect_codex(&root).unwrap();
+        assert!(!d.agents_md);
+        assert!(!d.codex_dir);
+        assert!(!d.agents_skills);
+        assert!(update_policies_include_codex());
+        generate_agents_md(&root, false).unwrap();
+        let d2 = detect_codex(&root).unwrap();
+        assert!(d2.agents_md);
+        let agents = read_to_string(&root, &SafeRelativePath::new(AGENTS_MD).unwrap()).unwrap();
+        assert!(agents.starts_with(MANAGED_PREFIX));
+        assert!(agents.contains("$dare-design"));
+        assert!(agents.contains("$skill-name"));
+    }
+
+    #[test]
+    fn preserve_unmanaged_agents_md() {
+        let dir = tempdir().unwrap();
+        let root = ProjectRoot::new(dir.path()).unwrap();
+        let rel = SafeRelativePath::new(AGENTS_MD).unwrap();
+        atomic_write(&root, &rel, b"# custom agents\nkeep\n").unwrap();
+        generate_agents_md(&root, false).unwrap();
+        let content = read_to_string(&root, &rel).unwrap();
+        assert!(content.contains("custom agents"));
+        assert!(!content.starts_with(MANAGED_PREFIX));
+    }
+
+    #[test]
     fn install_validate_agents_and_codex_in_policies() {
         assert!(update_policies_include_codex());
         let dir = tempdir().unwrap();
@@ -205,5 +235,14 @@ mod tests {
         let _ = install_codex_skills(&root, false).unwrap();
         let kept = read_to_string(&root, &shared).unwrap();
         assert_eq!(kept, "user custom skill\n");
+    }
+
+    #[test]
+    fn validate_requires_agents_md() {
+        let dir = tempdir().unwrap();
+        let root = ProjectRoot::new(dir.path()).unwrap();
+        let _ = install_codex_skills(&root, true).unwrap();
+        let msg = validate_codex_install(&root).unwrap_err().to_string();
+        assert!(msg.contains("AGENTS.md missing"));
     }
 }

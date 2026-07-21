@@ -174,16 +174,20 @@ enum CursorCmd {
 
 #[derive(Debug, Subcommand)]
 enum CodexCmd {
+    /// Detect AGENTS.md / .codex / .agents/skills presence.
     Detect {
         #[arg(long)]
         root: Option<PathBuf>,
     },
+    /// Install managed Codex skills + AGENTS.md from capability matrix.
     Install {
         #[arg(long)]
         root: Option<PathBuf>,
+        /// Overwrite unmanaged AGENTS.md / skills (default: preserve).
         #[arg(long)]
         force: bool,
     },
+    /// Validate installed Codex skills vs matrix.
     Validate {
         #[arg(long)]
         root: Option<PathBuf>,
