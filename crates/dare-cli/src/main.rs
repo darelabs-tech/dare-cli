@@ -14,7 +14,8 @@ use dare_config::{
     default_config, load_effective, CliOverrides, EnvOverrides, DEFAULT_CONFIG_REL,
 };
 use dare_harness::{
-    detect_claude, generate_claude_md, install_commands, validate_install, write_settings_json,
+    detect_claude, detect_cursor, generate_claude_md, generate_cursorrules, install_commands,
+    install_cursor_commands, validate_cursor_install, validate_install, write_settings_json,
 };
 use dare_core::{init_tracing, CoreError, CoreResult, ExecutionContext, ProjectRoot, SafeRelativePath};
 use output::OutputRenderer;
@@ -92,6 +93,11 @@ enum HarnessIde {
         #[command(subcommand)]
         action: ClaudeCmd,
     },
+    /// Cursor IDE adapter.
+    Cursor {
+        #[command(subcommand)]
+        action: CursorCmd,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -109,6 +115,24 @@ enum ClaudeCmd {
         force: bool,
     },
     /// Validate installed Claude commands vs matrix.
+    Validate {
+        #[arg(long)]
+        root: Option<PathBuf>,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+enum CursorCmd {
+    Detect {
+        #[arg(long)]
+        root: Option<PathBuf>,
+    },
+    Install {
+        #[arg(long)]
+        root: Option<PathBuf>,
+        #[arg(long)]
+        force: bool,
+    },
     Validate {
         #[arg(long)]
         root: Option<PathBuf>,
@@ -225,6 +249,29 @@ fn run(cli: Cli) -> Result<String, CoreError> {
                 let project = project_root(root)?;
                 let n = validate_install(&project)?;
                 Ok(format!("harness claude validate: ok ({n} commands)"))
+            }
+        },
+        Some(Commands::Harness {
+            ide: HarnessIde::Cursor { action },
+        }) => match action {
+            CursorCmd::Detect { root } => {
+                let project = project_root(root)?;
+                let d = detect_cursor(&project)?;
+                Ok(format!(
+                    "harness cursor detect: cursor_dir={} cursorrules={}",
+                    d.cursor_dir, d.cursorrules
+                ))
+            }
+            CursorCmd::Install { root, force } => {
+                let project = project_root(root)?;
+                let _ = generate_cursorrules(&project, force);
+                let n = install_cursor_commands(&project, force)?;
+                Ok(format!("harness cursor install: wrote {n} commands"))
+            }
+            CursorCmd::Validate { root } => {
+                let project = project_root(root)?;
+                let n = validate_cursor_install(&project)?;
+                Ok(format!("harness cursor validate: ok ({n} commands)"))
             }
         },
     }

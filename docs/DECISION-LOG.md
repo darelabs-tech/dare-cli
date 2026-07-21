@@ -16,6 +16,7 @@ Registro append-only de decisões de governança dos microplanos DARE CLI.
 | DEC-010 | 2026-07-21 | Assets: rust-embed + assets/manifest.yml SHA-256; templates canónicos; .claude external | n/a | Tech Lead DARE CLI | active |
 | DEC-011 | 2026-07-21 | Capabilities ADR-007: matrix 49 Claude; tipos em dare-assets; harness crate defer 011+ | ADR-007 | Tech Lead DARE CLI | active |
 | DEC-012 | 2026-07-21 | Adapter Claude: dare-harness; install/validate/detect; preserve unmanaged | ADR-007 | Tech Lead DARE CLI | active |
+| DEC-013 | 2026-07-21 | Adapter Cursor: commands from matrix; .cursorrules managed; preserve | ADR-007 | Tech Lead DARE CLI | active |
 
 ## Notas
 
