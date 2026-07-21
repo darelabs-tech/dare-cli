@@ -108,6 +108,17 @@ pub fn render_claude_command(cap: &Capability) -> String {
     )
 }
 
+/// Agent Skills body (Codex / Antigravity shared) with YAML frontmatter.
+pub fn render_agent_skill(cap: &Capability) -> String {
+    format!(
+        "---\nname: {id}\ndescription: {desc}\n---\n\n# {title}\n\n{instructions}\n",
+        id = cap.id,
+        desc = cap.description.replace('\n', " ").trim(),
+        title = cap.title,
+        instructions = cap.instructions.trim()
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

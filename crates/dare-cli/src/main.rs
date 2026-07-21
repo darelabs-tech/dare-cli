@@ -14,8 +14,9 @@ use dare_config::{
     default_config, load_effective, CliOverrides, EnvOverrides, DEFAULT_CONFIG_REL,
 };
 use dare_harness::{
-    detect_claude, detect_cursor, generate_claude_md, generate_cursorrules, install_commands,
-    install_cursor_commands, validate_cursor_install, validate_install, write_settings_json,
+    detect_claude, detect_codex, detect_cursor, generate_agents_md, generate_claude_md,
+    generate_cursorrules, install_codex_skills, install_commands, install_cursor_commands,
+    validate_codex_install, validate_cursor_install, validate_install, write_settings_json,
 };
 use dare_core::{init_tracing, CoreError, CoreResult, ExecutionContext, ProjectRoot, SafeRelativePath};
 use output::OutputRenderer;
@@ -98,6 +99,11 @@ enum HarnessIde {
         #[command(subcommand)]
         action: CursorCmd,
     },
+    /// Codex adapter (AGENTS.md + skills).
+    Codex {
+        #[command(subcommand)]
+        action: CodexCmd,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -123,6 +129,24 @@ enum ClaudeCmd {
 
 #[derive(Debug, Subcommand)]
 enum CursorCmd {
+    Detect {
+        #[arg(long)]
+        root: Option<PathBuf>,
+    },
+    Install {
+        #[arg(long)]
+        root: Option<PathBuf>,
+        #[arg(long)]
+        force: bool,
+    },
+    Validate {
+        #[arg(long)]
+        root: Option<PathBuf>,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+enum CodexCmd {
     Detect {
         #[arg(long)]
         root: Option<PathBuf>,
@@ -272,6 +296,29 @@ fn run(cli: Cli) -> Result<String, CoreError> {
                 let project = project_root(root)?;
                 let n = validate_cursor_install(&project)?;
                 Ok(format!("harness cursor validate: ok ({n} commands)"))
+            }
+        },
+        Some(Commands::Harness {
+            ide: HarnessIde::Codex { action },
+        }) => match action {
+            CodexCmd::Detect { root } => {
+                let project = project_root(root)?;
+                let d = detect_codex(&project)?;
+                Ok(format!(
+                    "harness codex detect: agents_md={} codex_dir={} agents_skills={}",
+                    d.agents_md, d.codex_dir, d.agents_skills
+                ))
+            }
+            CodexCmd::Install { root, force } => {
+                let project = project_root(root)?;
+                generate_agents_md(&project, force)?;
+                let n = install_codex_skills(&project, force)?;
+                Ok(format!("harness codex install: wrote {n} skills + AGENTS.md"))
+            }
+            CodexCmd::Validate { root } => {
+                let project = project_root(root)?;
+                let n = validate_codex_install(&project)?;
+                Ok(format!("harness codex validate: ok ({n} skills)"))
             }
         },
     }
