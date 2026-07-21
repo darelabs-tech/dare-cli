@@ -8,3 +8,10 @@ publish = false
 
 [dependencies]
 dare-core = { workspace = true }
+serde = { workspace = true }
+serde_yaml = { workspace = true }
+sha2 = { workspace = true }
+rust-embed = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

@@ -32,6 +32,7 @@ fs4 = "=1.1.0"
 sha2 = "=0.10.9"
 kill_tree = "=0.2.4"
 serde_yaml = { package = "yaml_serde", version = "=0.10.4" }
+rust-embed = "=8.7.2"
 dare-core = { path = "crates/dare-core" }
 dare-contracts = { path = "crates/dare-contracts" }
 dare-config = { path = "crates/dare-config" }
