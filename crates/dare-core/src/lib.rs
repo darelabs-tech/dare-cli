@@ -1,12 +1,17 @@
-//! Core types, errors, redaction, context, and tracing helpers for the DARE CLI workspace.
+//! Core types, errors, redaction, context, path safety, and tracing helpers.
 
 mod context;
 mod error;
+pub mod fs;
+mod path;
 mod redact;
 mod telemetry;
 
 pub use context::{ColorMode, ExecutionContext};
 pub use error::{exit_code, CoreError, CoreResult, ErrorKind};
+pub use path::{
+    to_posix, ProjectRoot, SafeAbsolutePath, SafeRelativePath, PATH_ESCAPE_MSG,
+};
 pub use redact::redact;
 pub use telemetry::{init_test_subscriber, init_tracing};
 
@@ -76,7 +81,6 @@ mod tests {
         let v = json!({"ok": true, "a": 1, "nested": {"z": 1, "m": 2}});
         let s = to_canonical_json_string(&v).expect("serialize");
         assert!(!s.contains('\u{1b}'), "{s}");
-        // "a" before "nested" before "ok"; nested "m" before "z"
         assert_eq!(s, r#"{"a":1,"nested":{"m":2,"z":1},"ok":true}"#);
     }
 }
