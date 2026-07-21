@@ -376,6 +376,7 @@ name = "dare-update"
 version = "0.1.0-alpha.0"
 dependencies = [
  "dare-assets",
+ "dare-config",
  "dare-contracts",
  "dare-core",
  "dare-harness",

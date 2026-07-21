@@ -90,11 +90,17 @@ enum Commands {
         #[arg(long)]
         strict: bool,
     },
-    /// Plan project asset updates (dry-run until microplano 022).
+    /// Plan (`--dry-run`) or apply project asset updates.
     Update {
-        /// Plan only; no writes. Required until microplano 022 implements apply.
+        /// Plan only; no writes (`--force` ignored).
         #[arg(long)]
         dry_run: bool,
+        /// Keep customized files without prompting (non-interactive keep).
+        #[arg(short = 'y', long = "yes")]
+        yes: bool,
+        /// Overwrite customized files (session backup first).
+        #[arg(long)]
+        force: bool,
         /// Limit plan to harness: claude-code|cursor|codex|antigravity|hybrid|claude-hybrid
         #[arg(long)]
         target: Option<String>,
@@ -344,9 +350,11 @@ fn run(cli: Cli) -> Result<(String, serde_json::Value), CoreError> {
         }) => run_discover(dir, check, force, dry_run, strict_conflicts),
         Some(Commands::Update {
             dry_run,
+            yes,
+            force,
             target,
             dir,
-        }) => run_update(dry_run, target, dir),
+        }) => run_update(dry_run, yes, force, target, dir),
         Some(Commands::Assets {
             action: AssetsCmd::Verify,
         }) => {

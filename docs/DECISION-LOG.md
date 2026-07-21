@@ -26,6 +26,7 @@ Registro append-only de decisões de governança dos microplanos DARE CLI.
 | DEC-020 | 2026-07-21 | dare discover install: InstallPlan/rollback; conflicts warn+continue; --strict-conflicts; schema InstallReport 1 | — | Tech Lead DARE CLI | active |
 | DEC-021 | 2026-07-21 | dare validate: crate dare-dag; ValidationReport schema 1; exit 1+report; parse Config=4; strict | — | Tech Lead DARE CLI | active |
 | DEC-022 | 2026-07-21 | dare update: crate dare-update; UpdatePlan schema 1; UpdateManifestV2 embed; dry-run zero writes; stub apply→022; --target harness | — | Tech Lead DARE CLI | active |
+| DEC-023 | 2026-07-21 | dare update apply: matrizes keep/replace/ask; -y≠--force; session backup `.dare/backup-<ver>/` (≠005 `.dare/backups/`); migrate no journal; UpdateApplyReport schema 1; rollback | — | Tech Lead DARE CLI | active |
 
 ## Notas
 
@@ -48,3 +49,4 @@ Registro append-only de decisões de governança dos microplanos DARE CLI.
 - **DEC-020:** microplano 019 — `dare discover` install: `InstallPlan`/`InstallReport` schema 1; conflicts warn+install; `--strict-conflicts`/`--force`/`--dry-run`; rollback journal; docs [`cli-discover-install.md`](compatibility/cli-discover-install.md).
 - **DEC-021:** microplano 020 — `dare validate`: crate `dare-dag`; `ValidationReport` schema 1; falha de regras → exit 1 + report (envelope `ok`=`data.ok`); YAML parse → Config exit 4; `--strict`; zero writes; docs [`cli-validate.md`](compatibility/cli-validate.md).
 - **DEC-022:** microplano 021 — `dare update`: crate `dare-update`; `UpdatePlan` schema 1 + `UpdateManifestV2` embed (schema 2); classificação identical/missing/apply/customized; `--target` = harness id (não semver); `--dry-run` zero writes; apply stub Internal exit 1 até microplano 022; Codex + releases sem buraco (Classe C vs TS); docs [`cli-update-plan.md`](compatibility/cli-update-plan.md).
+- **DEC-023:** microplano 022 — `dare update` apply: políticas §5.1 (`-y` keep customized; `--force` replace); session backup `.dare/backup-<cliVersion>/` (Classe B vs `.dare/backups/` 005); migrate `dare.config.json` no session journal; rollback em falha; `UpdateApplyReport` schema 1; exit codes 004; docs [`cli-update-apply.md`](compatibility/cli-update-apply.md).
