@@ -23,8 +23,10 @@ fn block_from_env_key(key: &str) -> Option<&'static str> {
     }
 }
 
-/// Pure infallible parse from an iterator of (key, value). Unknown keys ignored.
-/// Invalid bool values are skipped here; use [`env_overrides_from_vars_strict`].
+/// Lenient parse of allowlisted `DARE_*` vars.
+///
+/// Unknown keys are ignored. Invalid `*_ENABLED` bools are **skipped** (no error).
+/// Prefer [`env_overrides_from_vars_strict`] when invalid values must fail loudly.
 pub fn env_overrides_from_vars<K, V, I>(vars: I) -> EnvOverrides
 where
     K: AsRef<str>,
@@ -50,7 +52,9 @@ where
     out
 }
 
-/// Like [`env_overrides_from_vars`] but invalid `*_ENABLED` values error with JSON pointer.
+/// Strict parse: invalid `*_ENABLED` values return `CoreError::Config` with pointer `/env/{KEY}`.
+///
+/// Error messages intentionally omit the raw env value (RS-02 redact). Unknown keys ignored.
 pub fn env_overrides_from_vars_strict<K, V, I>(vars: I) -> CoreResult<EnvOverrides>
 where
     K: AsRef<str>,
@@ -83,6 +87,7 @@ where
     Ok(out)
 }
 
+/// Read process env via [`env_overrides_from_vars_strict`] (`std::env::vars()`).
 pub fn env_overrides_from_os() -> CoreResult<EnvOverrides> {
     env_overrides_from_vars_strict(std::env::vars())
 }
@@ -108,5 +113,9 @@ mod tests {
         let err = env_overrides_from_vars_strict([("DARE_GUARD_ENABLED", "maybe")]).unwrap_err();
         let msg = err.to_string();
         assert!(msg.contains("/env/DARE_GUARD_ENABLED"), "{msg}");
+        assert!(
+            !msg.contains("maybe"),
+            "error must not echo raw env value: {msg}"
+        );
     }
 }

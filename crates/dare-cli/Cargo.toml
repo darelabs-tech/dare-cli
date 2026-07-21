@@ -18,6 +18,7 @@ dare-assets = { workspace = true }
 dare-harness = { workspace = true }
 clap = { workspace = true }
 tracing-subscriber = { workspace = true }
+serde = { workspace = true }
 serde_json = { workspace = true }
 anstream = { workspace = true }
 
@@ -25,3 +26,4 @@ anstream = { workspace = true }
 assert_cmd = { workspace = true }
 predicates = { workspace = true }
 serde_json = { workspace = true }
+tempfile = { workspace = true }

@@ -287,7 +287,9 @@ dependencies = [
  "dare-core",
  "dare-harness",
  "predicates",
+ "serde",
  "serde_json",
+ "tempfile",
  "tracing-subscriber",
 ]
 

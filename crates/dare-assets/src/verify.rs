@@ -3,7 +3,7 @@
 use dare_core::{CoreError, CoreResult};
 
 use crate::embed::EmbeddedAssets;
-use crate::manifest::{load_manifest_from_str, sha256_hex, AssetKind};
+use crate::manifest::{assert_safe_asset_path, load_manifest_from_str, sha256_hex, AssetKind};
 
 pub fn verify_embedded_assets() -> CoreResult<()> {
     let manifest_file = EmbeddedAssets::get("manifest.yml").ok_or_else(|| {
@@ -14,6 +14,7 @@ pub fn verify_embedded_assets() -> CoreResult<()> {
     let manifest = load_manifest_from_str(yaml)?;
 
     for entry in &manifest.assets {
+        assert_safe_asset_path(&entry.path)?;
         if matches!(entry.kind, AssetKind::External) {
             continue;
         }

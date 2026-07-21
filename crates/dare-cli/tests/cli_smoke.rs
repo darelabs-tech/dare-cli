@@ -83,3 +83,22 @@ fn welcome_env_no_banner() {
         .stdout(predicate::str::contains("____").not())
         .stdout(predicate::str::contains("Quick start"));
 }
+
+#[test]
+fn assets_verify_ok() {
+    Command::new(cargo_bin("dare"))
+        .args(["assets", "verify"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("assets verify: ok"));
+}
+
+#[test]
+fn capabilities_validate_ok() {
+    Command::new(cargo_bin("dare"))
+        .args(["capabilities", "validate"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("capabilities validate: ok"))
+        .stdout(predicate::str::contains("49"));
+}

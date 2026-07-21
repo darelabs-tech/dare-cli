@@ -1,30 +1,30 @@
 version: 1
 assets:
-  - id: template-design
-    path: templates/DESIGN-template.md
-    sha256: d285d9f80983575975c8199a1faea3319264ad4f147365cd0323c920f7415734
-    kind: canonical
-  - id: template-blueprint
-    path: templates/BLUEPRINT-template.md
-    sha256: aaea3af4dbf194f61ed67a9a8736af8c510d8fcea745793921bc0b32066ea203
-    kind: canonical
-  - id: template-tasks
-    path: templates/TASKS-template.md
-    sha256: cfd50a03b4fb4fd5f43f18a47239e75916315e8cf74fee9bd202b2835d181368
-    kind: canonical
-  - id: template-task-spec
-    path: templates/TASK-SPEC-template.md
-    sha256: 4861d7217d0cdac303221d236febfff42dfa6773215acdea5f26ab17dc85adfe
-    kind: canonical
-  - id: template-telemetry
-    path: templates/TELEMETRY-template.md
-    sha256: 08029642cc30a56aa80264b5298b06bda944c0e1e692ac85ec285d5d1deb5f06
-    kind: canonical
-  - id: template-hooks-adapter
-    path: templates/HOOKS-ADAPTER.md
-    sha256: c9d81bad1aebdc57b909d262e0f78dcb7dc619b0b168a3793f550582806ce3bb
-    kind: canonical
-  - id: capability-matrix
-    path: capability-matrix.yml
-    sha256: 664368843ff5647f30ad686b8bc6a6bcdeb361673ae59d53fbb52a0e00fd811b
-    kind: canonical
+- id: template-design
+  path: templates/DESIGN-template.md
+  sha256: d285d9f80983575975c8199a1faea3319264ad4f147365cd0323c920f7415734
+  kind: canonical
+- id: template-blueprint
+  path: templates/BLUEPRINT-template.md
+  sha256: aaea3af4dbf194f61ed67a9a8736af8c510d8fcea745793921bc0b32066ea203
+  kind: canonical
+- id: template-tasks
+  path: templates/TASKS-template.md
+  sha256: cfd50a03b4fb4fd5f43f18a47239e75916315e8cf74fee9bd202b2835d181368
+  kind: canonical
+- id: template-task-spec
+  path: templates/TASK-SPEC-template.md
+  sha256: 4861d7217d0cdac303221d236febfff42dfa6773215acdea5f26ab17dc85adfe
+  kind: canonical
+- id: template-telemetry
+  path: templates/TELEMETRY-template.md
+  sha256: 08029642cc30a56aa80264b5298b06bda944c0e1e692ac85ec285d5d1deb5f06
+  kind: canonical
+- id: template-hooks-adapter
+  path: templates/HOOKS-ADAPTER.md
+  sha256: c9d81bad1aebdc57b909d262e0f78dcb7dc619b0b168a3793f550582806ce3bb
+  kind: canonical
+- id: capability-matrix
+  path: capability-matrix.yml
+  sha256: 6ef1e1f582ef837bc09400dee24fe4e26e1446aa2121ee10116aa3e493d41cfc
+  kind: canonical

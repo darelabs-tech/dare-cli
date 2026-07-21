@@ -7,6 +7,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
+use commands::info::{collect_info, format_human, report_to_json};
 use commands::welcome::{render_welcome, WelcomeOptions};
 use dare_assets::{
     load_capability_matrix_from_str, validate_capability_matrix, verify_embedded_assets,
@@ -52,6 +53,12 @@ enum Commands {
         /// Skip ASCII banner even on TTY.
         #[arg(long)]
         no_banner: bool,
+    },
+    /// Read-only installation / project diagnostics.
+    Info {
+        /// Project root hint (default: cwd, walk-up).
+        #[arg(long)]
+        root: Option<PathBuf>,
     },
     /// Asset inventory / embed checks (microplano 009).
     Assets {
@@ -221,8 +228,8 @@ fn main() -> ExitCode {
 
     match Cli::try_parse() {
         Ok(cli) => match run(cli) {
-            Ok(msg) => {
-                let _ = renderer.write_success(&msg, serde_json::json!({ "message": msg }));
+            Ok((msg, data)) => {
+                let _ = renderer.write_success(&msg, data);
                 ExitCode::SUCCESS
             }
             Err(e) => exit(renderer.write_error(&e)),
@@ -239,22 +246,35 @@ fn main() -> ExitCode {
     }
 }
 
-fn run(cli: Cli) -> Result<String, CoreError> {
+fn run(cli: Cli) -> Result<(String, serde_json::Value), CoreError> {
     match cli.command {
-        None => Ok(
-            "DARE CLI ready. Try: dare welcome | dare assets verify | dare config load | dare harness claude validate"
-                .into(),
-        ),
-        Some(Commands::Welcome { no_banner }) => Ok(render_welcome(&WelcomeOptions {
-            no_banner,
-            no_color: cli.no_color,
-            stdout_is_tty: None,
-        })),
+        None => {
+            let msg =
+                "DARE CLI ready. Try: dare welcome | dare info | dare assets verify".to_string();
+            ok_msg(msg)
+        }
+        Some(Commands::Welcome { no_banner }) => {
+            let msg = render_welcome(&WelcomeOptions {
+                no_banner,
+                no_color: cli.no_color,
+                stdout_is_tty: None,
+            });
+            ok_msg(msg)
+        }
+        Some(Commands::Info { root }) => {
+            let cwd = root.unwrap_or_else(|| {
+                std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
+            });
+            let report = collect_info(&cwd)?;
+            let human = format_human(&report);
+            let data = report_to_json(&report);
+            Ok((human, data))
+        }
         Some(Commands::Assets {
             action: AssetsCmd::Verify,
         }) => {
             verify_embedded_assets()?;
-            Ok("assets verify: ok".into())
+            ok_msg("assets verify: ok".to_string())
         }
         Some(Commands::Config {
             action: ConfigCmd::Load { root },
@@ -270,7 +290,7 @@ fn run(cli: Cli) -> Result<String, CoreError> {
             let ide = cfg.ide.as_deref().unwrap_or("(none)");
             let extras = cfg.extra.len();
             let _ = default_config();
-            Ok(format!(
+            ok_msg(format!(
                 "config load: ok (ide={ide}, extra_keys={extras}, path={DEFAULT_CONFIG_REL})"
             ))
         }
@@ -284,7 +304,7 @@ fn run(cli: Cli) -> Result<String, CoreError> {
                 .map_err(|e| CoreError::config(format!("invalid capability-matrix encoding: {e}")))?;
             let matrix = load_capability_matrix_from_str(yaml)?;
             validate_capability_matrix(&matrix)?;
-            Ok(format!(
+            ok_msg(format!(
                 "capabilities validate: ok ({} entries)",
                 matrix.capabilities.len()
             ))
@@ -295,7 +315,7 @@ fn run(cli: Cli) -> Result<String, CoreError> {
             ClaudeCmd::Detect { root } => {
                 let project = project_root(root)?;
                 let d = detect_claude(&project)?;
-                Ok(format!(
+                ok_msg(format!(
                     "harness claude detect: claude_md={} claude_dir={}",
                     d.claude_md, d.claude_dir
                 ))
@@ -305,12 +325,12 @@ fn run(cli: Cli) -> Result<String, CoreError> {
                 let _ = generate_claude_md(&project, force);
                 let n = install_commands(&project, force)?;
                 let _ = write_settings_json(&project, force);
-                Ok(format!("harness claude install: wrote {n} commands"))
+                ok_msg(format!("harness claude install: wrote {n} commands"))
             }
             ClaudeCmd::Validate { root } => {
                 let project = project_root(root)?;
                 let n = validate_install(&project)?;
-                Ok(format!("harness claude validate: ok ({n} commands)"))
+                ok_msg(format!("harness claude validate: ok ({n} commands)"))
             }
         },
         Some(Commands::Harness {
@@ -319,7 +339,7 @@ fn run(cli: Cli) -> Result<String, CoreError> {
             CursorCmd::Detect { root } => {
                 let project = project_root(root)?;
                 let d = detect_cursor(&project)?;
-                Ok(format!(
+                ok_msg(format!(
                     "harness cursor detect: cursor_dir={} cursorrules={}",
                     d.cursor_dir, d.cursorrules
                 ))
@@ -328,12 +348,12 @@ fn run(cli: Cli) -> Result<String, CoreError> {
                 let project = project_root(root)?;
                 let _ = generate_cursorrules(&project, force);
                 let n = install_cursor_commands(&project, force)?;
-                Ok(format!("harness cursor install: wrote {n} commands"))
+                ok_msg(format!("harness cursor install: wrote {n} commands"))
             }
             CursorCmd::Validate { root } => {
                 let project = project_root(root)?;
                 let n = validate_cursor_install(&project)?;
-                Ok(format!("harness cursor validate: ok ({n} commands)"))
+                ok_msg(format!("harness cursor validate: ok ({n} commands)"))
             }
         },
         Some(Commands::Harness {
@@ -342,7 +362,7 @@ fn run(cli: Cli) -> Result<String, CoreError> {
             CodexCmd::Detect { root } => {
                 let project = project_root(root)?;
                 let d = detect_codex(&project)?;
-                Ok(format!(
+                ok_msg(format!(
                     "harness codex detect: agents_md={} codex_dir={} agents_skills={}",
                     d.agents_md, d.codex_dir, d.agents_skills
                 ))
@@ -351,12 +371,12 @@ fn run(cli: Cli) -> Result<String, CoreError> {
                 let project = project_root(root)?;
                 generate_agents_md(&project, force)?;
                 let n = install_codex_skills(&project, force)?;
-                Ok(format!("harness codex install: wrote {n} skills + AGENTS.md"))
+                ok_msg(format!("harness codex install: wrote {n} skills + AGENTS.md"))
             }
             CodexCmd::Validate { root } => {
                 let project = project_root(root)?;
                 let n = validate_codex_install(&project)?;
-                Ok(format!("harness codex validate: ok ({n} skills)"))
+                ok_msg(format!("harness codex validate: ok ({n} skills)"))
             }
         },
         Some(Commands::Harness {
@@ -365,7 +385,7 @@ fn run(cli: Cli) -> Result<String, CoreError> {
             AntigravityCmd::Detect { root } => {
                 let project = project_root(root)?;
                 let d = detect_antigravity(&project)?;
-                Ok(format!(
+                ok_msg(format!(
                     "harness antigravity detect: rules={} dir={} skills={} workflows={}",
                     d.antigravityrules, d.antigravity_dir, d.agents_skills, d.agents_workflows
                 ))
@@ -375,17 +395,21 @@ fn run(cli: Cli) -> Result<String, CoreError> {
                 generate_antigravityrules(&project, force)?;
                 ensure_workflows_dir(&project, force)?;
                 let n = install_antigravity(&project, force)?;
-                Ok(format!(
+                ok_msg(format!(
                     "harness antigravity install: wrote {n} commands + skills/rules"
                 ))
             }
             AntigravityCmd::Validate { root } => {
                 let project = project_root(root)?;
                 let n = validate_antigravity_install(&project)?;
-                Ok(format!("harness antigravity validate: ok ({n} commands)"))
+                ok_msg(format!("harness antigravity validate: ok ({n} commands)"))
             }
         },
     }
+}
+
+fn ok_msg(msg: String) -> Result<(String, serde_json::Value), CoreError> {
+    Ok((msg.clone(), serde_json::json!({ "message": msg })))
 }
 
 fn exit(code: i32) -> ExitCode {

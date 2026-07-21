@@ -200,4 +200,36 @@ mod tests {
         let backups = std::fs::read_dir(dir.path().join(".dare/backups")).unwrap();
         assert!(backups.count() >= 1);
     }
+
+    #[test]
+    fn apply_default_options_does_not_write_schema_version() {
+        let dir = tempdir().unwrap();
+        let root = ProjectRoot::new(dir.path()).unwrap();
+        let rel = SafeRelativePath::new("dare.config.json").unwrap();
+        let raw = r#"{"ide":"cursor"}"#;
+        std::fs::write(dir.path().join("dare.config.json"), raw).unwrap();
+        let before = std::fs::read(dir.path().join("dare.config.json")).unwrap();
+        let plan = apply_migrate(&root, &rel, &MigrateOptions::default()).unwrap();
+        assert!(plan.steps.is_empty());
+        assert!(!plan.would_write_schema_version);
+        let after = std::fs::read(dir.path().join("dare.config.json")).unwrap();
+        assert_eq!(before, after);
+        let cfg = load_dare_config(&root, &rel).unwrap();
+        assert!(!cfg.extra.contains_key("schemaVersion"));
+    }
+
+    #[test]
+    fn apply_empty_steps_skips_backup() {
+        let dir = tempdir().unwrap();
+        let root = ProjectRoot::new(dir.path()).unwrap();
+        let rel = SafeRelativePath::new("dare.config.json").unwrap();
+        std::fs::write(dir.path().join("dare.config.json"), r#"{"ide":"cursor"}"#).unwrap();
+        let opts = MigrateOptions {
+            write_schema_version: false,
+            schema_version: 1,
+        };
+        let plan = apply_migrate(&root, &rel, &opts).unwrap();
+        assert!(plan.steps.is_empty());
+        assert!(!dir.path().join(".dare/backups").exists());
+    }
 }

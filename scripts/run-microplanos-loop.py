@@ -20,7 +20,7 @@ Uso (microplanos 011 → 056 até o fim) — dentro do Cursor / Claude Code:
   python scripts/run-microplanos-loop.py status
 
 Opções:
-  --start N      primeiro microplano (default: 11)
+  --start N      primeiro microplano (default: 8)
   --end N        último microplano inclusive (default: 56); omitir = até o último ficheiro
   --count N      limite opcional (sobrescreve --end se ambos forem passados via slice)
   --only 11,12   lista CSV explícita
@@ -149,6 +149,39 @@ def current_mp(state: dict[str, Any]) -> Microplano | None:
     return Microplano(**raw)
 
 
+_SPEC_REQUIRED = re.compile(
+    r"(?i)(##\s*OBJETIVO|##\s*Objetivo|##\s*VALIDATION|##\s*Validation|"
+    r"##\s*DONE|##\s*Definition of Done|##\s*Arquivos)"
+)
+
+
+def _execution_specs_ok(mp: Microplano) -> tuple[bool, str]:
+    """Rejeita stubs (# id apenas). Cada spec precisa de corpo DARE real."""
+    ex = mp.execution()
+    if not ex.is_dir():
+        return False, f"{ex}/ (ausente)"
+    specs = sorted(ex.glob("*.md"))
+    if not specs:
+        return False, f"{ex}/ (sem *.md)"
+    stubs: list[str] = []
+    for p in specs:
+        try:
+            text = p.read_text(encoding="utf-8")
+        except OSError as e:
+            return False, f"{p}: {e}"
+        # Stub típico do atalho errado: só "# mp014-001" (+ newlines)
+        if p.stat().st_size < 180 or not _SPEC_REQUIRED.search(text):
+            stubs.append(p.name)
+    if stubs:
+        return False, (
+            f"{ex}/ stubs sem spec DARE ({len(stubs)}): "
+            + ", ".join(stubs[:8])
+            + ("…" if len(stubs) > 8 else "")
+            + " — use /dare-tasks (OBJETIVO + VALIDATION + DONE)"
+        )
+    return True, f"{ex}/ ({len(specs)} specs)"
+
+
 def artifact_ok(mp: Microplano, phase: str) -> tuple[bool, str]:
     if phase == "design":
         p = mp.design()
@@ -157,15 +190,16 @@ def artifact_ok(mp: Microplano, phase: str) -> tuple[bool, str]:
         p = mp.blueprint()
         return p.is_file() and p.stat().st_size > 200, str(p)
     if phase == "tasks":
-        ok = (
-            mp.tasks().is_file()
-            and mp.dag().is_file()
-            and mp.execution().is_dir()
-            and any(mp.execution().glob("*.md"))
-        )
-        return ok, f"{mp.tasks()} + {mp.dag()} + {mp.execution()}/"
+        if not (mp.tasks().is_file() and mp.dag().is_file()):
+            return False, f"{mp.tasks()} + {mp.dag()} + {mp.execution()}/"
+        specs_ok, specs_detail = _execution_specs_ok(mp)
+        ok = specs_ok
+        return ok, f"{mp.tasks()} + {mp.dag()} + {specs_detail}"
     if phase == "execute":
-        # Heurística: canvas ou TASKS com todos DONE; script não parseia YAML profundo
+        # Specs ainda têm de ser reais (ninguém pode apagar/esvaziar na execute)
+        specs_ok, specs_detail = _execution_specs_ok(mp)
+        if not specs_ok:
+            return False, specs_detail
         tasks = mp.tasks()
         if not tasks.is_file():
             return False, str(tasks)
@@ -174,7 +208,7 @@ def artifact_ok(mp: Microplano, phase: str) -> tuple[bool, str]:
         done = len(re.findall(r"DONE|✅", text))
         # Aceita se não houver PENDING e houver pelo menos 1 DONE
         ok = pending == 0 and done > 0
-        return ok, f"{tasks} (DONE≈{done}, PENDING≈{pending})"
+        return ok, f"{tasks} (DONE≈{done}, PENDING≈{pending}); {specs_detail}"
     if phase == "commit":
         return True, "git"
     return False, "fase desconhecida"
@@ -196,10 +230,12 @@ Execute **{slash}** + o arquivo do Microplano.
 ## Regras
 - Siga a skill/command {slash} (template DESIGN completo).
 - MODO AUTONOMO: nao pergunte nada ao humano; nao peca aprovacao; nao espere confirmacao.
+- Pode sobrescrever o DESIGN deste microplano ({mp.nnn}) se estiver a repetir o ciclo.
 - Nao sobrescreva designs de microplanos anteriores (001–{mp.number - 1:03d}).
 - Espelhe o padrao de `DARE/DESIGN-007-contratos-persistidos.md`.
 - Stack = este repo Rust (workspace dare-cli).
 - Documentacao DARE em portugues.
+- PROIBIDO pular para implementacao nesta fase.
 
 Ao terminar a fase, IMEDIATAMENTE rode:
 ```
@@ -245,10 +281,13 @@ Execute **{slash}** (+ `/dare-tasks`) + o blueprint gerado.
 - `{mp.dag().as_posix()}`
 - `{mp.execution().as_posix()}/` com specs `mp{mp.nnn}-*.md`
 
-## Regras
+## Regras (INEGOCIAVEIS)
 - IDs `mp{mp.nnn}-001`, ...
 - Consistencia TASKS <-> DAG <-> EXECUTION (dare-dag-runner).
-- Padrao: dare-dag-007 / TASKS-007 / EXECUTION-007.
+- Padrao: `DARE/EXECUTION-008/mp008-*.md` (OBJETIVO + VALIDATION/DONE + caminhos).
+- PROIBIDO criar `EXECUTION-*/mp*.md` stub (`# mp014-001` sozinho). Spec vazia = fase tasks INVALIDA.
+- Anti-stub: cada spec com arquivos exatos, assinaturas, testes nomeados, Definition of Done.
+- Nesta fase NAO implemente codigo de producao — so artefatos TASKS/DAG/EXECUTION.
 - MODO AUTONOMO: nao pergunte nada; nao peca aprovacao.
 
 Ao terminar, IMEDIATAMENTE:
@@ -266,6 +305,9 @@ Execute **{slash}** + o DAG gerado.
 ## DAG
 `{mp.dag().as_posix()}`
 
+## Specs (fonte da verdade — LEIA ANTES DE CODIGAR)
+`{mp.execution().as_posix()}/mp{mp.nnn}-*.md`
+
 ## Comandos do orquestrador CLI
 ```
 dare execute --dag {mp.dag().as_posix()} --status
@@ -274,7 +316,9 @@ dare execute --dag {mp.dag().as_posix()} --complete <id> --output "..."
 dare execute --dag {mp.dag().as_posix()} --fail <id> --reason "..."
 ```
 
-## Regras
+## Regras (INEGOCIAVEIS)
+- Ordem: ler spec EXECUTION da task → implementar exatamente o que a spec pede → Ralph Loop → so entao marcar DONE.
+- PROIBIDO inventar implementacao sem spec; PROIBIDO marcar DONE com EXECUTION stub.
 - Siga a skill {slash} (fan-out paralelo se possivel; senao serial).
 - Ralph Loop em cada task (build -> test -> lint -> audit se deps).
 - Atualize `{mp.tasks().as_posix()}` para 100% DONE.
@@ -731,7 +775,7 @@ def cmd_run_agent_help(_: argparse.Namespace) -> None:
 
 1. No terminal do projeto:
    python scripts/run-microplanos-loop.py init
-   # default: --start 11 --end 56 (46 microplanos até o fim)
+   # default: --start 8 --end 56
 
 2. No chat do agente Cursor, cole:
 
@@ -765,9 +809,9 @@ def build_parser() -> argparse.ArgumentParser:
             help="Nao remove target/ nem worktrees apos cada ciclo",
         )
 
-    sp = sub.add_parser("init", help="Inicializa fila (default: 011–056)")
+    sp = sub.add_parser("init", help="Inicializa fila (default: 008–056)")
     add_common(sp)
-    sp.add_argument("--start", type=int, default=11, help="Primeiro microplano (default: 11)")
+    sp.add_argument("--start", type=int, default=8, help="Primeiro microplano (default: 8)")
     sp.add_argument(
         "--end",
         nargs="?",

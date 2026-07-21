@@ -1,5 +1,11 @@
 version: 1
-exceptions: []
+exceptions:
+  - id: cursor-commands-full-parity
+    reason: "Cursor command count 33 vs matrix deferred to adapter 012; Class C"
+  - id: cursor-rules-full-parity
+    reason: "Cursor rules count 25 not modeled as separate Capability rows; Class C"
+  - id: agent-skills-full-parity
+    reason: "Agent Skills count 48 package skills != IDE capabilities; Class C until 044/012"
 capabilities:
   - id: dare-ai
     title: "dare-ai"

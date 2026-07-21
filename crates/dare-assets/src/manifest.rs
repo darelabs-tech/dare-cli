@@ -32,6 +32,31 @@ pub fn sha256_hex(bytes: &[u8]) -> String {
     format!("{:x}", hasher.finalize())
 }
 
+/// Reject absolute paths, `..` segments, and backslashes (RS-01 / Blueprint T-05).
+pub fn assert_safe_asset_path(path: &str) -> CoreResult<()> {
+    if path.is_empty() {
+        return Err(CoreError::config("invalid asset path: empty"));
+    }
+    if path.starts_with('/') || path.starts_with('\\') {
+        return Err(CoreError::config(format!(
+            "invalid asset path (absolute): {path}"
+        )));
+    }
+    if path.contains('\\') {
+        return Err(CoreError::config(format!(
+            "invalid asset path (backslash): {path}"
+        )));
+    }
+    for seg in path.split('/') {
+        if seg == ".." {
+            return Err(CoreError::config(format!(
+                "invalid asset path (dot-dot): {path}"
+            )));
+        }
+    }
+    Ok(())
+}
+
 pub fn load_manifest_from_str(yaml: &str) -> CoreResult<AssetsManifest> {
     let m: AssetsManifest =
         serde_yaml::from_str(yaml).map_err(|e| CoreError::config(format!("invalid assets manifest: {e}")))?;
@@ -61,5 +86,24 @@ assets:
         let m = load_manifest_from_str(yaml).unwrap();
         assert_eq!(m.assets.len(), 1);
         assert_eq!(m.assets[0].kind, AssetKind::Canonical);
+    }
+
+    #[test]
+    fn rejects_dotdot_path() {
+        let err = assert_safe_asset_path("templates/../etc/passwd").unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains("..") || msg.contains("dot-dot"), "{msg}");
+        assert!(msg.contains("templates/../etc/passwd"), "{msg}");
+    }
+
+    #[test]
+    fn rejects_backslash_path() {
+        let err = assert_safe_asset_path(r"foo\bar").unwrap_err();
+        assert!(err.to_string().contains(r"foo\bar"));
+    }
+
+    #[test]
+    fn accepts_posix_relative() {
+        assert!(assert_safe_asset_path("templates/DESIGN-template.md").is_ok());
     }
 }

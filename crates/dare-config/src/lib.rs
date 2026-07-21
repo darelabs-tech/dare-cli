@@ -9,7 +9,9 @@ mod r#override;
 mod validate;
 
 pub use defaults::default_config;
-pub use env::{env_overrides_from_os, env_overrides_from_vars};
+pub use env::{
+    env_overrides_from_os, env_overrides_from_vars, env_overrides_from_vars_strict,
+};
 pub use load::{load_effective, DEFAULT_CONFIG_REL};
 pub use merge::merge_layers;
 pub use migrate::{
