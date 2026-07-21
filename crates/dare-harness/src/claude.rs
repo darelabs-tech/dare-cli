@@ -177,7 +177,8 @@ mod tests {
         generate_claude_md(&root, false).unwrap();
         let d2 = detect_claude(&root).unwrap();
         assert!(d2.claude_md);
-        let content = read_to_string(&root, &SafeRelativePath::new(CLAUDE_MD_REL).unwrap()).unwrap();
+        let content =
+            read_to_string(&root, &SafeRelativePath::new(CLAUDE_MD_REL).unwrap()).unwrap();
         assert!(content.starts_with(MANAGED_PREFIX));
         assert!(content.contains("dare harness claude"));
         assert!(content.contains(".claude/commands/"));

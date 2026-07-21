@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # DARE native installer (alpha) — microplano 015
+# Env: DARE_VERSION | DARE_LOCAL_ARCHIVE (one required);
+#      DARE_REPO, DARE_INSTALL_BASE, DARE_PREFIX (optional)
 set -euo pipefail
 
 REPO="${DARE_REPO:-dewtech/dare-cli}"
@@ -26,20 +28,18 @@ detect_target() {
 }
 
 main() {
-  local target archive url tmp sums
+  local target archive url tmp
   target="$(detect_target)"
+
   if [[ -n "$VERSION" ]]; then
     archive="dare-${VERSION}-${target}.tar.gz"
     url="${BASE_URL}/${archive}"
+  elif [[ -n "${DARE_LOCAL_ARCHIVE:-}" ]]; then
+    archive="$(basename "${DARE_LOCAL_ARCHIVE}")"
+    url="file://${DARE_LOCAL_ARCHIVE}"
   else
-    # latest release asset naming still needs version in filename — require VERSION or local file
-    if [[ -n "${DARE_LOCAL_ARCHIVE:-}" ]]; then
-      archive="$(basename "$DARE_LOCAL_ARCHIVE")"
-      url="file://${DARE_LOCAL_ARCHIVE}"
-    else
-      echo "Set DARE_VERSION=vX.Y.Z-alpha.N or DARE_LOCAL_ARCHIVE=/path/to/archive.tar.gz" >&2
-      exit 2
-    fi
+    echo "Set DARE_VERSION=vX.Y.Z-alpha.N or DARE_LOCAL_ARCHIVE=/path/to/archive.tar.gz" >&2
+    exit 2
   fi
 
   tmp="$(mktemp -d)"
@@ -49,9 +49,11 @@ main() {
     cp "${url#file://}" "$tmp/$archive"
   else
     curl -fsSL "$url" -o "$tmp/$archive"
-    sums_url="${BASE_URL}/SHA256SUMS"
-    if curl -fsSL "$sums_url" -o "$tmp/SHA256SUMS"; then
+    if curl -fsSL "${BASE_URL}/SHA256SUMS" -o "$tmp/SHA256SUMS"; then
       (cd "$tmp" && sha256sum -c SHA256SUMS --ignore-missing)
+    else
+      echo "SHA256SUMS download failed" >&2
+      exit 1
     fi
   fi
 
@@ -59,9 +61,13 @@ main() {
   tar -xzf "$tmp/$archive" -C "$tmp"
   local bin
   bin="$(find "$tmp" -type f -name dare | head -n1)"
+  if [[ -z "$bin" ]]; then
+    echo "dare binary not found in archive" >&2
+    exit 1
+  fi
   install -m 755 "$bin" "$BIN_DIR/dare"
   echo "Installed: $BIN_DIR/dare"
-  "$BIN_DIR/dare" --version || "$BIN_DIR/dare" version || true
+  "$BIN_DIR/dare" --version
 }
 
 main "$@"

@@ -10,12 +10,10 @@ mod telemetry;
 
 pub use context::{ColorMode, ExecutionContext};
 pub use error::{exit_code, CoreError, CoreResult, ErrorKind};
-pub use path::{
-    to_posix, ProjectRoot, SafeAbsolutePath, SafeRelativePath, PATH_ESCAPE_MSG,
-};
+pub use path::{to_posix, ProjectRoot, SafeAbsolutePath, SafeRelativePath, PATH_ESCAPE_MSG};
 pub use process::{
-    env_key_is_denied, sanitize_env, truncate_chars, CancelFlag, MockProcessRunner,
-    ProcessOutput, ProcessRunner, SafeCommand, SystemProcessRunner, DEFAULT_STREAM_LIMIT,
+    env_key_is_denied, sanitize_env, truncate_chars, CancelFlag, MockProcessRunner, ProcessOutput,
+    ProcessRunner, SafeCommand, SystemProcessRunner, DEFAULT_STREAM_LIMIT,
 };
 pub use redact::redact;
 pub use telemetry::{init_test_subscriber, init_tracing};

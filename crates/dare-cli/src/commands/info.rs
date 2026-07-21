@@ -192,14 +192,25 @@ pub fn format_human(r: &InfoReport) -> String {
                 format!("FAIL ({})", r.assets_error.as_deref().unwrap_or("?"))
             }
         ),
-        format!("  config:     {}", if r.config_present { "yes" } else { "no" }),
-        format!("  DARE/:      {}", if r.dare_dir_present { "yes" } else { "no" }),
-        format!("  .dare/state:{}", if r.state_present { " yes" } else { " no" }),
+        format!(
+            "  config:     {}",
+            if r.config_present { "yes" } else { "no" }
+        ),
+        format!(
+            "  DARE/:      {}",
+            if r.dare_dir_present { "yes" } else { "no" }
+        ),
+        format!(
+            "  .dare/state:{}",
+            if r.state_present { " yes" } else { " no" }
+        ),
         format!(
             "  graph:      {}",
-            r.graph_path
-                .as_deref()
-                .unwrap_or(if r.graph_present { "(present)" } else { "(absent)" })
+            r.graph_path.as_deref().unwrap_or(if r.graph_present {
+                "(present)"
+            } else {
+                "(absent)"
+            })
         ),
         format!(
             "  backend/ide:{}",

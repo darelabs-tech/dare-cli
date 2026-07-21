@@ -12,13 +12,7 @@ pub fn validate(cfg: &DareConfig) -> CoreResult<()> {
         }
     }
     // enabled:false blocks: no deep validation required (types already deserialized)
-    let _ = (
-        &cfg.project,
-        &cfg.agent,
-        &cfg.guard,
-        &cfg.graph,
-        &cfg.hooks,
-    );
+    let _ = (&cfg.project, &cfg.agent, &cfg.guard, &cfg.graph, &cfg.hooks);
     Ok(())
 }
 

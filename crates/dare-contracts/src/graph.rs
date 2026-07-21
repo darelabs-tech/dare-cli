@@ -62,8 +62,7 @@ pub fn canonical_edge_id(kind: &str, from: &str, to: &str) -> String {
 
 pub fn load_graph(root: &ProjectRoot, rel: &SafeRelativePath) -> CoreResult<GraphDocument> {
     let bytes = read_limited(root, rel)?;
-    let text = String::from_utf8(bytes)
-        .map_err(|e| dare_core::CoreError::config(e.to_string()))?;
+    let text = String::from_utf8(bytes).map_err(|e| dare_core::CoreError::config(e.to_string()))?;
     from_yaml_str(&text)
 }
 

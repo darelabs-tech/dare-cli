@@ -30,9 +30,7 @@ impl ProcessRunner for SystemProcessRunner {
         }
         for (k, _) in &cmd.extra_env {
             if env_key_is_denied(k) {
-                return Err(CoreError::invalid_input(
-                    "environment variable name denied",
-                ));
+                return Err(CoreError::invalid_input("environment variable name denied"));
             }
         }
 
@@ -127,12 +125,8 @@ impl ProcessRunner for SystemProcessRunner {
             Some(child.wait().map_err(|e| CoreError::io(e.to_string()))?)
         };
 
-        let stdout_raw = stdout_handle
-            .join()
-            .unwrap_or_default();
-        let stderr_raw = stderr_handle
-            .join()
-            .unwrap_or_default();
+        let stdout_raw = stdout_handle.join().unwrap_or_default();
+        let stderr_raw = stderr_handle.join().unwrap_or_default();
 
         let stdout = String::from_utf8_lossy(&stdout_raw).into_owned();
         let stderr = String::from_utf8_lossy(&stderr_raw).into_owned();
@@ -162,9 +156,7 @@ impl ProcessRunner for SystemProcessRunner {
             });
         }
 
-        let exit_code = status
-            .and_then(|s| s.code())
-            .unwrap_or(-1);
+        let exit_code = status.and_then(|s| s.code()).unwrap_or(-1);
 
         Ok(ProcessOutput {
             exit_code,
@@ -206,9 +198,8 @@ fn resolve_program(cmd: &SafeCommand) -> CoreResult<PathBuf> {
                 "absolute program path must stay within the project",
             ));
         };
-        let utf = Utf8PathBuf::from_path_buf(path.to_path_buf()).map_err(|_| {
-            CoreError::invalid_input("program path is not valid UTF-8")
-        })?;
+        let utf = Utf8PathBuf::from_path_buf(path.to_path_buf())
+            .map_err(|_| CoreError::invalid_input("program path is not valid UTF-8"))?;
         if !cwd.root.contains(&utf)? {
             return Err(CoreError::invalid_input(
                 "absolute program path must stay within the project",
@@ -263,9 +254,7 @@ mod tests {
 
     #[test]
     fn system_runner_echo_ok() {
-        let out = SystemProcessRunner
-            .run(&echo_hello())
-            .expect("echo");
+        let out = SystemProcessRunner.run(&echo_hello()).expect("echo");
         assert_eq!(out.exit_code, 0);
         assert!(out.stdout.to_lowercase().contains("hello"));
         assert!(!out.timed_out);
@@ -278,11 +267,7 @@ mod tests {
             #[cfg(windows)]
             {
                 SafeCommand::new("powershell.exe")
-                    .args([
-                        "-NoProfile",
-                        "-Command",
-                        "Write-Output (('x' * 5000))",
-                    ])
+                    .args(["-NoProfile", "-Command", "Write-Output (('x' * 5000))"])
                     .stdout_limit(4000)
             }
             #[cfg(unix)]
@@ -352,9 +337,7 @@ mod tests {
     #[test]
     fn system_runner_missing_exe_not_found() {
         let err = SystemProcessRunner
-            .run(&SafeCommand::new(
-                "__dare_definitely_missing_exe_9f3a2b__",
-            ))
+            .run(&SafeCommand::new("__dare_definitely_missing_exe_9f3a2b__"))
             .expect_err("missing");
         assert!(matches!(err, CoreError::NotFound(_)));
         assert!(err.to_string().contains("executable not found"));

@@ -110,9 +110,8 @@ impl ProjectRoot {
             )));
         }
         let canon = std::fs::canonicalize(dir).map_err(|e| CoreError::io(e.to_string()))?;
-        let root = Utf8PathBuf::from_path_buf(canon).map_err(|_| {
-            CoreError::invalid_input("project root path is not valid UTF-8")
-        })?;
+        let root = Utf8PathBuf::from_path_buf(canon)
+            .map_err(|_| CoreError::invalid_input("project root path is not valid UTF-8"))?;
         Ok(Self { root })
     }
 
@@ -128,9 +127,8 @@ impl ProjectRoot {
         let cand = if candidate.exists() {
             let c = std::fs::canonicalize(candidate.as_std_path())
                 .map_err(|e| CoreError::io(e.to_string()))?;
-            Utf8PathBuf::from_path_buf(c).map_err(|_| {
-                CoreError::invalid_input("path is not valid UTF-8")
-            })?
+            Utf8PathBuf::from_path_buf(c)
+                .map_err(|_| CoreError::invalid_input("path is not valid UTF-8"))?
         } else {
             candidate.to_path_buf()
         };
@@ -181,9 +179,8 @@ fn is_within(root: &Utf8Path, candidate: &Utf8Path) -> bool {
 fn verify_within_root(root: &Utf8Path, joined: &Path) -> CoreResult<Utf8PathBuf> {
     if joined.exists() {
         let canon = std::fs::canonicalize(joined).map_err(|e| CoreError::io(e.to_string()))?;
-        let utf = Utf8PathBuf::from_path_buf(canon).map_err(|_| {
-            CoreError::invalid_input("path is not valid UTF-8")
-        })?;
+        let utf = Utf8PathBuf::from_path_buf(canon)
+            .map_err(|_| CoreError::invalid_input("path is not valid UTF-8"))?;
         if !is_within(root, &utf) {
             return Err(escape_err());
         }
@@ -194,21 +191,14 @@ fn verify_within_root(root: &Utf8Path, joined: &Path) -> CoreResult<Utf8PathBuf>
     let mut ancestor = joined.to_path_buf();
     let mut missing: Vec<std::ffi::OsString> = Vec::new();
     while !ancestor.exists() {
-        let file_name = ancestor
-            .file_name()
-            .ok_or_else(escape_err)?
-            .to_os_string();
+        let file_name = ancestor.file_name().ok_or_else(escape_err)?.to_os_string();
         missing.push(file_name);
-        ancestor = ancestor
-            .parent()
-            .ok_or_else(escape_err)?
-            .to_path_buf();
+        ancestor = ancestor.parent().ok_or_else(escape_err)?.to_path_buf();
     }
     let ancestor_canon =
         std::fs::canonicalize(&ancestor).map_err(|e| CoreError::io(e.to_string()))?;
-    let ancestor_utf = Utf8PathBuf::from_path_buf(ancestor_canon).map_err(|_| {
-        CoreError::invalid_input("path is not valid UTF-8")
-    })?;
+    let ancestor_utf = Utf8PathBuf::from_path_buf(ancestor_canon)
+        .map_err(|_| CoreError::invalid_input("path is not valid UTF-8"))?;
     if !is_within(root, &ancestor_utf) {
         return Err(escape_err());
     }
@@ -227,9 +217,8 @@ fn verify_within_root(root: &Utf8Path, joined: &Path) -> CoreResult<Utf8PathBuf>
         if out.exists() {
             let c = std::fs::canonicalize(out.as_std_path())
                 .map_err(|e| CoreError::io(e.to_string()))?;
-            let cu = Utf8PathBuf::from_path_buf(c).map_err(|_| {
-                CoreError::invalid_input("path is not valid UTF-8")
-            })?;
+            let cu = Utf8PathBuf::from_path_buf(c)
+                .map_err(|_| CoreError::invalid_input("path is not valid UTF-8"))?;
             if !is_within(root, &cu) {
                 return Err(escape_err());
             }
@@ -292,10 +281,7 @@ mod tests {
         symlink(outside.path(), &link).unwrap();
         let rel = SafeRelativePath::new("escape").unwrap();
         let err = root.resolve(&rel).unwrap_err();
-        assert!(
-            matches!(err, CoreError::InvalidInput(_)),
-            "{err:?}"
-        );
+        assert!(matches!(err, CoreError::InvalidInput(_)), "{err:?}");
         assert!(err.message().contains(PATH_ESCAPE_MSG));
     }
 

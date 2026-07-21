@@ -34,7 +34,8 @@ pub fn atomic_write(root: &ProjectRoot, rel: &SafeRelativePath, data: &[u8]) -> 
     let write_result = (|| -> CoreResult<()> {
         let mut f = std::fs::File::create(tmp_path.as_std_path())
             .map_err(|e| CoreError::io(e.to_string()))?;
-        f.write_all(data).map_err(|e| CoreError::io(e.to_string()))?;
+        f.write_all(data)
+            .map_err(|e| CoreError::io(e.to_string()))?;
         let _ = f.sync_all();
         std::fs::rename(tmp_path.as_std_path(), abs.as_path().as_std_path())
             .map_err(|e| CoreError::io(e.to_string()))?;

@@ -11,9 +11,8 @@ use crate::verify::verify_embedded_assets;
 /// Returns number of files written.
 pub fn materialize_to(root: &ProjectRoot, dest_rel: &SafeRelativePath) -> CoreResult<usize> {
     verify_embedded_assets()?;
-    let manifest_file = EmbeddedAssets::get("manifest.yml").ok_or_else(|| {
-        CoreError::config("asset missing: manifest.yml")
-    })?;
+    let manifest_file = EmbeddedAssets::get("manifest.yml")
+        .ok_or_else(|| CoreError::config("asset missing: manifest.yml"))?;
     let yaml = std::str::from_utf8(manifest_file.data.as_ref())
         .map_err(|e| CoreError::config(format!("invalid assets manifest encoding: {e}")))?;
     let manifest = load_manifest_from_str(yaml)?;

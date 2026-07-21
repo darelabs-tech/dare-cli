@@ -19,7 +19,7 @@ Registro append-only de decisões de governança dos microplanos DARE CLI.
 | DEC-013 | 2026-07-21 | Adapter Cursor: commands from matrix; .cursorrules managed; preserve | ADR-007 | Tech Lead DARE CLI | active |
 | DEC-014 | 2026-07-21 | Adapter Codex: AGENTS.md + skills; .agents share; UPDATE_HARNESS_IDES includes codex | ADR-007 | Tech Lead DARE CLI | active |
 | DEC-015 | 2026-07-21 | Adapter Antigravity: rules + commands + shared .agents/skills; frontmatter validate | ADR-007 | Tech Lead DARE CLI | active |
-| DEC-016 | 2026-07-21 | Release alpha: 5 targets GH Actions; SHA256SUMS+SBOM; install.sh/ps1; optional cosign | ADR-008 | Tech Lead DARE CLI | active |
+| DEC-016 | 2026-07-21 | Release alpha: 5 targets GH Actions; SHA256SUMS+SBOM; install.sh/ps1; cosign soft-fail | ADR-008 | Tech Lead DARE CLI | active |
 | DEC-017 | 2026-07-21 | dare welcome: TTY banner; --no-banner / DARE_NO_BANNER; no dare new; snapshots | — | Tech Lead DARE CLI | active |
 
 ## Notas
@@ -36,3 +36,4 @@ Registro append-only de decisões de governança dos microplanos DARE CLI.
 - **DEC-010:** microplano 009 — `assets/` + `manifest.yml` SHA-256; embed `rust-embed` 8.7.2; `verify_embedded_assets` / `materialize_to`; templates canónicos; `.claude/commands` não apagados (external); docs em [`assets-inventory.md`](compatibility/assets-inventory.md).
 - **DEC-011:** microplano 010 — `capability-matrix.yml` com 49 capabilities Claude (ADR-007); validate + render; tipos em `dare-assets` até crate harness nos adapters; docs em [`capabilities-canonical.md`](compatibility/capabilities-canonical.md).
 - **DEC-012:** microplano 011 — crate `dare-harness` adapter Claude (`detect`/`install`/`validate`); preserve unmanaged; CLI `dare harness claude`; docs em [`harness-claude.md`](compatibility/harness-claude.md).
+- **DEC-016:** microplano 015 — release alpha nativo: `release.yml` (5 targets, macos-13/14, cosign soft-fail), `SHA256SUMS`+`SBOM.spdx.json`, `installers/install.{sh,ps1}`, smoke `scripts/smoke-release-install.*`; ADR [`ADR-008-release-alpha-nativo.md`](adr/ADR-008-release-alpha-nativo.md); docs [`release-alpha.md`](compatibility/release-alpha.md).

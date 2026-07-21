@@ -30,28 +30,39 @@ else
 fi
 
 (cd "$OUT" && sha256sum "$ARTIFACT" > SHA256SUMS)
-cat > "$OUT/SBOM.spdx.json" <<EOF
-{"spdxVersion":"SPDX-2.3","dataLicense":"CC0-1.0","SPDXID":"SPDXRef-DOCUMENT","name":"dare-cli-${VERSION}","documentNamespace":"https://local/spdx/${VERSION}","creationInfo":{"created":"$(date -u +%Y-%m-%dT%H:%M:%SZ)","creators":["Tool: dare-smoke"]},"packages":[{"name":"dare","SPDXID":"SPDXRef-Package-dare","downloadLocation":"NOASSERTION","filesAnalyzed":false,"versionInfo":"${VERSION}"}]}
-EOF
+CREATED="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+printf '%s\n' "{\"spdxVersion\":\"SPDX-2.3\",\"dataLicense\":\"CC0-1.0\",\"SPDXID\":\"SPDXRef-DOCUMENT\",\"name\":\"dare-cli-${VERSION}\",\"documentNamespace\":\"https://local/spdx/${VERSION}\",\"creationInfo\":{\"created\":\"${CREATED}\",\"creators\":[\"Tool: dare-smoke\"]},\"packages\":[{\"name\":\"dare\",\"SPDXID\":\"SPDXRef-Package-dare\",\"downloadLocation\":\"NOASSERTION\",\"filesAnalyzed\":false,\"versionInfo\":\"${VERSION}\"}]}" > "$OUT/SBOM.spdx.json"
 echo "signing skipped — local smoke" > "$OUT/SHA256SUMS.sig"
 cp "$ROOT/installers/install.sh" "$OUT/" 2>/dev/null || true
 cp "$ROOT/installers/install.ps1" "$OUT/" 2>/dev/null || true
 
 PREFIX="$OUT/prefix"
 mkdir -p "$PREFIX/bin"
+export DARE_LOCAL_ARCHIVE="$OUT/$ARTIFACT"
+export DARE_PREFIX="$PREFIX"
 if [[ "$HOST" == *"windows"* ]]; then
-  export DARE_LOCAL_ARCHIVE="$OUT/$ARTIFACT"
-  export DARE_PREFIX="$PREFIX"
   powershell -NoProfile -File "$ROOT/installers/install.ps1"
-  "$PREFIX/bin/dare.exe" --help >/dev/null
+  VER_OUT="$("$PREFIX/bin/dare.exe" --version)"
 else
-  export DARE_LOCAL_ARCHIVE="$OUT/$ARTIFACT"
-  export DARE_PREFIX="$PREFIX"
   bash "$ROOT/installers/install.sh"
-  "$PREFIX/bin/dare" --help >/dev/null
+  VER_OUT="$("$PREFIX/bin/dare" --version)"
 fi
+echo "$VER_OUT" | grep -Eq '^dare '
+
+# Confirm five-target matrix in release.yml
+for t in \
+  x86_64-unknown-linux-gnu \
+  aarch64-unknown-linux-gnu \
+  x86_64-apple-darwin \
+  aarch64-apple-darwin \
+  x86_64-pc-windows-msvc
+do
+  grep -q "$t" "$ROOT/.github/workflows/release.yml"
+done
+grep -q 'macos-13' "$ROOT/.github/workflows/release.yml"
+grep -q 'macos-14' "$ROOT/.github/workflows/release.yml"
 
 echo "smoke-install OK: $ARTIFACT"
 test -f "$OUT/SHA256SUMS"
 test -f "$OUT/SBOM.spdx.json"
-echo "five-target matrix declared in .github/workflows/release.yml"
+echo "five-target matrix OK in release.yml"

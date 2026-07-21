@@ -93,8 +93,8 @@ pub enum DagDocument {
 }
 
 pub fn parse_dag_yaml(text: &str) -> CoreResult<DagDocument> {
-    let value: Value =
-        serde_yaml::from_str(text).map_err(|e| CoreError::config(format!("invalid dare-dag.yaml: {e}")))?;
+    let value: Value = serde_yaml::from_str(text)
+        .map_err(|e| CoreError::config(format!("invalid dare-dag.yaml: {e}")))?;
     let Value::Object(map) = &value else {
         return Err(CoreError::config("invalid dare-dag.yaml"));
     };

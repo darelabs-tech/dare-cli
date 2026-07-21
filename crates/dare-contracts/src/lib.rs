@@ -10,9 +10,7 @@ mod telemetry;
 mod update_manifest;
 mod verification;
 
-pub use config::{
-    load_dare_config, save_dare_config, ConfigObject, DareConfig,
-};
+pub use config::{load_dare_config, save_dare_config, ConfigObject, DareConfig};
 pub use dag::{
     load_dag, parse_dag_yaml, save_dag, DagDocument, DagLimits, DagTask, DagV21, LegacyDag,
     LegacyTask,
@@ -21,9 +19,7 @@ pub use graph::{
     canonical_edge_id, canonical_file_node_id, canonical_task_node_id, load_graph, save_graph,
     GraphDocument, GraphEdge, GraphNode,
 };
-pub use io::{
-    from_json_slice, from_yaml_str, read_limited, write_json_atomic, write_yaml_atomic,
-};
+pub use io::{from_json_slice, from_yaml_str, read_limited, write_json_atomic, write_yaml_atomic};
 pub use skills::{load_skills_manifest, save_skills_manifest, SkillEntry, SkillsManifest};
 pub use state::{
     load_runtime_state, runtime_state_from_str, save_runtime_state, AttemptRecord, RuntimeStateV1,

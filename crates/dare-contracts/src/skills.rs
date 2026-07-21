@@ -31,8 +31,7 @@ pub fn load_skills_manifest(
     rel: &SafeRelativePath,
 ) -> CoreResult<SkillsManifest> {
     let bytes = read_limited(root, rel)?;
-    let text = String::from_utf8(bytes)
-        .map_err(|e| dare_core::CoreError::config(e.to_string()))?;
+    let text = String::from_utf8(bytes).map_err(|e| dare_core::CoreError::config(e.to_string()))?;
     from_yaml_str(&text)
 }
 

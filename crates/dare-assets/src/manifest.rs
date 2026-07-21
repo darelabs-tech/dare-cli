@@ -58,8 +58,8 @@ pub fn assert_safe_asset_path(path: &str) -> CoreResult<()> {
 }
 
 pub fn load_manifest_from_str(yaml: &str) -> CoreResult<AssetsManifest> {
-    let m: AssetsManifest =
-        serde_yaml::from_str(yaml).map_err(|e| CoreError::config(format!("invalid assets manifest: {e}")))?;
+    let m: AssetsManifest = serde_yaml::from_str(yaml)
+        .map_err(|e| CoreError::config(format!("invalid assets manifest: {e}")))?;
     if m.version != 1 {
         return Err(CoreError::config(format!(
             "unsupported assets manifest version: {}",

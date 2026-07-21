@@ -94,9 +94,7 @@ mod tests {
             timed_out: false,
             cancelled: false,
         });
-        let out = mock
-            .run(&SafeCommand::new("never-runs"))
-            .expect("mock ok");
+        let out = mock.run(&SafeCommand::new("never-runs")).expect("mock ok");
         assert_eq!(out.stdout, "ok");
         assert_eq!(out.exit_code, 0);
     }

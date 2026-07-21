@@ -205,6 +205,41 @@ mod tests {
     use tempfile::tempdir;
 
     #[test]
+    fn detect_empty_and_generate_rules_workflows() {
+        let dir = tempdir().unwrap();
+        let root = ProjectRoot::new(dir.path()).unwrap();
+        let d = detect_antigravity(&root).unwrap();
+        assert!(!d.antigravityrules);
+        assert!(!d.antigravity_dir);
+        assert!(!d.agents_skills);
+        assert!(!d.agents_workflows);
+        generate_antigravityrules(&root, false).unwrap();
+        ensure_workflows_dir(&root, false).unwrap();
+        let d2 = detect_antigravity(&root).unwrap();
+        assert!(d2.antigravityrules);
+        assert!(d2.agents_workflows);
+        let rules = read_to_string(&root, &SafeRelativePath::new(RULES_REL).unwrap()).unwrap();
+        assert!(rules.starts_with(MANAGED_PREFIX));
+        assert!(root
+            .resolve(&SafeRelativePath::new(WORKFLOWS_KEEP).unwrap())
+            .unwrap()
+            .as_path()
+            .is_file());
+    }
+
+    #[test]
+    fn preserve_unmanaged_antigravityrules() {
+        let dir = tempdir().unwrap();
+        let root = ProjectRoot::new(dir.path()).unwrap();
+        let rel = SafeRelativePath::new(RULES_REL).unwrap();
+        atomic_write(&root, &rel, b"# custom antigravity rules\nkeep\n").unwrap();
+        generate_antigravityrules(&root, false).unwrap();
+        let content = read_to_string(&root, &rel).unwrap();
+        assert!(content.contains("custom antigravity rules"));
+        assert!(!content.starts_with(MANAGED_PREFIX));
+    }
+
+    #[test]
     fn install_validate_and_codex_coexistence() {
         let dir = tempdir().unwrap();
         let root = ProjectRoot::new(dir.path()).unwrap();
@@ -221,9 +256,6 @@ mod tests {
     #[test]
     fn frontmatter_rejects_incomplete() {
         assert!(validate_skill_frontmatter("---\nname: x\n---\n").is_err());
-        assert!(validate_skill_frontmatter(
-            "---\nname: x\ndescription: y\n---\nbody\n"
-        )
-        .is_ok());
+        assert!(validate_skill_frontmatter("---\nname: x\ndescription: y\n---\nbody\n").is_ok());
     }
 }

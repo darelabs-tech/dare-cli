@@ -54,7 +54,10 @@ pub struct RuntimeStateV1 {
     pub extra: Map<String, Value>,
 }
 
-pub fn load_runtime_state(root: &ProjectRoot, rel: &SafeRelativePath) -> CoreResult<RuntimeStateV1> {
+pub fn load_runtime_state(
+    root: &ProjectRoot,
+    rel: &SafeRelativePath,
+) -> CoreResult<RuntimeStateV1> {
     let bytes = read_limited(root, rel)?;
     let state: RuntimeStateV1 = from_json_slice(&bytes)?;
     if state.version != 1 {

@@ -13,7 +13,10 @@ fn merge_extras(base: &Map<String, Value>, overlay: &Map<String, Value>) -> Map<
     out
 }
 
-fn merge_block(base: Option<&ConfigObject>, overlay: Option<&ConfigObject>) -> Option<ConfigObject> {
+fn merge_block(
+    base: Option<&ConfigObject>,
+    overlay: Option<&ConfigObject>,
+) -> Option<ConfigObject> {
     match (base, overlay) {
         (None, None) => None,
         (Some(b), None) => Some(b.clone()),
@@ -39,7 +42,11 @@ fn apply_block_enabled(cfg: &mut DareConfig, block: &str, enabled: bool) {
     *target = Some(obj);
 }
 
-fn apply_overrides(cfg: &mut DareConfig, ide: &Option<String>, blocks: &std::collections::BTreeMap<String, bool>) {
+fn apply_overrides(
+    cfg: &mut DareConfig,
+    ide: &Option<String>,
+    blocks: &std::collections::BTreeMap<String, bool>,
+) {
     if let Some(ide) = ide {
         cfg.ide = Some(ide.clone());
     }

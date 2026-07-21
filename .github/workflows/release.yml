@@ -36,10 +36,10 @@ jobs:
             archive: tar.gz
             cross: true
           - target: x86_64-apple-darwin
-            os: macos-latest
+            os: macos-13
             archive: tar.gz
           - target: aarch64-apple-darwin
-            os: macos-latest
+            os: macos-14
             archive: tar.gz
           - target: x86_64-pc-windows-msvc
             os: windows-latest
@@ -124,54 +124,36 @@ jobs:
         run: |
           set -euo pipefail
           cd dist
+          : > SHA256SUMS
           find . -type f \( -name '*.tar.gz' -o -name '*.zip' \) -printf '%P\n' | sort | while read -r f; do
-            sha256sum "$f"
-          done > SHA256SUMS
+            sha256sum "$f" >> SHA256SUMS
+          done
           VERSION="${GITHUB_REF_NAME:-dev}"
-          cat > SBOM.spdx.json <<EOF
-          {
-            "spdxVersion": "SPDX-2.3",
-            "dataLicense": "CC0-1.0",
-            "SPDXID": "SPDXRef-DOCUMENT",
-            "name": "dare-cli-${VERSION}",
-            "documentNamespace": "https://github.com/dewtech/dare-cli/spdx/${VERSION}",
-            "creationInfo": {
-              "created": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-              "creators": ["Tool: dare-release-alpha"]
-            },
-            "packages": [
-              {
-                "name": "dare",
-                "SPDXID": "SPDXRef-Package-dare",
-                "downloadLocation": "NOASSERTION",
-                "filesAnalyzed": false,
-                "versionInfo": "${VERSION}"
-              }
-            ]
-          }
-          EOF
-          cp ../installers/install.sh . 2>/dev/null || true
-          cp ../installers/install.ps1 . 2>/dev/null || true
+          CREATED="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          printf '%s\n' "{\"spdxVersion\":\"SPDX-2.3\",\"dataLicense\":\"CC0-1.0\",\"SPDXID\":\"SPDXRef-DOCUMENT\",\"name\":\"dare-cli-${VERSION}\",\"documentNamespace\":\"https://github.com/dewtech/dare-cli/spdx/${VERSION}\",\"creationInfo\":{\"created\":\"${CREATED}\",\"creators\":[\"Tool: dare-release-alpha\"]},\"packages\":[{\"name\":\"dare\",\"SPDXID\":\"SPDXRef-Package-dare\",\"downloadLocation\":\"NOASSERTION\",\"filesAnalyzed\":false,\"versionInfo\":\"${VERSION}\"}]}" > SBOM.spdx.json
+          cp ../installers/install.sh .
+          cp ../installers/install.ps1 .
 
       - name: sign checksums (optional cosign)
-        continue-on-error: true
         env:
           COSIGN_YES: "true"
         run: |
           set -euo pipefail
+          SIG="dist/SHA256SUMS.sig"
           if command -v cosign >/dev/null 2>&1 || curl -fsSL https://github.com/sigstore/cosign/releases/download/v2.4.1/cosign-linux-amd64 -o /tmp/cosign; then
             chmod +x /tmp/cosign 2>/dev/null || true
             COSIGN_BIN=$(command -v cosign || echo /tmp/cosign)
             if [[ -n "${COSIGN_KEY:-}" ]]; then
-              "$COSIGN_BIN" sign-blob --key env://COSIGN_KEY --output-signature dist/SHA256SUMS.sig dist/SHA256SUMS
+              "$COSIGN_BIN" sign-blob --key env://COSIGN_KEY --output-signature "$SIG" dist/SHA256SUMS \
+                || echo "signing skipped — key sign failed" > "$SIG"
             else
-              # keyless (OIDC) when permissions allow
-              "$COSIGN_BIN" sign-blob --yes --output-signature dist/SHA256SUMS.sig dist/SHA256SUMS || \
-                echo "signing skipped — no key / OIDC unavailable" > dist/SHA256SUMS.sig
+              "$COSIGN_BIN" sign-blob --yes --output-signature "$SIG" dist/SHA256SUMS \
+                || echo "signing skipped — no key / OIDC unavailable" > "$SIG"
             fi
           else
-            echo "signing skipped — cosign unavailable" > dist/SHA256SUMS.sig
+            echo "signing skipped — cosign unavailable" > "$SIG"
           fi
+          test -f "$SIG"
 
       - name: upload meta
         uses: actions/upload-artifact@v4.6.0

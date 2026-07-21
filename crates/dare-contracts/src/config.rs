@@ -63,7 +63,10 @@ mod tests {
         assert!(cfg.extra.contains_key("customExtension"));
         save_dare_config(&root, &rel, &cfg).unwrap();
         let cfg2 = load_dare_config(&root, &rel).unwrap();
-        assert_eq!(cfg2.extra.get("customExtension"), cfg.extra.get("customExtension"));
+        assert_eq!(
+            cfg2.extra.get("customExtension"),
+            cfg.extra.get("customExtension")
+        );
     }
 
     #[test]
@@ -76,6 +79,9 @@ mod tests {
         let cfg = load_dare_config(&root, &rel).unwrap();
         let g = cfg.guard.as_ref().unwrap();
         assert_eq!(g.enabled, Some(true));
-        assert_eq!(g.extra.get("customRule").and_then(|v| v.as_str()), Some("a"));
+        assert_eq!(
+            g.extra.get("customRule").and_then(|v| v.as_str()),
+            Some("a")
+        );
     }
 }

@@ -128,7 +128,8 @@ mod tests {
         generate_cursorrules(&root, false).unwrap();
         let d2 = detect_cursor(&root).unwrap();
         assert!(d2.cursorrules);
-        let content = read_to_string(&root, &SafeRelativePath::new(".cursorrules").unwrap()).unwrap();
+        let content =
+            read_to_string(&root, &SafeRelativePath::new(".cursorrules").unwrap()).unwrap();
         assert!(content.starts_with(MANAGED_PREFIX));
         assert!(content.contains("DARE Cursor rules"));
     }

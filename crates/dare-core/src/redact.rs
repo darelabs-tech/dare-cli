@@ -100,7 +100,9 @@ fn redact_akia_keys(input: &str) -> String {
         if i + 20 <= chars.len() {
             let window: String = chars[i..i + 20].iter().collect();
             let ok = window.starts_with("AKIA")
-                && window[4..].chars().all(|c| c.is_ascii_uppercase() || c.is_ascii_digit())
+                && window[4..]
+                    .chars()
+                    .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit())
                 && (i == 0 || !chars[i - 1].is_ascii_alphanumeric())
                 && (i + 20 == chars.len() || !chars[i + 20].is_ascii_alphanumeric());
             if ok {

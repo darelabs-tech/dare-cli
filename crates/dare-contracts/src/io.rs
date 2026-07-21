@@ -1,9 +1,9 @@
 //! Canonical contract I/O under [`ProjectRoot`].
 
-use dare_core::{CoreError, CoreResult};
 use dare_core::fs::{atomic_write, read_to_string};
-use dare_core::{ProjectRoot, SafeRelativePath};
 use dare_core::to_canonical_json_string;
+use dare_core::{CoreError, CoreResult};
+use dare_core::{ProjectRoot, SafeRelativePath};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 

@@ -6,7 +6,9 @@ use kill_tree::Config;
 use crate::error::{CoreError, CoreResult};
 
 pub(crate) fn kill_tree_once(pid: u32) -> CoreResult<()> {
-    kill_tree(pid).map(|_| ()).map_err(|e| CoreError::io(format!("kill_tree failed: {e}")))
+    kill_tree(pid)
+        .map(|_| ())
+        .map_err(|e| CoreError::io(format!("kill_tree failed: {e}")))
 }
 
 pub(crate) fn kill_tree_force(pid: u32) -> CoreResult<()> {

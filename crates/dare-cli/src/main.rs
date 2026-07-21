@@ -13,17 +13,17 @@ use dare_assets::{
     load_capability_matrix_from_str, validate_capability_matrix, verify_embedded_assets,
     EmbeddedAssets,
 };
-use dare_config::{
-    default_config, load_effective, CliOverrides, EnvOverrides, DEFAULT_CONFIG_REL,
+use dare_config::{default_config, load_effective, CliOverrides, EnvOverrides, DEFAULT_CONFIG_REL};
+use dare_core::{
+    init_tracing, CoreError, CoreResult, ExecutionContext, ProjectRoot, SafeRelativePath,
 };
 use dare_harness::{
     detect_antigravity, detect_claude, detect_codex, detect_cursor, ensure_workflows_dir,
     generate_agents_md, generate_antigravityrules, generate_claude_md, generate_cursorrules,
     install_antigravity, install_codex_skills, install_commands, install_cursor_commands,
-    validate_antigravity_install, validate_codex_install, validate_cursor_install, validate_install,
-    write_settings_json,
+    validate_antigravity_install, validate_codex_install, validate_cursor_install,
+    validate_install, write_settings_json,
 };
-use dare_core::{init_tracing, CoreError, CoreResult, ExecutionContext, ProjectRoot, SafeRelativePath};
 use output::OutputRenderer;
 
 #[derive(Debug, Parser)]
@@ -196,16 +196,20 @@ enum CodexCmd {
 
 #[derive(Debug, Subcommand)]
 enum AntigravityCmd {
+    /// Detect .antigravityrules / .antigravity / .agents presence.
     Detect {
         #[arg(long)]
         root: Option<PathBuf>,
     },
+    /// Install managed Antigravity rules, workflows, commands and shared skills.
     Install {
         #[arg(long)]
         root: Option<PathBuf>,
+        /// Overwrite unmanaged rules / commands / skills (default: preserve).
         #[arg(long)]
         force: bool,
     },
+    /// Validate installed Antigravity assets vs matrix.
     Validate {
         #[arg(long)]
         root: Option<PathBuf>,
@@ -213,7 +217,8 @@ enum AntigravityCmd {
 }
 
 fn project_root(root: Option<PathBuf>) -> CoreResult<ProjectRoot> {
-    let root_path = root.unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
+    let root_path =
+        root.unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
     ProjectRoot::new(&root_path)
 }
 
@@ -271,9 +276,8 @@ fn run(cli: Cli) -> Result<(String, serde_json::Value), CoreError> {
             ok_msg(msg)
         }
         Some(Commands::Info { root }) => {
-            let cwd = root.unwrap_or_else(|| {
-                std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
-            });
+            let cwd = root
+                .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
             let report = collect_info(&cwd)?;
             let human = format_human(&report);
             let data = report_to_json(&report);
@@ -306,11 +310,11 @@ fn run(cli: Cli) -> Result<(String, serde_json::Value), CoreError> {
         Some(Commands::Capabilities {
             action: CapabilitiesCmd::Validate,
         }) => {
-            let file = EmbeddedAssets::get("capability-matrix.yml").ok_or_else(|| {
-                CoreError::config("asset missing: capability-matrix.yml")
+            let file = EmbeddedAssets::get("capability-matrix.yml")
+                .ok_or_else(|| CoreError::config("asset missing: capability-matrix.yml"))?;
+            let yaml = std::str::from_utf8(file.data.as_ref()).map_err(|e| {
+                CoreError::config(format!("invalid capability-matrix encoding: {e}"))
             })?;
-            let yaml = std::str::from_utf8(file.data.as_ref())
-                .map_err(|e| CoreError::config(format!("invalid capability-matrix encoding: {e}")))?;
             let matrix = load_capability_matrix_from_str(yaml)?;
             validate_capability_matrix(&matrix)?;
             ok_msg(format!(
@@ -380,7 +384,9 @@ fn run(cli: Cli) -> Result<(String, serde_json::Value), CoreError> {
                 let project = project_root(root)?;
                 generate_agents_md(&project, force)?;
                 let n = install_codex_skills(&project, force)?;
-                ok_msg(format!("harness codex install: wrote {n} skills + AGENTS.md"))
+                ok_msg(format!(
+                    "harness codex install: wrote {n} skills + AGENTS.md"
+                ))
             }
             CodexCmd::Validate { root } => {
                 let project = project_root(root)?;

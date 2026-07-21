@@ -108,8 +108,7 @@ pub fn apply_plan_in_memory(cfg: &DareConfig, plan: &MigrationPlan) -> DareConfi
                 set_block_enabled(&mut out, block, *enabled);
             }
             MigrationStepKind::WriteSchemaVersion { version } => {
-                out.extra
-                    .insert("schemaVersion".into(), json!(version));
+                out.extra.insert("schemaVersion".into(), json!(version));
             }
         }
     }

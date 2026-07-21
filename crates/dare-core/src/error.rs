@@ -120,6 +120,9 @@ mod tests {
         assert_eq!(exit_code(ErrorKind::Io), 5);
         assert_eq!(ErrorKind::Usage.as_str(), "Usage");
         assert_eq!(CoreError::usage("x").exit_code(), 2);
-        assert_eq!(CoreError::invalid_input("x").kind(), ErrorKind::InvalidInput);
+        assert_eq!(
+            CoreError::invalid_input("x").kind(),
+            ErrorKind::InvalidInput
+        );
     }
 }

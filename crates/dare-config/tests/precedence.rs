@@ -52,12 +52,7 @@ fn p3_cli_beats_env() {
         ide: Some("windsurf".into()),
         ..Default::default()
     };
-    let out = merge_layers(
-        &default_config(),
-        Some(&file_ide("cursor")),
-        &env,
-        &cli,
-    );
+    let out = merge_layers(&default_config(), Some(&file_ide("cursor")), &env, &cli);
     assert_eq!(out.ide.as_deref(), Some("windsurf"));
 }
 

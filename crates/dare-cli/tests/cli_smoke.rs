@@ -180,3 +180,36 @@ fn harness_codex_install_validate_detect() {
         .stdout(predicate::str::contains("agents_md=true"));
 }
 
+#[test]
+fn harness_antigravity_install_validate_detect() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let root = dir.path().to_str().expect("utf8 path");
+
+    Command::new(cargo_bin("dare"))
+        .args([
+            "harness",
+            "antigravity",
+            "install",
+            "--force",
+            "--root",
+            root,
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(
+            "harness antigravity install: wrote 49",
+        ));
+
+    Command::new(cargo_bin("dare"))
+        .args(["harness", "antigravity", "validate", "--root", root])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("harness antigravity validate: ok"))
+        .stdout(predicate::str::contains("49"));
+
+    Command::new(cargo_bin("dare"))
+        .args(["harness", "antigravity", "detect", "--root", root])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("rules=true"));
+}
