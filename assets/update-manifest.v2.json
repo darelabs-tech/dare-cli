@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 2,
+  "cliVersion": "0.1.0-alpha.0",
+  "releases": [
+    {
+      "version": "0.1.0-alpha.0",
+      "notes": "initial desired-state series (no holes)"
+    }
+  ],
+  "assets": [
+    {
+      "path": "AGENTS.md",
+      "sha256": "3968afe96e6d08f4efa6d4e49ebe8c18598995a938e6acc25e4648ee10279ca4",
+      "appliesTo": ["codex"],
+      "kind": "harness"
+    },
+    {
+      "path": "CLAUDE.md",
+      "sha256": "9ac6b4f176c7a945f48cdedf3616babe316f2ca6a5377e118d3a5034b1973559",
+      "appliesTo": ["claude-code"],
+      "kind": "harness"
+    },
+    {
+      "path": ".cursorrules",
+      "sha256": "85202d6cc92beee517985a947b974f93a21534b82317212005187fc0a61f7117",
+      "appliesTo": ["cursor"],
+      "kind": "harness"
+    },
+    {
+      "path": ".antigravityrules",
+      "sha256": "f88bced09e9c8f8610ee2abe8900279e77a4d08449d47c2a0e841fb4f098a0df",
+      "appliesTo": ["antigravity"],
+      "kind": "harness"
+    },
+    {
+      "path": "templates/DESIGN-template.md",
+      "sha256": "d285d9f80983575975c8199a1faea3319264ad4f147365cd0323c920f7415734",
+      "appliesTo": ["*"],
+      "kind": "template",
+      "source": "templates/DESIGN-template.md"
+    },
+    {
+      "path": "templates/BLUEPRINT-template.md",
+      "sha256": "aaea3af4dbf194f61ed67a9a8736af8c510d8fcea745793921bc0b32066ea203",
+      "appliesTo": ["*"],
+      "kind": "template",
+      "source": "templates/BLUEPRINT-template.md"
+    },
+    {
+      "path": "capability-matrix.yml",
+      "sha256": "6ef1e1f582ef837bc09400dee24fe4e26e1446aa2121ee10116aa3e493d41cfc",
+      "appliesTo": ["*"],
+      "kind": "canonical",
+      "source": "capability-matrix.yml"
+    }
+  ]
+}

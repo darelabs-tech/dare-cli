@@ -4,6 +4,7 @@ pub mod antigravity;
 pub mod claude;
 pub mod codex;
 pub mod cursor;
+pub mod managed;
 
 pub use antigravity::{
     detect_antigravity, ensure_workflows_dir, generate_antigravityrules, install_antigravity,
@@ -21,3 +22,4 @@ pub use cursor::{
     detect_cursor, generate_cursorrules, install_cursor_commands, validate_cursor_install,
     CursorDetect,
 };
+pub use managed::content_is_managed;

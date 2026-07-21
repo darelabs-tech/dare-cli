@@ -527,3 +527,164 @@ fn validate_zero_writes() {
     let after = listing(dir.path());
     assert_eq!(before, after);
 }
+
+fn update_fixture(name: &str) -> std::path::PathBuf {
+    fixture(&format!("update/{name}"))
+}
+
+fn listing_tree(base: &std::path::Path) -> Vec<String> {
+    let mut out = Vec::new();
+    fn walk(base: &std::path::Path, cur: &std::path::Path, out: &mut Vec<String>) {
+        if let Ok(rd) = std::fs::read_dir(cur) {
+            for e in rd.flatten() {
+                let p = e.path();
+                let rel = p
+                    .strip_prefix(base)
+                    .unwrap()
+                    .to_string_lossy()
+                    .replace('\\', "/");
+                out.push(rel);
+                if p.is_dir() {
+                    walk(base, &p, out);
+                }
+            }
+        }
+    }
+    walk(base, base, &mut out);
+    out.sort();
+    out
+}
+
+#[test]
+fn update_requires_dry_run_stub() {
+    let assert = Command::new(cargo_bin("dare"))
+        .args(["update", "--no-color"])
+        .assert()
+        .code(1);
+    let err = String::from_utf8_lossy(&assert.get_output().stderr);
+    assert!(
+        err.contains("dry-run") && err.contains("022"),
+        "stub message must mention dry-run and 022, got: {err}"
+    );
+}
+
+#[test]
+fn update_dry_run_ok() {
+    let mixed = update_fixture("mixed");
+    let path = mixed.to_str().expect("utf8");
+    Command::new(cargo_bin("dare"))
+        .args(["update", "--dry-run", "-d", path, "--no-color"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("mode: dry-run"));
+}
+
+#[test]
+fn update_dry_run_json_schema() {
+    let mixed = update_fixture("mixed");
+    let path = mixed.to_str().expect("utf8");
+    let assert = Command::new(cargo_bin("dare"))
+        .args(["update", "--dry-run", "--json", "-d", path, "--no-color"])
+        .assert()
+        .success();
+    let out = String::from_utf8_lossy(&assert.get_output().stdout);
+    let v: Value = serde_json::from_str(out.trim()).expect("json");
+    assert_eq!(v["ok"], true);
+    assert_eq!(v["data"]["schemaVersion"], 1);
+    assert_eq!(v["data"]["mode"], "dry-run");
+}
+
+#[test]
+fn update_target_codex() {
+    let mixed = update_fixture("mixed");
+    let path = mixed.to_str().expect("utf8");
+    let assert = Command::new(cargo_bin("dare"))
+        .args([
+            "update",
+            "--dry-run",
+            "--target",
+            "codex",
+            "--json",
+            "-d",
+            path,
+            "--no-color",
+        ])
+        .assert()
+        .success();
+    let out = String::from_utf8_lossy(&assert.get_output().stdout);
+    let v: Value = serde_json::from_str(out.trim()).expect("json");
+    let items = v["data"]["items"].as_array().expect("items");
+    assert!(!items.is_empty(), "expected at least one codex|* item");
+    for item in items {
+        let applies = item["appliesTo"].as_array().expect("appliesTo");
+        let ok = applies.iter().any(|a| {
+            let s = a.as_str().unwrap_or("");
+            s == "*" || s == "codex"
+        });
+        assert!(
+            ok,
+            "item {} appliesTo must include * or codex: {:?}",
+            item["path"], applies
+        );
+    }
+}
+
+#[test]
+fn update_invalid_target() {
+    let mixed = update_fixture("mixed");
+    let path = mixed.to_str().expect("utf8");
+    Command::new(cargo_bin("dare"))
+        .args([
+            "update",
+            "--dry-run",
+            "--target",
+            "3.2.0",
+            "-d",
+            path,
+            "--no-color",
+        ])
+        .assert()
+        .code(4);
+}
+
+#[test]
+fn update_customized_detected() {
+    let customized = update_fixture("customized-assets");
+    let path = customized.to_str().expect("utf8");
+    let assert = Command::new(cargo_bin("dare"))
+        .args(["update", "--dry-run", "--json", "-d", path, "--no-color"])
+        .assert()
+        .success();
+    let out = String::from_utf8_lossy(&assert.get_output().stdout);
+    let v: Value = serde_json::from_str(out.trim()).expect("json");
+    let customized_n = v["data"]["counts"]["customized"]
+        .as_u64()
+        .expect("customized count");
+    assert!(
+        customized_n >= 1,
+        "expected counts.customized >= 1, got {customized_n}"
+    );
+}
+
+#[test]
+fn update_zero_writes() {
+    let mixed = update_fixture("mixed");
+    let path = mixed.to_str().expect("utf8");
+    let before = listing_tree(&mixed);
+    Command::new(cargo_bin("dare"))
+        .args(["update", "--dry-run", "-d", path, "--no-color"])
+        .assert()
+        .success();
+    let after = listing_tree(&mixed);
+    assert_eq!(before, after, "dry-run must not create or delete files");
+}
+
+#[test]
+fn update_no_root() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().to_str().expect("utf8");
+    Command::new(cargo_bin("dare"))
+        .args(["update", "--dry-run", "-d", path, "--no-color"])
+        .assert()
+        .code(4);
+}

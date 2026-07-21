@@ -30,14 +30,6 @@ pub fn detect_claude(root: &ProjectRoot) -> CoreResult<ClaudeDetect> {
     })
 }
 
-fn is_managed(bytes: &[u8]) -> bool {
-    let text = String::from_utf8_lossy(bytes);
-    text.lines()
-        .next()
-        .map(|l| l.trim_start().starts_with(MANAGED_PREFIX))
-        .unwrap_or(false)
-}
-
 fn should_write(root: &ProjectRoot, rel: &SafeRelativePath, force: bool) -> CoreResult<bool> {
     if force {
         return Ok(true);
@@ -47,7 +39,7 @@ fn should_write(root: &ProjectRoot, rel: &SafeRelativePath, force: bool) -> Core
         return Ok(true);
     }
     let existing = read_to_string(root, rel)?;
-    Ok(is_managed(existing.as_bytes()))
+    Ok(crate::content_is_managed(existing.as_bytes()))
 }
 
 fn load_matrix() -> CoreResult<dare_assets::CapabilityMatrix> {

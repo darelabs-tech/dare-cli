@@ -1,4 +1,9 @@
-# /dare-update
+---
+name: dare-update
+description: Sincroniza os artefatos do projeto (comandos de IDE, skills, templates) com a versão instalada do DARE CLI, preservando customizações. Mapeia o CLI `dare update`.
+---
+
+# Atualizar o projeto para a versão atual do CLI
 
 Sincroniza os artefatos do projeto (comandos de IDE, skills, templates) com a versão instalada do DARE CLI, preservando customizações.
 

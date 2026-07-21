@@ -288,6 +288,7 @@ dependencies = [
  "dare-dag",
  "dare-harness",
  "dare-project",
+ "dare-update",
  "predicates",
  "serde",
  "serde_json",
@@ -362,6 +363,19 @@ version = "0.1.0-alpha.0"
 dependencies = [
  "dare-assets",
  "dare-config",
+ "dare-contracts",
+ "dare-core",
+ "dare-harness",
+ "serde",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
+name = "dare-update"
+version = "0.1.0-alpha.0"
+dependencies = [
+ "dare-assets",
  "dare-contracts",
  "dare-core",
  "dare-harness",

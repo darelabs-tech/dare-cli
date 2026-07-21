@@ -9,6 +9,7 @@ use std::process::ExitCode;
 use clap::{Parser, Subcommand};
 use commands::discover::run_discover;
 use commands::info::{collect_info, format_human, report_to_json};
+use commands::update::run_update;
 use commands::validate::run_validate;
 use commands::welcome::{render_welcome, WelcomeOptions};
 use dare_assets::{
@@ -88,6 +89,18 @@ enum Commands {
         /// Treat warnings as failures.
         #[arg(long)]
         strict: bool,
+    },
+    /// Plan project asset updates (dry-run until microplano 022).
+    Update {
+        /// Plan only; no writes. Required until microplano 022 implements apply.
+        #[arg(long)]
+        dry_run: bool,
+        /// Limit plan to harness: claude-code|cursor|codex|antigravity|hybrid|claude-hybrid
+        #[arg(long)]
+        target: Option<String>,
+        /// Project directory (default: cwd walk).
+        #[arg(short = 'd', long = "dir")]
+        dir: Option<PathBuf>,
     },
     /// Asset inventory / embed checks (microplano 009).
     Assets {
@@ -329,6 +342,11 @@ fn run(cli: Cli) -> Result<(String, serde_json::Value), CoreError> {
             dry_run,
             strict_conflicts,
         }) => run_discover(dir, check, force, dry_run, strict_conflicts),
+        Some(Commands::Update {
+            dry_run,
+            target,
+            dir,
+        }) => run_update(dry_run, target, dir),
         Some(Commands::Assets {
             action: AssetsCmd::Verify,
         }) => {

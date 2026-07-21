@@ -39,17 +39,6 @@ pub fn detect_codex(root: &ProjectRoot) -> CoreResult<CodexDetect> {
     })
 }
 
-fn is_managed(bytes: &[u8]) -> bool {
-    String::from_utf8_lossy(bytes)
-        .lines()
-        .next()
-        .map(|l| {
-            let t = l.trim_start();
-            t.starts_with(MANAGED_PREFIX) || t.starts_with("---")
-        })
-        .unwrap_or(false)
-}
-
 fn should_write(root: &ProjectRoot, rel: &SafeRelativePath, force: bool) -> CoreResult<bool> {
     if force {
         return Ok(true);
@@ -59,7 +48,7 @@ fn should_write(root: &ProjectRoot, rel: &SafeRelativePath, force: bool) -> Core
         return Ok(true);
     }
     let existing = read_to_string(root, rel)?;
-    Ok(is_managed(existing.as_bytes()))
+    Ok(crate::content_is_managed(existing.as_bytes()))
 }
 
 fn load_matrix() -> CoreResult<dare_assets::CapabilityMatrix> {
