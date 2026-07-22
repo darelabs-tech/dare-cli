@@ -17,9 +17,17 @@ pub fn inject_enrichable(
     markdown: &str,
     sections: &BTreeMap<String, String>,
 ) -> CoreResult<String> {
+    inject_sections(markdown, sections, ENRICHABLE)
+}
+
+pub fn inject_sections(
+    markdown: &str,
+    sections: &BTreeMap<String, String>,
+    ids: &[&str],
+) -> CoreResult<String> {
     let mut out = markdown.to_string();
 
-    for id in ENRICHABLE {
+    for id in ids {
         let body = sections
             .get(*id)
             .ok_or_else(|| CoreError::invalid_input(format!("missing enrichment section: {id}")))?;

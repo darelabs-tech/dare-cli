@@ -11,12 +11,12 @@ mod schema;
 use std::time::Duration;
 
 pub use codex::{parse_argv_override, CodexCliProvider};
-pub use inject::inject_enrichable;
+pub use inject::{inject_enrichable, inject_sections};
 pub use mock::MockProvider;
 pub use provider::{resolve_provider, AiProvider, ProviderId};
 pub use redact_log::{redact_prompt_for_log, redact_stderr_for_error};
 pub use request::{EnrichRaw, EnrichRequest};
-pub use schema::parse_and_validate_sections;
+pub use schema::{parse_and_validate_sections, parse_and_validate_sections_with};
 
 pub const ENRICH_TIMEOUT: Duration = Duration::from_secs(20 * 60);
 pub const STDOUT_CAP: usize = 1_048_576;

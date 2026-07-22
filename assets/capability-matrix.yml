@@ -48,7 +48,7 @@ capabilities:
     description: "Capability IDE for dare-blueprint"
     instructions: |
       Use the /dare-blueprint slash command when appropriate.
-    cli_commands: []
+    cli_commands: ["blueprint"]
     outputs:
       claude: .claude/commands/dare-blueprint.md
       cursor: .cursor/commands/dare-blueprint.md

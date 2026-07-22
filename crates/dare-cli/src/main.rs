@@ -7,6 +7,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
+use commands::blueprint::{run_blueprint, BlueprintInput};
 use commands::design::run_design;
 use commands::discover::run_discover;
 use commands::info::{collect_info, format_human, report_to_json};
@@ -99,6 +100,20 @@ enum Commands {
         #[arg(long)]
         interactive: bool,
         /// Run optional AI enrichment after deterministic write.
+        #[arg(long)]
+        ai: bool,
+        /// AI provider id (requires `--ai`; default: codex).
+        #[arg(long)]
+        provider: Option<String>,
+    },
+    /// Generate DARE/BLUEPRINT.md, TASKS.md, dare-dag.yaml and EXECUTION specs from Design.
+    Blueprint {
+        /// Optional path to DESIGN.md (default DARE/DESIGN.md).
+        design: Option<PathBuf>,
+        /// Overwrite existing artifacts even without managed marker.
+        #[arg(long)]
+        force: bool,
+        /// Run optional AI enrichment on BLUEPRINT.md (soft-fail).
         #[arg(long)]
         ai: bool,
         /// AI provider id (requires `--ai`; default: codex).
@@ -369,6 +384,17 @@ fn run(cli: Cli) -> Result<(String, serde_json::Value), CoreError> {
             };
             run_design(desc, interactive, ai, provider)
         }
+        Some(Commands::Blueprint {
+            design,
+            force,
+            ai,
+            provider,
+        }) => run_blueprint(BlueprintInput {
+            design_rel_or_abs: design,
+            force,
+            ai,
+            provider,
+        }),
         Some(Commands::Discover {
             dir,
             check,

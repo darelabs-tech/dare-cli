@@ -6,6 +6,13 @@ use serde_json::Value;
 use crate::{BODY_MAX, ENRICHABLE};
 
 pub fn parse_and_validate_sections(stdout: &str) -> CoreResult<BTreeMap<String, String>> {
+    parse_and_validate_sections_with(stdout, ENRICHABLE)
+}
+
+pub fn parse_and_validate_sections_with(
+    stdout: &str,
+    ids: &[&str],
+) -> CoreResult<BTreeMap<String, String>> {
     let value: Value = serde_json::from_str(stdout)
         .map_err(|_| CoreError::invalid_input("enrichment response is not JSON"))?;
 
@@ -16,7 +23,7 @@ pub fn parse_and_validate_sections(stdout: &str) -> CoreResult<BTreeMap<String, 
 
     let mut out = BTreeMap::new();
 
-    for id in ENRICHABLE {
+    for id in ids {
         let body = sections
             .get(*id)
             .and_then(Value::as_str)

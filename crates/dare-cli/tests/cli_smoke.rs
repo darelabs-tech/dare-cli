@@ -1022,3 +1022,161 @@ fn design_interactive_no_tty_exits_2() {
         "piped stdin must reject --interactive without TTY"
     );
 }
+
+fn blueprint_fixture(name: &str) -> std::path::PathBuf {
+    std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../tests/fixtures/blueprint")
+        .join(name)
+}
+
+fn blueprint_project_temp() -> tempfile::TempDir {
+    let dir = tempfile::tempdir().expect("tempdir");
+    std::fs::write(dir.path().join("dare.config.json"), "{}").expect("dare.config.json");
+    std::fs::create_dir_all(dir.path().join("DARE")).expect("DARE dir");
+    std::fs::copy(
+        blueprint_fixture("sample-design.md"),
+        dir.path().join("DARE/DESIGN.md"),
+    )
+    .expect("copy sample design");
+    dir
+}
+
+#[test]
+fn blueprint_creates_artifacts() {
+    let dir = blueprint_project_temp();
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args(["blueprint", "--no-color"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("blueprint: ok"))
+        .stdout(predicate::str::contains("validateOk: true"));
+    assert!(dir.path().join("DARE/BLUEPRINT.md").is_file());
+    assert!(dir.path().join("DARE/TASKS.md").is_file());
+    assert!(dir.path().join("DARE/dare-dag.yaml").is_file());
+    assert!(dir.path().join("DARE/EXECUTION/task-001.md").is_file());
+}
+
+#[test]
+fn blueprint_json_schema() {
+    let dir = blueprint_project_temp();
+    let assert = Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args(["blueprint", "--json", "--no-color"])
+        .assert()
+        .success();
+    let out = String::from_utf8_lossy(&assert.get_output().stdout);
+    let v: Value = serde_json::from_str(out.trim()).expect("json envelope");
+    assert_eq!(v["ok"], true);
+    let data = &v["data"];
+    assert_eq!(data["schemaVersion"], 1);
+    assert_eq!(data["mode"], "blueprint");
+    assert_eq!(data["validateOk"], true);
+    assert!(data["taskCount"].as_u64().unwrap_or(0) >= 2);
+}
+
+#[test]
+fn blueprint_missing_design_not_found() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    std::fs::write(dir.path().join("dare.config.json"), "{}").expect("dare.config.json");
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args(["blueprint", "--no-color"])
+        .assert()
+        .failure()
+        .code(3);
+}
+
+#[test]
+fn blueprint_keep_custom_without_force() {
+    let dir = blueprint_project_temp();
+    let custom = "# Custom blueprint kept by stakeholder\n\nNotes.\n";
+    std::fs::write(dir.path().join("DARE/BLUEPRINT.md"), custom).expect("custom blueprint");
+    let assert = Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args(["blueprint", "--json", "--no-color"])
+        .assert()
+        .success();
+    let after = std::fs::read_to_string(dir.path().join("DARE/BLUEPRINT.md")).expect("read");
+    assert_eq!(after, custom, "custom unmanaged BLUEPRINT must be kept");
+    let out = String::from_utf8_lossy(&assert.get_output().stdout);
+    let v: Value = serde_json::from_str(out.trim()).expect("json");
+    let kept = v["data"]["kept"].as_array().expect("kept");
+    assert!(
+        kept.iter().any(|p| p.as_str() == Some("DARE/BLUEPRINT.md")),
+        "expected DARE/BLUEPRINT.md in kept, got {kept:?}"
+    );
+    let warnings = v["data"]["warnings"].as_array().expect("warnings");
+    assert!(
+        warnings.iter().any(|w| {
+            w.as_str()
+                .map(|s| s.contains("kept unmanaged") && s.contains("BLUEPRINT.md"))
+                .unwrap_or(false)
+        }),
+        "expected kept unmanaged warning, got {warnings:?}"
+    );
+}
+
+#[test]
+fn blueprint_force_overwrites() {
+    let dir = blueprint_project_temp();
+    let custom = "# Custom TASKS table\n| x | y |\n";
+    std::fs::write(dir.path().join("DARE/TASKS.md"), custom).expect("custom tasks");
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args(["blueprint", "--force", "--no-color"])
+        .assert()
+        .success();
+    let after = std::fs::read_to_string(dir.path().join("DARE/TASKS.md")).expect("read");
+    assert!(after.starts_with("<!-- dare:managed -->"));
+    assert_ne!(after, custom, "--force must overwrite unmanaged TASKS.md");
+}
+
+#[test]
+fn blueprint_provider_without_ai_usage() {
+    let dir = blueprint_project_temp();
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args(["blueprint", "--provider", "mock", "--no-color"])
+        .assert()
+        .code(2);
+}
+
+#[test]
+fn blueprint_ai_mock_soft_or_enrich() {
+    let dir = blueprint_project_temp();
+    let assert = Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args([
+            "blueprint",
+            "--ai",
+            "--provider",
+            "mock",
+            "--json",
+            "--no-color",
+        ])
+        .assert()
+        .success();
+    let out = String::from_utf8_lossy(&assert.get_output().stdout);
+    let v: Value = serde_json::from_str(out.trim()).expect("json");
+    assert_eq!(v["ok"], true);
+    assert_eq!(v["data"]["ai"], true);
+    assert_eq!(v["data"]["provider"], "mock");
+    let enriched = v["data"]["enriched"].as_bool().unwrap_or(false);
+    let blueprint = std::fs::read_to_string(dir.path().join("DARE/BLUEPRINT.md")).expect("read");
+    if enriched {
+        assert!(
+            blueprint.contains("Generated by mock"),
+            "enriched blueprint must contain mock injection"
+        );
+    } else {
+        let warnings = v["data"]["warnings"].as_array().expect("warnings");
+        assert!(
+            warnings.iter().any(|w| w
+                .as_str()
+                .map(|s| s.contains("AI enrichment skipped"))
+                .unwrap_or(false)),
+            "soft-fail must include AI warning when not enriched"
+        );
+    }
+}
