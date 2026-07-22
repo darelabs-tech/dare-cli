@@ -360,6 +360,7 @@ fn run(cli: Cli) -> Result<(String, serde_json::Value), CoreError> {
                 no_banner,
                 no_color: cli.no_color,
                 stdout_is_tty: None,
+                force_color: None,
             });
             ok_msg(msg)
         }

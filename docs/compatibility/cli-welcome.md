@@ -18,8 +18,22 @@ dare welcome --json
 | Flag | Effect |
 |------|--------|
 | `--no-banner` | Skip banner even on TTY; still prints quick-start |
-| `--no-color` | If banner would show, use plain `DARE Framework` instead of ASCII art |
+| `--no-color` | If banner would show, use plain `DARE` instead of ASCII art |
 | `--json` | Envelope via output renderer (004); body = welcome text |
+
+## Brand (DareLabs)
+
+TTY color banner uses identity palette:
+
+| Role | Color |
+|------|--------|
+| Frame + letter contours | Electric blue `#1E6BFF` (`38;2;30;107;255`) |
+| Block letter fill `DARE` | White |
+| Method line | Muted slate |
+
+Banner shows **DARE** only (no `LABS`) in block/figlet style with blue outline. Method line: `Discover · Design · Architect · Review · Execute`.
+
+Marketing PNG (not printed by CLI): [`assets/brand/darelabs-welcome-banner.png`](../../assets/brand/darelabs-welcome-banner.png) · logo [`assets/brand/darelabs-logo.png`](../../assets/brand/darelabs-logo.png).
 
 ## Environment
 
@@ -34,8 +48,8 @@ dare welcome --json
 |-----------|--------|
 | Non-TTY (pipes/CI) | Off |
 | `--no-banner` or truthy `DARE_NO_BANNER` | Off |
-| TTY + color allowed | ASCII art + tagline |
-| TTY + `--no-color` / `NO_COLOR` | `DARE Framework` + tagline |
+| TTY + color allowed | Block ASCII (white/blue) + tagline |
+| TTY + `--no-color` / `NO_COLOR` | `DARE` + tagline |
 
 Quick-start is **always** printed.
 
