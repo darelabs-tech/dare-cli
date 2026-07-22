@@ -1140,7 +1140,7 @@ mod tests {
         assert!(is_managed_yaml(&yaml));
 
         let yaml_late = "title: test\n# dare:managed\n";
-        assert!(!is_managed_yaml(&yaml_late));
+        assert!(!is_managed_yaml(yaml_late));
     }
 
     #[test]

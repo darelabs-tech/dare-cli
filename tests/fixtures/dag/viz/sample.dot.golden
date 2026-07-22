@@ -1,0 +1,11 @@
+digraph dare_dag {
+  rankdir=TB;
+  task_a [label="task-a\nAlpha"];
+  task_b [label="task-b\nBeta"];
+  task_c [label="task-c\nGamma"];
+  task_d [label="task-d\nDelta"];
+  task_a -> task_b;
+  task_a -> task_c;
+  task_b -> task_d;
+  task_c -> task_d;
+}

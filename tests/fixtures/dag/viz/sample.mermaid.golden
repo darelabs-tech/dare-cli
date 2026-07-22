@@ -1,0 +1,15 @@
+flowchart TB
+  subgraph rank_0["Rank 0"]
+    task_a["task-a<br/>Alpha"]
+  end
+  subgraph rank_1["Rank 1"]
+    task_b["task-b<br/>Beta"]
+    task_c["task-c<br/>Gamma"]
+  end
+  subgraph rank_2["Rank 2"]
+    task_d["task-d<br/>Delta"]
+  end
+  task_a --> task_b
+  task_a --> task_c
+  task_b --> task_d
+  task_c --> task_d

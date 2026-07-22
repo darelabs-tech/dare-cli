@@ -8,6 +8,7 @@ use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
 use commands::blueprint::{run_blueprint, BlueprintInput};
+use commands::dag::{run_dag_viz, CliVizFormat};
 use commands::design::run_design;
 use commands::discover::run_discover;
 use commands::info::{collect_info, format_human, report_to_json};
@@ -92,6 +93,11 @@ enum Commands {
         #[arg(long)]
         strict: bool,
     },
+    /// DAG utilities (visualization).
+    Dag {
+        #[command(subcommand)]
+        action: DagCmd,
+    },
     /// Render DARE/DESIGN.md from a feature description (deterministic).
     Design {
         /// Feature/product description (omit with --interactive).
@@ -157,6 +163,22 @@ enum Commands {
     Harness {
         #[command(subcommand)]
         ide: HarnessIde,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+enum DagCmd {
+    /// Render Mermaid / DOT / Excalidraw visualization of a DAG.
+    Viz {
+        /// Path to dare-dag.yaml (default: DARE/dare-dag.yaml).
+        #[arg(long)]
+        dag: Option<PathBuf>,
+        /// Output format (exact lowercase).
+        #[arg(short = 'f', long = "format", value_enum, default_value_t = CliVizFormat::Mermaid)]
+        format: CliVizFormat,
+        /// Write visualization to this path (project-relative or under root).
+        #[arg(short = 'o', long = "output")]
+        output: Option<PathBuf>,
     },
 }
 
@@ -321,6 +343,14 @@ fn main() -> ExitCode {
     match Cli::try_parse() {
         Ok(cli) => match cli.command {
             Some(Commands::Validate { dag, strict }) => run_validate(dag, strict, &renderer),
+            Some(Commands::Dag {
+                action:
+                    DagCmd::Viz {
+                        dag,
+                        format,
+                        output,
+                    },
+            }) => run_dag_viz(dag, format, output, &renderer),
             other => {
                 let cli = Cli {
                     json: cli.json,
@@ -548,6 +578,7 @@ fn run(cli: Cli) -> Result<(String, serde_json::Value), CoreError> {
             }
         },
         Some(Commands::Validate { .. }) => unreachable!("validate handled in main"),
+        Some(Commands::Dag { .. }) => unreachable!("dag handled in main"),
     }
 }
 

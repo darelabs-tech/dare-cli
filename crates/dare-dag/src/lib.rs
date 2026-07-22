@@ -7,6 +7,7 @@ mod report;
 mod state;
 mod status;
 mod validate;
+pub mod viz;
 
 pub use canvas::{render, write, CANVAS_REL};
 pub use format::{format_human, report_to_json};
@@ -24,6 +25,7 @@ pub use state::{
 };
 pub use status::TaskStatus;
 pub use validate::{is_kebab_id, validate_dag, validate_path, ValidateFsContext};
+pub use viz::{VizFormat, VizOptions, OUTPUT_CAP, TITLE_MAX_DEFAULT};
 
 #[cfg(test)]
 mod integration_tests {

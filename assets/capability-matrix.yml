@@ -129,10 +129,11 @@ capabilities:
     assets: []
   - id: dare-dag-viz
     title: "dare-dag-viz"
-    description: "Capability IDE for dare-dag-viz"
+    description: "Visualize DARE DAG as Mermaid/DOT/Excalidraw via nested CLI dare dag viz"
     instructions: |
-      Use the /dare-dag-viz slash command when appropriate.
-    cli_commands: []
+      Use /dare-dag-viz or `dare dag viz` (subcommand viz under cli command dag).
+      Formats: mermaid (default), dot, excalidraw. See docs/compatibility/cli-dag-viz.md.
+    cli_commands: ["dag"]
     outputs:
       claude: .claude/commands/dare-dag-viz.md
       cursor: .cursor/commands/dare-dag-viz.md
