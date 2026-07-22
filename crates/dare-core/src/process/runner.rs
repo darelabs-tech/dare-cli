@@ -1,6 +1,6 @@
 //! SystemProcessRunner — argv-only spawn with timeout/cancel.
 
-use std::io::Read;
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::atomic::Ordering;
@@ -16,7 +16,7 @@ use crate::process::kill::{kill_tree_force, kill_with_grace};
 use crate::process::output::{truncate_chars, ProcessOutput};
 use crate::process::SafeCommand;
 
-pub trait ProcessRunner {
+pub trait ProcessRunner: Send + Sync {
     fn run(&self, cmd: &SafeCommand) -> CoreResult<ProcessOutput>;
 }
 
@@ -39,7 +39,11 @@ impl ProcessRunner for SystemProcessRunner {
         command.args(&cmd.args);
         command.stdout(Stdio::piped());
         command.stderr(Stdio::piped());
-        command.stdin(Stdio::null());
+        if cmd.stdin.is_some() {
+            command.stdin(Stdio::piped());
+        } else {
+            command.stdin(Stdio::null());
+        }
 
         if let Some(cwd) = &cmd.cwd {
             let abs = cwd.root.resolve(&cwd.rel)?;
@@ -67,6 +71,14 @@ impl ProcessRunner for SystemProcessRunner {
             }
             Err(e) => return Err(CoreError::io(e.to_string())),
         };
+
+        if let Some(stdin_bytes) = cmd.stdin.clone() {
+            if let Some(mut stdin_pipe) = child.stdin.take() {
+                thread::spawn(move || {
+                    let _ = stdin_pipe.write_all(&stdin_bytes);
+                });
+            }
+        }
 
         let pid = child.id();
         let mut stdout_pipe = child.stdout.take();
@@ -365,5 +377,27 @@ mod tests {
         let cmd = SafeCommand::new("../etc/passwd").cwd(root, rel);
         let err = SystemProcessRunner.run(&cmd).expect_err("dotdot");
         assert!(matches!(err, CoreError::InvalidInput(_)));
+    }
+
+    #[test]
+    fn system_runner_stdin_piped_to_child() {
+        let cmd = {
+            #[cfg(windows)]
+            {
+                SafeCommand::new("powershell.exe")
+                    .args(["-NoProfile", "-Command", "[Console]::In.ReadToEnd()"])
+                    .stdin(b"hello stdin".to_vec())
+                    .timeout(Duration::from_secs(5))
+            }
+            #[cfg(unix)]
+            {
+                SafeCommand::new("cat")
+                    .stdin(b"hello stdin".to_vec())
+                    .timeout(Duration::from_secs(5))
+            }
+        };
+        let out = SystemProcessRunner.run(&cmd).expect("stdin child");
+        assert_eq!(out.exit_code, 0);
+        assert!(out.stdout.contains("hello stdin"));
     }
 }

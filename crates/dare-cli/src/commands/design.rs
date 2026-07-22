@@ -3,6 +3,9 @@
 use std::collections::HashMap;
 use std::io::{self, IsTerminal, Write};
 
+use dare_ai::{
+    inject_enrichable, parse_and_validate_sections, resolve_provider, EnrichRequest, ProviderId,
+};
 use dare_core::fs::{atomic_write, read_to_string};
 use dare_core::{CoreError, CoreResult, ProjectRoot, SafeRelativePath};
 use dare_project::find_project_root;
@@ -10,7 +13,7 @@ use serde::Serialize;
 use serde_json::{json, Value};
 
 pub const DESIGN_REL: &str = "DARE/DESIGN.md";
-pub const DESIGN_SCHEMA_VERSION: u32 = 1;
+pub const DESIGN_SCHEMA_VERSION: u32 = 2;
 pub const DESC_MAX: usize = 32_768;
 pub const DESIGN_READ_CAP: usize = 262_144;
 pub const MARKER_BEGIN: &str = "<!-- AGENT:BEGIN section=\"";
@@ -44,6 +47,9 @@ pub struct DesignReport {
     pub preserved_regions: u32,
     pub interactive: bool,
     pub warnings: Vec<String>,
+    pub ai: bool,
+    pub provider: Option<String>,
+    pub enriched: bool,
 }
 
 fn marker_begin(section: &str) -> String {
@@ -241,16 +247,21 @@ pub fn render_canonical(input: &DesignInput) -> String {
 
 pub fn format_human(r: &DesignReport) -> String {
     let status = if r.ok { "ok" } else { "failed" };
-    format!(
+    let mut out = format!(
         "design: {status}\n\
          path: {}\n\
          action: {}\n\
          title: {}\n\
          markerCount: {}\n\
          preservedRegions: {}\n\
-         mode: {}",
-        r.path, r.action, r.title, r.marker_count, r.preserved_regions, r.mode
-    )
+         ai: {}\n",
+        r.path, r.action, r.title, r.marker_count, r.preserved_regions, r.ai
+    );
+    if let Some(ref provider) = r.provider {
+        out.push_str(&format!("provider: {provider}\n"));
+    }
+    out.push_str(&format!("enriched: {}\nmode: {}", r.enriched, r.mode));
+    out
 }
 
 pub fn report_to_json(r: &DesignReport) -> Value {
@@ -475,7 +486,16 @@ fn read_interactive_input() -> CoreResult<(String, String)> {
 }
 
 /// CLI entry: resolve project root, optional interactive prompts, apply design.
-pub fn run_design(description: Option<String>, interactive: bool) -> CoreResult<(String, Value)> {
+pub fn run_design(
+    description: Option<String>,
+    interactive: bool,
+    ai: bool,
+    provider: Option<String>,
+) -> CoreResult<(String, Value)> {
+    if provider.is_some() && !ai {
+        return Err(CoreError::usage("--provider requires --ai"));
+    }
+
     if interactive {
         if description.is_some() {
             return Err(CoreError::usage(
@@ -509,10 +529,56 @@ pub fn run_design(description: Option<String>, interactive: bool) -> CoreResult<
         interactive,
         fixed_date: None,
     };
-    let report = apply_design(&root, &input)?;
+    let base = apply_design(&root, &input)?;
+    let report = if ai {
+        enrich_design(&root, &input, base, provider)?
+    } else {
+        report_v2(base, false, None, false)
+    };
     let human = format_human(&report);
     let data = report_to_json(&report);
     Ok((human, data))
+}
+
+fn report_v2(
+    mut base: DesignReport,
+    ai: bool,
+    provider: Option<String>,
+    enriched: bool,
+) -> DesignReport {
+    base.schema_version = DESIGN_SCHEMA_VERSION;
+    base.ai = ai;
+    base.provider = provider;
+    base.enriched = enriched;
+    base
+}
+
+fn enrich_design(
+    root: &ProjectRoot,
+    input: &DesignInput,
+    base: DesignReport,
+    provider: Option<String>,
+) -> CoreResult<DesignReport> {
+    let pid = match provider.as_deref() {
+        None => ProviderId::Codex,
+        Some(s) => ProviderId::parse(s)?,
+    };
+    let prov = resolve_provider(pid)?;
+    let rel = SafeRelativePath::new(DESIGN_REL)?;
+    let md = read_design_capped(root, &rel)?;
+    let cwd_rel = SafeRelativePath::new("DARE")?;
+    let req = EnrichRequest {
+        command: "design".into(),
+        title: base.title.clone(),
+        description: input.description.clone(),
+        current_markdown: md.clone(),
+        cwd: Some((root.clone(), cwd_rel)),
+    };
+    let raw = prov.enrich(&req)?;
+    let sections = parse_and_validate_sections(&raw.stdout)?;
+    let injected = inject_enrichable(&md, &sections)?;
+    atomic_write(root, &rel, injected.as_bytes())?;
+    Ok(report_v2(base, true, Some(pid.as_str().to_string()), true))
 }
 
 pub fn apply_design(root: &ProjectRoot, input: &DesignInput) -> CoreResult<DesignReport> {
@@ -553,6 +619,9 @@ pub fn apply_design(root: &ProjectRoot, input: &DesignInput) -> CoreResult<Desig
         preserved_regions,
         interactive: input.interactive,
         warnings: vec![],
+        ai: false,
+        provider: None,
+        enriched: false,
     })
 }
 
@@ -642,7 +711,7 @@ mod tests {
     }
 
     #[test]
-    fn report_schema_version_1() {
+    fn report_schema_version_2() {
         let report = DesignReport {
             schema_version: DESIGN_SCHEMA_VERSION,
             mode: "design".into(),
@@ -654,15 +723,46 @@ mod tests {
             preserved_regions: 0,
             interactive: false,
             warnings: vec![],
+            ai: false,
+            provider: None,
+            enriched: false,
         };
         let v = report_to_json(&report);
-        assert_eq!(v["schemaVersion"], 1);
+        assert_eq!(v["schemaVersion"], 2);
         assert_eq!(v["mode"], "design");
         assert_eq!(v["ok"], true);
         assert_eq!(v["markerCount"], 4);
+        assert_eq!(v["ai"], false);
+        assert_eq!(v["enriched"], false);
+        assert!(v["provider"].is_null());
         let human = format_human(&report);
         assert!(human.contains("design: ok"));
+        assert!(human.contains("ai: false"));
+        assert!(human.contains("enriched: false"));
         assert!(human.contains("mode: design"));
+    }
+
+    #[test]
+    fn design_ai_schema_fail_keeps_file() {
+        std::env::set_var("DARE_AI_MOCK_MODE", "invalid-json");
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("dare.config.json"), "{}").unwrap();
+        let root = ProjectRoot::new(dir.path()).unwrap();
+        let input = sample_input("Schema fail preserve write1");
+        let base = apply_design(&root, &input).unwrap();
+        let rel = SafeRelativePath::new(DESIGN_REL).unwrap();
+        let write1 = read_to_string(&root, &rel).unwrap();
+        assert!(write1.contains("[A definir]"));
+
+        let err = enrich_design(&root, &input, base, Some("mock".into())).unwrap_err();
+        assert_eq!(err.kind(), ErrorKind::InvalidInput);
+
+        let after = read_to_string(&root, &rel).unwrap();
+        assert_eq!(
+            write1, after,
+            "write1 must remain intact on enrich schema fail"
+        );
+        std::env::remove_var("DARE_AI_MOCK_MODE");
     }
 
     #[test]

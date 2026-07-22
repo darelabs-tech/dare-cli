@@ -25,6 +25,7 @@ pub struct SafeCommand {
     pub(crate) stdout_limit: usize,
     pub(crate) stderr_limit: usize,
     pub(crate) cancel: Option<CancelFlag>,
+    pub(crate) stdin: Option<Vec<u8>>,
 }
 
 impl SafeCommand {
@@ -39,6 +40,7 @@ impl SafeCommand {
             stdout_limit: super::DEFAULT_STREAM_LIMIT,
             stderr_limit: super::DEFAULT_STREAM_LIMIT,
             cancel: None,
+            stdin: None,
         }
     }
 
@@ -91,7 +93,20 @@ impl SafeCommand {
         self
     }
 
+    pub fn stdin(mut self, bytes: impl Into<Vec<u8>>) -> Self {
+        self.stdin = Some(bytes.into());
+        self
+    }
+
     pub fn program(&self) -> &str {
         &self.program
+    }
+
+    pub fn arg_list(&self) -> &[String] {
+        &self.args
+    }
+
+    pub fn stdin_bytes(&self) -> Option<&[u8]> {
+        self.stdin.as_deref()
     }
 }

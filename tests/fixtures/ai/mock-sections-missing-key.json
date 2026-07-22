@@ -1,0 +1,7 @@
+{
+  "sections": {
+    "description": "API de pagamentos com Stripe",
+    "objectives": "| # | Objetivo | Métrica verificável | Meta |\n|---|----------|---------------------|------|\n| O-01 | Checkout | taxa sucesso | > 99% |",
+    "stack": "| Camada | Tecnologia | Versão |\n|--------|-----------|--------|\n| Backend | Rust | 1.85 |"
+  }
+}

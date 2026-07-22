@@ -1,0 +1,8 @@
+{
+  "sections": {
+    "description": "API de pagamentos com Stripe",
+    "objectives": "| # | Objetivo | Métrica verificável | Meta |\n|---|----------|---------------------|------|\n| O-01 | Checkout | taxa sucesso | > 99% |",
+    "functional-requirements": "| ID | Requisito | Prioridade | Critério de aceite |\n|----|-----------|------------|--------------------|\n| RF-01 | Cobrar cartão | MUST | webhook 2xx |",
+    "stack": "| Camada | Tecnologia | Versão |\n|--------|-----------|--------|\n| Backend | Rust | 1.85 |"
+  }
+}

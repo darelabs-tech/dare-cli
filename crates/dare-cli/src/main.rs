@@ -98,6 +98,12 @@ enum Commands {
         /// Prompt for title and description on a TTY.
         #[arg(long)]
         interactive: bool,
+        /// Run optional AI enrichment after deterministic write.
+        #[arg(long)]
+        ai: bool,
+        /// AI provider id (requires `--ai`; default: codex).
+        #[arg(long)]
+        provider: Option<String>,
     },
     /// Plan (`--dry-run`) or apply project asset updates.
     Update {
@@ -353,13 +359,15 @@ fn run(cli: Cli) -> Result<(String, serde_json::Value), CoreError> {
         Some(Commands::Design {
             description,
             interactive,
+            ai,
+            provider,
         }) => {
             let desc = if description.is_empty() {
                 None
             } else {
                 Some(description.join(" "))
             };
-            run_design(desc, interactive)
+            run_design(desc, interactive, ai, provider)
         }
         Some(Commands::Discover {
             dir,
