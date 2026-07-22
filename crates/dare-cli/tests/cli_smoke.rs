@@ -813,3 +813,105 @@ fn update_dir_missing_exit_3() {
         .failure()
         .code(3);
 }
+
+fn design_project_temp() -> tempfile::TempDir {
+    let dir = tempfile::tempdir().expect("tempdir");
+    std::fs::write(dir.path().join("dare.config.json"), "{}").expect("dare.config.json");
+    dir
+}
+
+fn design_fixture(name: &str) -> std::path::PathBuf {
+    std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../tests/fixtures/design")
+        .join(name)
+}
+
+#[test]
+fn design_creates_file() {
+    let dir = design_project_temp();
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args(["design", "hello world", "--no-color"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("design: ok"))
+        .stdout(predicate::str::contains("path: DARE/DESIGN.md"));
+    let design_path = dir.path().join("DARE/DESIGN.md");
+    assert!(design_path.is_file(), "DARE/DESIGN.md must exist");
+    let content = std::fs::read_to_string(&design_path).expect("read DESIGN.md");
+    assert!(
+        content.contains("<!-- AGENT:BEGIN"),
+        "DESIGN.md must contain AGENT markers"
+    );
+}
+
+#[test]
+fn design_json_schema() {
+    let dir = design_project_temp();
+    let assert = Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args(["design", "payment API", "--json", "--no-color"])
+        .assert()
+        .success();
+    let out = String::from_utf8_lossy(&assert.get_output().stdout);
+    let v: Value = serde_json::from_str(out.trim()).expect("json envelope");
+    assert_eq!(v["ok"], true);
+    assert_eq!(v["data"]["schemaVersion"], 1);
+    assert_eq!(v["data"]["mode"], "design");
+}
+
+#[test]
+fn design_empty_desc_usage_or_4() {
+    let dir = design_project_temp();
+    let code = Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args(["design", "--no-color"])
+        .assert()
+        .get_output()
+        .status
+        .code()
+        .expect("exit code");
+    assert!(
+        code == 2 || code == 4,
+        "expected exit 2 or 4 for empty description, got {code}"
+    );
+}
+
+#[test]
+fn design_preserve_notes() {
+    let dir = design_project_temp();
+    std::fs::create_dir_all(dir.path().join("DARE")).expect("DARE dir");
+    std::fs::copy(
+        design_fixture("existing-with-notes.md"),
+        dir.path().join("DARE/DESIGN.md"),
+    )
+    .expect("copy fixture");
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args(["design", "Updated payment API", "--no-color"])
+        .assert()
+        .success();
+    let content = std::fs::read_to_string(dir.path().join("DARE/DESIGN.md")).expect("read");
+    assert!(
+        content.contains("User note outside any AGENT marker — must survive merge."),
+        "unmanaged notes must survive merge"
+    );
+}
+
+#[test]
+fn design_interactive_no_tty_exits_2() {
+    let dir = design_project_temp();
+    let output = std::process::Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args(["design", "--interactive", "--no-color"])
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .output()
+        .expect("spawn dare");
+    assert_eq!(
+        output.status.code(),
+        Some(2),
+        "piped stdin must reject --interactive without TTY"
+    );
+}

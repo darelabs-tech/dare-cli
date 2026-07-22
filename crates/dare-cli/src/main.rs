@@ -7,6 +7,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
+use commands::design::run_design;
 use commands::discover::run_discover;
 use commands::info::{collect_info, format_human, report_to_json};
 use commands::update::run_update;
@@ -89,6 +90,14 @@ enum Commands {
         /// Treat warnings as failures.
         #[arg(long)]
         strict: bool,
+    },
+    /// Render DARE/DESIGN.md from a feature description (deterministic).
+    Design {
+        /// Feature/product description (omit with --interactive).
+        description: Vec<String>,
+        /// Prompt for title and description on a TTY.
+        #[arg(long)]
+        interactive: bool,
     },
     /// Plan (`--dry-run`) or apply project asset updates.
     Update {
@@ -340,6 +349,17 @@ fn run(cli: Cli) -> Result<(String, serde_json::Value), CoreError> {
             let human = format_human(&report);
             let data = report_to_json(&report);
             Ok((human, data))
+        }
+        Some(Commands::Design {
+            description,
+            interactive,
+        }) => {
+            let desc = if description.is_empty() {
+                None
+            } else {
+                Some(description.join(" "))
+            };
+            run_design(desc, interactive)
         }
         Some(Commands::Discover {
             dir,

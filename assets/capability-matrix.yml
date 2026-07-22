@@ -156,7 +156,7 @@ capabilities:
     description: "Capability IDE for dare-design"
     instructions: |
       Use the /dare-design slash command when appropriate.
-    cli_commands: []
+    cli_commands: ["design"]
     outputs:
       claude: .claude/commands/dare-design.md
       cursor: .cursor/commands/dare-design.md
