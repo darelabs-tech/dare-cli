@@ -1,14 +1,28 @@
-//! DAG validation domain (microplano 020).
+//! DAG validation, graph ranks, and runtime status (microplanos 020 / 026).
 
+mod canvas;
 mod format;
+mod graph;
 mod report;
+mod state;
+mod status;
 mod validate;
 
+pub use canvas::{render, write, CANVAS_REL};
 pub use format::{format_human, report_to_json};
+pub use graph::{
+    compute_ranks, compute_ranks_validated, iter_task_views, next_executable, tasks_by_rank,
+    DagGraphError, TaskView,
+};
 pub use report::{
     IssueSeverity, ValidateOptions, ValidationIssue, ValidationReport, COMPLEXITY_ALLOWED,
     DEFAULT_DAG_REL, MSG_MAX, VALIDATION_SCHEMA_VERSION,
 };
+pub use state::{
+    apply_cascading_skip, ensure_state, transition, Clock, FixedClock, RefreshCanvas, SystemClock,
+    Transition, STATE_REL,
+};
+pub use status::TaskStatus;
 pub use validate::{is_kebab_id, validate_dag, validate_path, ValidateFsContext};
 
 #[cfg(test)]
@@ -34,7 +48,7 @@ mod integration_tests {
         (dir, root)
     }
 
-    fn ctx<'a>(root: &'a ProjectRoot) -> ValidateFsContext<'a> {
+    fn ctx(root: &ProjectRoot) -> ValidateFsContext<'_> {
         ValidateFsContext {
             root,
             dag_path_display: DEFAULT_DAG_REL.into(),
@@ -248,9 +262,8 @@ tasks:
         for w in r1.issues.windows(2) {
             let a = &w[0];
             let b = &w[1];
-            match (a.severity, b.severity) {
-                (IssueSeverity::Warning, IssueSeverity::Error) => panic!("unsorted severity"),
-                _ => {}
+            if let (IssueSeverity::Warning, IssueSeverity::Error) = (a.severity, b.severity) {
+                panic!("unsorted severity");
             }
         }
     }

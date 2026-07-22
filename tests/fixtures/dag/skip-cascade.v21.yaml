@@ -1,0 +1,28 @@
+title: "Skip cascade"
+version: "1.0.0"
+tasks:
+  - id: task-root
+    title: Root
+    depends_on: []
+    complexity: LOW
+    subtask_prompt: root of cascade
+  - id: task-child
+    title: Child
+    depends_on: [task-root]
+    complexity: MED
+    subtask_prompt: child of root
+  - id: task-grand
+    title: Grandchild
+    depends_on: [task-child]
+    complexity: HIGH
+    subtask_prompt: grandchild chain
+  - id: task-sibling
+    title: Sibling
+    depends_on: [task-root]
+    complexity: MED
+    subtask_prompt: sibling of child
+  - id: task-leaf
+    title: Leaf
+    depends_on: [task-sibling]
+    complexity: LOW
+    subtask_prompt: leaf under sibling

@@ -1,0 +1,23 @@
+title: "Ranks diamond"
+version: "1.0.0"
+tasks:
+  - id: task-root
+    title: Diamond root
+    depends_on: []
+    complexity: LOW
+    subtask_prompt: root
+  - id: task-left
+    title: Left branch
+    depends_on: [task-root]
+    complexity: MED
+    subtask_prompt: left
+  - id: task-right
+    title: Right branch
+    depends_on: [task-root]
+    complexity: MED
+    subtask_prompt: right
+  - id: task-join
+    title: Diamond join
+    depends_on: [task-left, task-right]
+    complexity: HIGH
+    subtask_prompt: join

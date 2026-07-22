@@ -1,0 +1,23 @@
+title: "Ranks fanout"
+version: "1.0.0"
+tasks:
+  - id: task-hub
+    title: Fanout hub
+    depends_on: []
+    complexity: LOW
+    subtask_prompt: hub
+  - id: task-spoke-a
+    title: Spoke A
+    depends_on: [task-hub]
+    complexity: LOW
+    subtask_prompt: spoke a
+  - id: task-spoke-b
+    title: Spoke B
+    depends_on: [task-hub]
+    complexity: MED
+    subtask_prompt: spoke b
+  - id: task-spoke-c
+    title: Spoke C
+    depends_on: [task-hub]
+    complexity: HIGH
+    subtask_prompt: spoke c

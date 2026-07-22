@@ -1,0 +1,18 @@
+title: "Ranks chain"
+version: "1.0.0"
+tasks:
+  - id: task-alpha
+    title: Alpha root
+    depends_on: []
+    complexity: LOW
+    subtask_prompt: start chain
+  - id: task-beta
+    title: Beta middle
+    depends_on: [task-alpha]
+    complexity: MED
+    subtask_prompt: middle of chain
+  - id: task-gamma
+    title: Gamma leaf
+    depends_on: [task-beta]
+    complexity: HIGH
+    subtask_prompt: end of chain

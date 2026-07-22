@@ -235,7 +235,7 @@ fn canonicalize_cycle(cycle: &[String]) -> Vec<String> {
 }
 
 /// Edge a → b means a depends_on b.
-fn collect_cycles(tasks: &[TaskView]) -> Vec<ValidationIssue> {
+fn collect_cycle_paths(tasks: &[TaskView]) -> Vec<Vec<String>> {
     let mut adj: BTreeMap<&str, Vec<&str>> = BTreeMap::new();
     for t in tasks {
         adj.entry(t.id.as_str()).or_default();
@@ -301,9 +301,12 @@ fn collect_cycles(tasks: &[TaskView]) -> Vec<ValidationIssue> {
             dfs(id, &adj, &mut color, &mut stack, &mut cycles, &mut reported);
         }
     }
+    cycles
+}
 
+fn collect_cycles(tasks: &[TaskView]) -> Vec<ValidationIssue> {
     let mut out = Vec::new();
-    for path in cycles {
+    for path in collect_cycle_paths(tasks) {
         let task_id = path.first().cloned().unwrap_or_default();
         let msg = format!("dependency cycle detected: {}", path.join(" -> "));
         out.push(issue(
@@ -315,6 +318,19 @@ fn collect_cycles(tasks: &[TaskView]) -> Vec<ValidationIssue> {
         ));
     }
     out
+}
+
+/// First canonical cycle path (lexico-min rotation + closed), if any.
+///
+/// Path format matches validate issues (`[min_id, …, min_id]`).
+/// Used by `graph::compute_ranks` (mp026-002); allow until that module lands.
+#[allow(dead_code)]
+pub(crate) fn find_cycle_path(doc: &DagDocument) -> Option<Vec<String>> {
+    let tasks = match doc {
+        DagDocument::V21(d) => materialize_v21(d).0,
+        DagDocument::Legacy(d) => materialize_legacy(d),
+    };
+    collect_cycle_paths(&tasks).into_iter().next()
 }
 
 fn collect_limits(limits: Option<&DagLimits>) -> Vec<ValidationIssue> {
