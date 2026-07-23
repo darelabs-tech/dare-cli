@@ -99,26 +99,44 @@ enum Commands {
         #[command(subcommand)]
         action: DagCmd,
     },
-    /// Orchestrate DAG execution (status / next / watch / complete / fail / reset).
+    /// Orchestrate DAG execution (status / next / watch / complete / fail / reset / agent).
     Execute {
         /// Show DAG runtime status (default when no action flag is set).
-        #[arg(long, conflicts_with_all = ["next", "watch", "complete", "fail", "reset"])]
+        #[arg(long, conflicts_with_all = ["next", "watch", "complete", "fail", "reset", "agent", "cleanup_worktrees"])]
         status: bool,
         /// Print next executable tasks at the minimum ready rank.
-        #[arg(long, conflicts_with_all = ["status", "watch", "complete", "fail", "reset"])]
+        #[arg(long, conflicts_with_all = ["status", "watch", "complete", "fail", "reset", "agent", "cleanup_worktrees"])]
         next: bool,
         /// Watch status without mutating runtime state.
-        #[arg(long, conflicts_with_all = ["status", "next", "complete", "fail", "reset"])]
+        #[arg(long, conflicts_with_all = ["status", "next", "complete", "fail", "reset", "agent", "cleanup_worktrees"])]
         watch: bool,
         /// Mark task DONE after Ralph gates pass.
-        #[arg(long, value_name = "TASK_ID", conflicts_with_all = ["status", "next", "watch", "fail", "reset"])]
+        #[arg(long, value_name = "TASK_ID", conflicts_with_all = ["status", "next", "watch", "fail", "reset", "agent", "cleanup_worktrees"])]
         complete: Option<String>,
         /// Mark task FAILED (cascade skip dependents).
-        #[arg(long, value_name = "TASK_ID", conflicts_with_all = ["status", "next", "watch", "complete", "reset"])]
+        #[arg(long, value_name = "TASK_ID", conflicts_with_all = ["status", "next", "watch", "complete", "reset", "agent", "cleanup_worktrees"])]
         fail: Option<String>,
         /// Reset task to PENDING (preserves attempts).
-        #[arg(long, value_name = "TASK_ID", conflicts_with_all = ["status", "next", "watch", "complete", "fail"])]
+        #[arg(long, value_name = "TASK_ID", conflicts_with_all = ["status", "next", "watch", "complete", "fail", "agent", "cleanup_worktrees"])]
         reset: Option<String>,
+        /// Run agent loop (mock/noop drivers in microplano 030).
+        #[arg(long, conflicts_with_all = ["status", "next", "watch", "complete", "fail", "reset", "cleanup_worktrees"])]
+        agent: bool,
+        /// Remove orphan dirs under `.dare/agent-worktrees/`.
+        #[arg(long, conflicts_with_all = ["status", "next", "watch", "complete", "fail", "reset", "agent"])]
+        cleanup_worktrees: bool,
+        /// Agent driver id (default: mock). Requires `--agent`.
+        #[arg(long, requires = "agent")]
+        driver: Option<String>,
+        /// Task id for `--agent` (default: first ready at min rank).
+        #[arg(long, requires = "agent")]
+        task: Option<String>,
+        /// Token budget for `--agent` (`0` = unlimited).
+        #[arg(long, requires = "agent", default_value_t = 0)]
+        budget_tokens: u64,
+        /// Agent policy (only `fixed` in 030).
+        #[arg(long, requires = "agent", default_value = "fixed")]
+        policy: String,
         /// Completion summary (requires `--complete`; default: Task completed.).
         #[arg(long, requires = "complete")]
         output: Option<String>,
@@ -395,13 +413,28 @@ fn main() -> ExitCode {
                 complete,
                 fail,
                 reset,
+                agent,
+                cleanup_worktrees,
+                driver,
+                task,
+                budget_tokens,
+                policy,
                 output,
                 reason,
                 dag,
                 interval,
                 max_ticks,
             }) => {
-                let action = if let Some(id) = complete {
+                let action = if cleanup_worktrees {
+                    ExecuteAction::CleanupWorktrees
+                } else if agent {
+                    ExecuteAction::Agent {
+                        driver: driver.unwrap_or_else(|| "mock".to_string()),
+                        task,
+                        budget_tokens,
+                        policy,
+                    }
+                } else if let Some(id) = complete {
                     ExecuteAction::Complete { id, output }
                 } else if let Some(id) = fail {
                     ExecuteAction::Fail { id, reason }

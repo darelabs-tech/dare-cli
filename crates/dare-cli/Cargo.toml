@@ -19,6 +19,7 @@ dare-harness = { workspace = true }
 dare-project = { workspace = true }
 dare-dag = { workspace = true }
 dare-verify = { workspace = true }
+dare-agent = { workspace = true }
 dare-update = { workspace = true }
 dare-ai = { workspace = true }
 clap = { workspace = true }

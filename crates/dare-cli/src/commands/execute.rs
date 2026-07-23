@@ -53,6 +53,13 @@ pub enum ExecuteAction {
     Reset {
         id: String,
     },
+    Agent {
+        driver: String,
+        task: Option<String>,
+        budget_tokens: u64,
+        policy: String,
+    },
+    CleanupWorktrees,
 }
 
 pub fn run_execute(
@@ -64,6 +71,24 @@ pub fn run_execute(
         ExecuteAction::Complete { id, output } => run_complete(dag, id, output, renderer),
         ExecuteAction::Fail { id, reason } => run_fail(dag, id, reason, renderer),
         ExecuteAction::Reset { id } => run_reset(dag, id, renderer),
+        ExecuteAction::Agent {
+            driver,
+            task,
+            budget_tokens,
+            policy,
+        } => crate::commands::execute_agent::run_agent(
+            dag,
+            crate::commands::execute_agent::AgentOpts {
+                driver,
+                task,
+                budget_tokens,
+                policy,
+            },
+            renderer,
+        ),
+        ExecuteAction::CleanupWorktrees => {
+            crate::commands::execute_agent::run_cleanup_worktrees(renderer)
+        }
         other => match run_execute_inner(dag, other, renderer) {
             Ok(Some((human, data))) => {
                 if let Err(e) = renderer.write_success(&human, data) {
@@ -130,8 +155,10 @@ fn run_execute_inner(
         }
         ExecuteAction::Complete { .. }
         | ExecuteAction::Fail { .. }
-        | ExecuteAction::Reset { .. } => {
-            unreachable!("mutations handled in run_execute")
+        | ExecuteAction::Reset { .. }
+        | ExecuteAction::Agent { .. }
+        | ExecuteAction::CleanupWorktrees => {
+            unreachable!("mutations/agent handled in run_execute")
         }
     }
 }
@@ -488,6 +515,34 @@ fn mock_timeout() -> ProcessOutput {
         timed_out: true,
         cancelled: false,
     }
+}
+
+/// Used by `--agent` Done path to run Ralph/complete (029) without printing.
+pub(crate) fn complete_task_after_agent_silent(
+    dag: Option<PathBuf>,
+    task_id: &str,
+    output: &str,
+) -> Result<(), CompleteExit> {
+    match run_complete_inner(dag, task_id, Some(output)) {
+        Ok(_) => Ok(()),
+        Err(CompleteOutcome::TimedOut(_)) => Err(CompleteExit::Timeout),
+        Err(CompleteOutcome::Other(e)) => Err(CompleteExit::Err(e)),
+    }
+}
+
+#[derive(Debug)]
+pub(crate) enum CompleteExit {
+    Timeout,
+    Err(CoreError),
+}
+
+/// Used by `--agent` Stop path to stamp Fail without printing success.
+pub(crate) fn fail_task_after_agent(
+    dag: Option<PathBuf>,
+    task_id: &str,
+    reason: &str,
+) -> CoreResult<()> {
+    run_fail_inner(dag, task_id, Some(reason)).map(|_| ())
 }
 
 fn format_complete_gate_fail(id: &str, ralph: &RalphReport) -> String {

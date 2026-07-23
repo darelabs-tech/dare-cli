@@ -278,6 +278,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "dare-agent"
+version = "0.1.0-alpha.0"
+dependencies = [
+ "dare-core",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tempfile",
+]
+
+[[package]]
 name = "dare-ai"
 version = "0.1.0-alpha.0"
 dependencies = [
@@ -306,6 +317,7 @@ dependencies = [
  "anstream",
  "assert_cmd",
  "clap",
+ "dare-agent",
  "dare-ai",
  "dare-assets",
  "dare-config",

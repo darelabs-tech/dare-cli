@@ -1629,3 +1629,160 @@ fn execute_fail_from_done_exit_4() {
         .assert()
         .code(4);
 }
+
+fn init_git_repo(dir: &std::path::Path) {
+    let status = std::process::Command::new("git")
+        .args(["init"])
+        .current_dir(dir)
+        .status()
+        .expect("git init");
+    assert!(status.success());
+    let _ = std::process::Command::new("git")
+        .args(["config", "user.email", "dare@test"])
+        .current_dir(dir)
+        .status();
+    let _ = std::process::Command::new("git")
+        .args(["config", "user.name", "dare"])
+        .current_dir(dir)
+        .status();
+    std::fs::write(dir.join("README"), "agent smoke").unwrap();
+    let _ = std::process::Command::new("git")
+        .args(["add", "."])
+        .current_dir(dir)
+        .status();
+    let _ = std::process::Command::new("git")
+        .args(["commit", "-m", "init"])
+        .current_dir(dir)
+        .status();
+}
+
+fn execute_agent_project() -> tempfile::TempDir {
+    let dir = execute_complete_project();
+    init_git_repo(dir.path());
+    dir
+}
+
+#[test]
+fn execute_agent_success_skip_ralph() {
+    let dir = execute_agent_project();
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .env("DARE_AGENT_MOCK", "success")
+        .env("DARE_AGENT_SKIP_RALPH", "1")
+        .args(["execute", "--agent", "--task", "task-001", "--no-color"])
+        .assert()
+        .success()
+        .stdout(
+            predicate::str::contains("decision=Done")
+                .or(predicate::str::contains("Agent finished")),
+        );
+}
+
+#[test]
+fn execute_agent_fail_stop_exit_1() {
+    let dir = execute_agent_project();
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .env("DARE_AGENT_MOCK", "fail")
+        .args(["execute", "--agent", "--task", "task-001", "--no-color"])
+        .assert()
+        .code(1)
+        .stdout(predicate::str::contains("stopped").or(predicate::str::contains("Agent stopped")));
+}
+
+#[test]
+fn execute_agent_timeout_exit_124() {
+    let dir = execute_agent_project();
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .env("DARE_AGENT_MOCK", "timeout")
+        .args(["execute", "--agent", "--task", "task-001", "--no-color"])
+        .assert()
+        .code(124);
+}
+
+#[test]
+fn execute_agent_driver_claude_exit_4() {
+    let dir = execute_agent_project();
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args([
+            "execute",
+            "--agent",
+            "--driver",
+            "claude",
+            "--task",
+            "task-001",
+            "--no-color",
+        ])
+        .assert()
+        .code(4)
+        .stderr(predicate::str::contains("not implemented").or(predicate::str::contains("driver")));
+}
+
+#[test]
+fn execute_agent_budget_exhaust_exit_1() {
+    let dir = execute_agent_project();
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .env("DARE_AGENT_MOCK", "fail")
+        .args([
+            "execute",
+            "--agent",
+            "--task",
+            "task-001",
+            "--budget-tokens",
+            "1",
+            "--no-color",
+        ])
+        .assert()
+        .code(1)
+        .stdout(predicate::str::contains("budget").or(predicate::str::contains("Budget")));
+}
+
+#[test]
+fn execute_agent_complete_exclusive_exit_2() {
+    let dir = execute_agent_project();
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args(["execute", "--agent", "--complete", "task-001", "--no-color"])
+        .assert()
+        .code(2);
+}
+
+#[test]
+fn execute_agent_no_git_exit_4() {
+    let dir = execute_complete_project();
+    // no .git
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .env("DARE_AGENT_SKIP_RALPH", "1")
+        .args(["execute", "--agent", "--task", "task-001", "--no-color"])
+        .assert()
+        .code(4)
+        .stderr(predicate::str::contains("git"));
+}
+
+#[test]
+fn execute_agent_cleanup_worktrees() {
+    let dir = execute_agent_project();
+    let orphan = dir.path().join(".dare/agent-worktrees/orphan-1");
+    std::fs::create_dir_all(&orphan).unwrap();
+    std::fs::write(orphan.join("marker"), "x").unwrap();
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args(["execute", "--cleanup-worktrees", "--no-color"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Cleaned up"));
+}
+
+#[test]
+fn execute_agent_cleanup_exclusive_exit_2() {
+    let dir = execute_agent_project();
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args(["execute", "--agent", "--cleanup-worktrees", "--no-color"])
+        .assert()
+        .code(2);
+}
