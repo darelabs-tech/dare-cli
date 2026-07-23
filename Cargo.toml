@@ -17,6 +17,7 @@ members = [
     "crates/dare-skills",
     "crates/dare-review",
     "crates/dare-guard",
+    "crates/dare-graph",
 ]
 
 [workspace.package]
@@ -71,7 +72,9 @@ dare-ast = { path = "crates/dare-ast" }
 dare-skills = { path = "crates/dare-skills" }
 dare-review = { path = "crates/dare-review" }
 dare-guard = { path = "crates/dare-guard" }
+dare-graph = { path = "crates/dare-graph" }
 ureq = { version = "=2.12.1", default-features = false, features = ["native-tls"] }
+rusqlite = { version = "=0.32.1", features = ["bundled"] }
 
 [workspace.lints.rust]
 unused = "warn"
