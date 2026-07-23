@@ -23,7 +23,8 @@ Contrato de saída do DARE CLI nativo após o microplano 004. Complementa [ADR-0
 | 3 | `NotFound` | recurso ausente |
 | 4 | `InvalidInput`, `Config` | validação / config |
 | 5 | `Io` | falha de I/O |
-| ≥6 | — | **reservado** (comandos futuros; não atribuir no 004) |
+| 6 | `GuardFail` | guard FAIL / preflight agent (microplano 034) |
+| ≥7 | — | **reservado** |
 
 ## Streams
 
