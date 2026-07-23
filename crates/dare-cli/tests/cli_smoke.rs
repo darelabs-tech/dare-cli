@@ -1247,3 +1247,190 @@ fn dag_viz_output_outside_root_exit_4() {
         .assert()
         .code(4);
 }
+
+#[test]
+fn execute_status_default() {
+    let dir = validate_project_with_dag(&fixture_dag("valid.v21.yaml"), true);
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args(["execute", "--no-color"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("PENDING"))
+        .stdout(predicate::str::contains("DARE/.canvas.md"));
+    assert!(dir.path().join(".dare/state.json").is_file());
+    assert!(dir.path().join("DARE/.canvas.md").is_file());
+}
+
+#[test]
+fn execute_status_flag() {
+    let dir = validate_project_with_dag(&fixture_dag("valid.v21.yaml"), true);
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args(["execute", "--status", "--json", "--no-color"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(r#""action":"status""#))
+        .stdout(predicate::str::contains(r#""outcome":"status""#));
+}
+
+#[test]
+fn execute_next_ready() {
+    let dir = validate_project_with_dag(&fixture_dag("valid.v21.yaml"), true);
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args(["execute", "--next", "--no-color"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("task-001"))
+        .stdout(predicate::str::contains("Rank 0"));
+}
+
+#[test]
+fn execute_next_empty() {
+    let dir = validate_project_with_dag(&fixture_dag("exec-empty.v21.yaml"), false);
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args(["execute", "--next", "--no-color"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Empty DAG — no tasks."));
+}
+
+#[test]
+fn execute_next_resolved() {
+    let dir = validate_project_with_dag(&fixture_dag("valid.v21.yaml"), true);
+    // Seed DONE via ensure then patch status.
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args(["execute", "--status", "--no-color"])
+        .assert()
+        .success();
+    let state_path = dir.path().join(".dare/state.json");
+    let mut v: Value =
+        serde_json::from_str(&std::fs::read_to_string(&state_path).unwrap()).unwrap();
+    v["tasks"]["task-001"]["status"] = Value::String("DONE".into());
+    std::fs::write(&state_path, serde_json::to_string_pretty(&v).unwrap()).unwrap();
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args(["execute", "--next", "--no-color"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("All tasks resolved."));
+}
+
+#[test]
+fn execute_next_blocked_or_cascade_resolved() {
+    // Failed parent + pending child: ensure_state cascading skip → resolved.
+    // Domain-level Blocked (pre-cascade) is covered in dare-dag execution tests.
+    let dir = validate_project_with_dag(&fixture_dag("exec-blocked.v21.yaml"), false);
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args(["execute", "--status", "--no-color"])
+        .assert()
+        .success();
+    let state_path = dir.path().join(".dare/state.json");
+    let mut v: Value =
+        serde_json::from_str(&std::fs::read_to_string(&state_path).unwrap()).unwrap();
+    v["tasks"]["task-a"]["status"] = Value::String("FAILED".into());
+    v["tasks"]["task-b"]["status"] = Value::String("PENDING".into());
+    std::fs::write(&state_path, serde_json::to_string_pretty(&v).unwrap()).unwrap();
+    let out = Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args(["execute", "--next", "--json", "--no-color"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let s = String::from_utf8_lossy(&out);
+    assert!(
+        s.contains(r#""outcome":"resolved""#) || s.contains(r#""outcome":"blocked""#),
+        "expected resolved (post-cascade) or blocked, got: {s}"
+    );
+}
+
+#[test]
+fn execute_missing_dag_exit_3() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(dir.path().join("dare.config.json"), "{}").unwrap();
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args(["execute", "--status", "--no-color"])
+        .assert()
+        .code(3);
+}
+
+#[test]
+fn execute_exclusive_flags_exit_2() {
+    let dir = validate_project_with_dag(&fixture_dag("valid.v21.yaml"), true);
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args(["execute", "--status", "--next", "--no-color"])
+        .assert()
+        .code(2);
+}
+
+#[test]
+fn execute_cycle_exit_4() {
+    let dir = validate_project_with_dag(&fixture_dag("cycle.v21.yaml"), false);
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args(["execute", "--status", "--no-color"])
+        .assert()
+        .code(4)
+        .stderr(predicate::str::contains("cycle").or(predicate::str::contains("Cycle")));
+}
+
+#[test]
+fn execute_watch_max_ticks_one() {
+    let dir = validate_project_with_dag(&fixture_dag("valid.v21.yaml"), true);
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args([
+            "execute",
+            "--watch",
+            "--max-ticks",
+            "1",
+            "--interval",
+            "0",
+            "--no-color",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("PENDING").or(predicate::str::contains("Valid fixture")));
+}
+
+#[test]
+fn execute_watch_does_not_mutate_state() {
+    let dir = validate_project_with_dag(&fixture_dag("valid.v21.yaml"), true);
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args(["execute", "--status", "--no-color"])
+        .assert()
+        .success();
+    let state_path = dir.path().join(".dare/state.json");
+    let canvas_path = dir.path().join("DARE/.canvas.md");
+    let state_before = std::fs::read(&state_path).unwrap();
+    let canvas_before = std::fs::read(&canvas_path).unwrap();
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args([
+            "execute",
+            "--watch",
+            "--max-ticks",
+            "2",
+            "--interval",
+            "0",
+            "--no-color",
+        ])
+        .assert()
+        .success();
+    let state_after = std::fs::read(&state_path).unwrap();
+    let canvas_after = std::fs::read(&canvas_path).unwrap();
+    assert_eq!(
+        state_before, state_after,
+        "watch must not mutate state.json"
+    );
+    assert_eq!(canvas_before, canvas_after, "watch must not rewrite canvas");
+}

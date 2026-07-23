@@ -11,6 +11,7 @@ use commands::blueprint::{run_blueprint, BlueprintInput};
 use commands::dag::{run_dag_viz, CliVizFormat};
 use commands::design::run_design;
 use commands::discover::run_discover;
+use commands::execute::{run_execute, ExecuteAction};
 use commands::info::{collect_info, format_human, report_to_json};
 use commands::update::run_update;
 use commands::validate::run_validate;
@@ -97,6 +98,27 @@ enum Commands {
     Dag {
         #[command(subcommand)]
         action: DagCmd,
+    },
+    /// Orchestrate DAG execution (status / next / watch).
+    Execute {
+        /// Show DAG runtime status (default when no action flag is set).
+        #[arg(long, conflicts_with_all = ["next", "watch"])]
+        status: bool,
+        /// Print next executable tasks at the minimum ready rank.
+        #[arg(long, conflicts_with_all = ["status", "watch"])]
+        next: bool,
+        /// Watch status without mutating runtime state.
+        #[arg(long, conflicts_with_all = ["status", "next"])]
+        watch: bool,
+        /// Path to dare-dag.yaml (default: DARE/dare-dag.yaml).
+        #[arg(long)]
+        dag: Option<PathBuf>,
+        /// Watch poll interval in seconds (default: 2).
+        #[arg(long, default_value_t = 2)]
+        interval: u64,
+        /// Stop watch after N ticks (omit for long-running watch).
+        #[arg(long)]
+        max_ticks: Option<u64>,
     },
     /// Render DARE/DESIGN.md from a feature description (deterministic).
     Design {
@@ -351,6 +373,27 @@ fn main() -> ExitCode {
                         output,
                     },
             }) => run_dag_viz(dag, format, output, &renderer),
+            Some(Commands::Execute {
+                status,
+                next,
+                watch,
+                dag,
+                interval,
+                max_ticks,
+            }) => {
+                let action = if watch {
+                    ExecuteAction::Watch {
+                        interval_secs: interval,
+                        max_ticks,
+                    }
+                } else if next {
+                    ExecuteAction::Next
+                } else {
+                    let _ = status; // default or explicit --status
+                    ExecuteAction::Status
+                };
+                run_execute(dag, action, &renderer)
+            }
             other => {
                 let cli = Cli {
                     json: cli.json,
@@ -579,6 +622,7 @@ fn run(cli: Cli) -> Result<(String, serde_json::Value), CoreError> {
         },
         Some(Commands::Validate { .. }) => unreachable!("validate handled in main"),
         Some(Commands::Dag { .. }) => unreachable!("dag handled in main"),
+        Some(Commands::Execute { .. }) => unreachable!("execute handled in main"),
     }
 }
 

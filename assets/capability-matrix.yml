@@ -202,10 +202,11 @@ capabilities:
     assets: []
   - id: dare-execute
     title: "dare-execute"
-    description: "Capability IDE for dare-execute"
+    description: "Orchestrate DAG via dare execute --status|--next|--watch"
     instructions: |
-      Use the /dare-execute slash command when appropriate.
-    cli_commands: []
+      Use /dare-execute or `dare execute` (--status default, --next, --watch).
+      See docs/compatibility/cli-execute-status.md (DEC-029). No Start-on-next.
+    cli_commands: ["execute"]
     outputs:
       claude: .claude/commands/dare-execute.md
       cursor: .cursor/commands/dare-execute.md

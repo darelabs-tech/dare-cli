@@ -1,6 +1,7 @@
 //! DAG validation, graph ranks, and runtime status (microplanos 020 / 026).
 
 mod canvas;
+mod execution;
 mod format;
 mod graph;
 mod report;
@@ -10,6 +11,11 @@ mod validate;
 pub mod viz;
 
 pub use canvas::{render, write, CANVAS_REL};
+pub use execution::{
+    build_next_report, build_status_snapshot, classify_next_outcome, compose_task_prompt,
+    parent_context_limit, ready_at_min_rank, ExecuteOutcome, NextReport, ReadyTask, StatusCounts,
+    StatusSnapshot, StatusTaskRow, MSG_BLOCKED, MSG_EMPTY, MSG_RESOLVED,
+};
 pub use format::{format_human, report_to_json};
 pub use graph::{
     compute_ranks, compute_ranks_validated, iter_task_views, next_executable, tasks_by_rank,

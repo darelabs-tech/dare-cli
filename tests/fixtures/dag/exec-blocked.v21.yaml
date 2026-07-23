@@ -1,0 +1,13 @@
+title: "Exec blocked"
+version: "1.0.0"
+tasks:
+  - id: task-a
+    title: Alpha
+    depends_on: []
+    complexity: LOW
+    subtask_prompt: a
+  - id: task-b
+    title: Beta
+    depends_on: [task-a]
+    complexity: MED
+    subtask_prompt: b
