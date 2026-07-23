@@ -13,6 +13,7 @@ use commands::design::run_design;
 use commands::discover::run_discover;
 use commands::execute::{run_execute, ExecuteAction};
 use commands::info::{collect_info, format_human, report_to_json};
+use commands::review::{run_review_cmd, ReviewCliArgs};
 use commands::skill::{run_skill, SkillAction};
 use commands::update::run_update;
 use commands::validate::run_validate;
@@ -179,6 +180,38 @@ enum Commands {
         #[arg(long)]
         ai: bool,
         /// AI provider id (requires `--ai`; default: codex).
+        #[arg(long)]
+        provider: Option<String>,
+    },
+    /// Static anti-stub / mock / TODO review for a task.
+    Review {
+        /// Task id (matches DARE/EXECUTION/<id>.md).
+        task_id: String,
+        /// Treat warnings as failures.
+        #[arg(long)]
+        strict: bool,
+        /// Emit only error-severity findings.
+        #[arg(long)]
+        errors_only: bool,
+        /// Override files to scan (project-relative).
+        #[arg(long = "files", value_name = "PATH", num_args = 1..)]
+        files: Vec<PathBuf>,
+        /// Merge semantic JSON from agent (`passed` / `unmetCriteria`).
+        #[arg(long = "from-agent", value_name = "PATH")]
+        from_agent: Option<PathBuf>,
+        /// Output format: human | json | github.
+        #[arg(long = "format", default_value = "human")]
+        format: String,
+        /// Include markdown PR comment body.
+        #[arg(long)]
+        comment: bool,
+        /// Fail threshold: error | warning | never.
+        #[arg(long = "fail-on", default_value = "error")]
+        fail_on: String,
+        /// Optional AI enrichment (soft stub Class B — static always runs).
+        #[arg(long)]
+        ai: bool,
+        /// AI provider id (requires `--ai`).
         #[arg(long)]
         provider: Option<String>,
     },
@@ -415,6 +448,32 @@ fn main() -> ExitCode {
     match Cli::try_parse() {
         Ok(cli) => match cli.command {
             Some(Commands::Validate { dag, strict }) => run_validate(dag, strict, &renderer),
+            Some(Commands::Review {
+                task_id,
+                strict,
+                errors_only,
+                files,
+                from_agent,
+                format,
+                comment,
+                fail_on,
+                ai,
+                provider,
+            }) => run_review_cmd(
+                ReviewCliArgs {
+                    task_id,
+                    strict,
+                    errors_only,
+                    files,
+                    from_agent,
+                    format,
+                    comment,
+                    fail_on,
+                    ai,
+                    provider,
+                },
+                &renderer,
+            ),
             Some(Commands::Dag {
                 action:
                     DagCmd::Viz {
@@ -704,6 +763,7 @@ fn run(cli: Cli) -> Result<(String, serde_json::Value), CoreError> {
             }
         },
         Some(Commands::Validate { .. }) => unreachable!("validate handled in main"),
+        Some(Commands::Review { .. }) => unreachable!("review handled in main"),
         Some(Commands::Dag { .. }) => unreachable!("dag handled in main"),
         Some(Commands::Execute { .. }) => unreachable!("execute handled in main"),
         Some(Commands::Skill { .. }) => unreachable!("skill handled in main"),

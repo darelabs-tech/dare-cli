@@ -48,7 +48,7 @@
     },
     {
       "path": "capability-matrix.yml",
-      "sha256": "a36273877290846dd760853d220b768dc00fa361f5ae06e80664e7ae40d8dca9",
+      "sha256": "64a7875099d261dcecae67b26989160fe22ffbaf73eeb281d7d4a2fee3597d71",
       "appliesTo": ["*"],
       "kind": "canonical",
       "source": "capability-matrix.yml"
