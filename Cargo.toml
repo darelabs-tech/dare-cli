@@ -13,6 +13,7 @@ members = [
     "crates/dare-update",
     "crates/dare-verify",
     "crates/dare-agent",
+    "crates/dare-graph",
 ]
 
 [workspace.package]
@@ -52,6 +53,8 @@ dare-ai = { path = "crates/dare-ai" }
 dare-update = { path = "crates/dare-update" }
 dare-verify = { path = "crates/dare-verify" }
 dare-agent = { path = "crates/dare-agent" }
+dare-graph = { path = "crates/dare-graph" }
+rusqlite = { version = "=0.32.1", features = ["bundled"] }
 
 [workspace.lints.rust]
 unused = "warn"
