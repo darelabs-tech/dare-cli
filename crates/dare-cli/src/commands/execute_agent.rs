@@ -173,8 +173,7 @@ fn run_agent_inner(dag: Option<PathBuf>, opts: AgentOpts) -> CoreResult<AgentOut
 
     let driver = resolve_driver(&opts.driver)?;
     let _ = driver.doctor()?;
-    // Guard stub until microplano 034 — always Ok.
-    let _ = guard_preflight_stub();
+    dare_guard::run_preflight(&root, &dare_guard::PreflightOptions::default())?;
 
     let task_id = match &opts.task {
         Some(id) => {
@@ -365,10 +364,6 @@ fn stop_outcome(
         false,
     );
     Ok(AgentOutcome::Stopped { human, data })
-}
-
-fn guard_preflight_stub() -> CoreResult<()> {
-    Ok(())
 }
 
 fn dag_has_task(doc: &DagDocument, task_id: &str) -> bool {

@@ -9,6 +9,8 @@ pub enum ErrorKind {
     Config,
     Io,
     Internal,
+    /// Guard pipeline FAIL (microplano 034) — exit 6.
+    GuardFail,
 }
 
 impl ErrorKind {
@@ -20,11 +22,12 @@ impl ErrorKind {
             ErrorKind::Config => "Config",
             ErrorKind::Io => "Io",
             ErrorKind::Internal => "Internal",
+            ErrorKind::GuardFail => "GuardFail",
         }
     }
 }
 
-/// Pure mapping — exhaustive and stable (microplano 004).
+/// Pure mapping — exhaustive and stable (microplano 004 + 034).
 pub fn exit_code(kind: ErrorKind) -> i32 {
     match kind {
         ErrorKind::Internal => 1,
@@ -32,6 +35,7 @@ pub fn exit_code(kind: ErrorKind) -> i32 {
         ErrorKind::NotFound => 3,
         ErrorKind::InvalidInput | ErrorKind::Config => 4,
         ErrorKind::Io => 5,
+        ErrorKind::GuardFail => 6,
     }
 }
 
@@ -50,6 +54,8 @@ pub enum CoreError {
     Io(String),
     #[error("{0}")]
     Internal(String),
+    #[error("{0}")]
+    GuardFail(String),
 }
 
 impl CoreError {
@@ -61,6 +67,7 @@ impl CoreError {
             CoreError::Config(_) => ErrorKind::Config,
             CoreError::Io(_) => ErrorKind::Io,
             CoreError::Internal(_) => ErrorKind::Internal,
+            CoreError::GuardFail(_) => ErrorKind::GuardFail,
         }
     }
 
@@ -75,7 +82,8 @@ impl CoreError {
             | CoreError::InvalidInput(m)
             | CoreError::Config(m)
             | CoreError::Io(m)
-            | CoreError::Internal(m) => m.as_str(),
+            | CoreError::Internal(m)
+            | CoreError::GuardFail(m) => m.as_str(),
         }
     }
 
@@ -102,6 +110,10 @@ impl CoreError {
     pub fn internal(msg: impl Into<String>) -> Self {
         CoreError::Internal(crate::redact::redact(&msg.into()))
     }
+
+    pub fn guard_fail(msg: impl Into<String>) -> Self {
+        CoreError::GuardFail(crate::redact::redact(&msg.into()))
+    }
 }
 
 pub type CoreResult<T> = Result<T, CoreError>;
@@ -118,8 +130,11 @@ mod tests {
         assert_eq!(exit_code(ErrorKind::InvalidInput), 4);
         assert_eq!(exit_code(ErrorKind::Config), 4);
         assert_eq!(exit_code(ErrorKind::Io), 5);
+        assert_eq!(exit_code(ErrorKind::GuardFail), 6);
         assert_eq!(ErrorKind::Usage.as_str(), "Usage");
+        assert_eq!(ErrorKind::GuardFail.as_str(), "GuardFail");
         assert_eq!(CoreError::usage("x").exit_code(), 2);
+        assert_eq!(CoreError::guard_fail("x").exit_code(), 6);
         assert_eq!(
             CoreError::invalid_input("x").kind(),
             ErrorKind::InvalidInput

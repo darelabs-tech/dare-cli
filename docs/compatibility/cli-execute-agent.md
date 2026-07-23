@@ -66,7 +66,7 @@ Requires a git repository (`.git`). Auto-cleanup after each attempt; orphans rem
 | 4 | No git / unknown driver / bad policy / invalid input |
 | 5 | (reserved / IO per 004) |
 | 124 | Agent mock timeout **or** Ralph timeout |
-| **6** | **Not used** (guard deferred to 034) |
+| **6** | Guard FAIL (preflight) |
 
 ## JSON (`--json`)
 
@@ -86,5 +86,4 @@ cargo test -p dare-cli --test cli_smoke -- execute_agent
 
 - Real drivers (**031**)
 - Decay / REPLAN (**033**)
-- Guard exit 6 (**034**)
 - Review in loop (**032**)

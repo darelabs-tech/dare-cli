@@ -12,6 +12,7 @@ use commands::dag::{run_dag_viz, CliVizFormat};
 use commands::design::run_design;
 use commands::discover::run_discover;
 use commands::execute::{run_execute, ExecuteAction};
+use commands::guard::{run_guard_cmd, GuardCliOpts};
 use commands::info::{collect_info, format_human, report_to_json};
 use commands::review::{run_review_cmd, ReviewCliArgs};
 use commands::skill::{run_skill, SkillAction};
@@ -95,6 +96,35 @@ enum Commands {
         /// Treat warnings as failures.
         #[arg(long)]
         strict: bool,
+    },
+    /// Security gate: unicode, injection scan, provenance (exit 6 on FAIL).
+    Guard {
+        /// File or directory target (default: DARE/ + dare.config.json).
+        target: Option<PathBuf>,
+        /// Scan git staged files only.
+        #[arg(long, conflicts_with_all = ["all", "sign"])]
+        staged: bool,
+        /// Scan all text-ish files under the project (skips heavy dirs).
+        #[arg(long, conflicts_with_all = ["staged", "sign"])]
+        all: bool,
+        /// Sign a target file (writes `.minisig`); requires DARE_GUARD_PRIVATE_KEY.
+        #[arg(long, conflicts_with_all = ["staged", "all"])]
+        sign: bool,
+        /// Unicode mode: strip|block (default: block).
+        #[arg(long, default_value = "block")]
+        unicode: String,
+        /// Treat WARN as FAIL (exit 6).
+        #[arg(long)]
+        strict: bool,
+        /// Fail when severity reaches this level: fail|warn (default: fail).
+        #[arg(long, default_value = "fail")]
+        fail_on: String,
+        /// Output format hint: text|json (JSON envelope still via global --json).
+        #[arg(long, default_value = "text")]
+        format: String,
+        /// Optional comment for --sign (reserved).
+        #[arg(long)]
+        comment: Option<String>,
     },
     /// DAG utilities (visualization).
     Dag {
@@ -474,6 +504,30 @@ fn main() -> ExitCode {
                 },
                 &renderer,
             ),
+            Some(Commands::Guard {
+                target,
+                staged,
+                all,
+                sign,
+                unicode,
+                strict,
+                fail_on,
+                format,
+                comment,
+            }) => run_guard_cmd(
+                GuardCliOpts {
+                    target,
+                    staged,
+                    all,
+                    sign,
+                    unicode,
+                    strict,
+                    fail_on,
+                    format,
+                    comment,
+                },
+                &renderer,
+            ),
             Some(Commands::Dag {
                 action:
                     DagCmd::Viz {
@@ -764,6 +818,7 @@ fn run(cli: Cli) -> Result<(String, serde_json::Value), CoreError> {
         },
         Some(Commands::Validate { .. }) => unreachable!("validate handled in main"),
         Some(Commands::Review { .. }) => unreachable!("review handled in main"),
+        Some(Commands::Guard { .. }) => unreachable!("guard handled in main"),
         Some(Commands::Dag { .. }) => unreachable!("dag handled in main"),
         Some(Commands::Execute { .. }) => unreachable!("execute handled in main"),
         Some(Commands::Skill { .. }) => unreachable!("skill handled in main"),

@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "rules": [
+    {
+      "id": "instr-override",
+      "severity": "fail",
+      "description": "Instruction override / jailbreak phrases",
+      "pattern": "(?i)(ignore\\s+(all\\s+)?(previous|prior|above)\\s+instructions|disregard\\s+(all\\s+)?(previous|prior)\\s+(rules|instructions)|you\\s+are\\s+now\\s+(DAN|unrestricted)|jailbreak\\s*mode)"
+    },
+    {
+      "id": "shell-exec",
+      "severity": "fail",
+      "description": "Shell execution / RCE hints in prompts",
+      "pattern": "(?i)(rm\\s+-rf\\s+/|curl\\s+[^\\n]*\\|\\s*(ba)?sh|wget\\s+[^\\n]*\\|\\s*(ba)?sh|powershell\\s+-enc|Invoke-Expression|eval\\s*\\(|os\\.system\\s*\\()"
+    },
+    {
+      "id": "exfiltration",
+      "severity": "fail",
+      "description": "Data exfiltration directives",
+      "pattern": "(?i)(exfiltrat(e|ion)|send\\s+(all\\s+)?(secrets?|api[_-]?keys?|tokens?|credentials?)\\s+to|upload\\s+[^\\n]*\\.(env|pem|key)\\b|base64\\s+[^\\n]*\\|\\s*curl)"
+    },
+    {
+      "id": "hidden-directive",
+      "severity": "warn",
+      "description": "Hidden / system-role directive smuggling",
+      "pattern": "(?i)(<\\|?(system|assistant)\\|?>|\\[INST\\]|<<SYS>>|###\\s*System\\s*:|BEGIN\\s+HIDDEN\\s+INSTRUCTION)"
+    }
+  ]
+}

@@ -16,6 +16,7 @@ members = [
     "crates/dare-ast",
     "crates/dare-skills",
     "crates/dare-review",
+    "crates/dare-guard",
 ]
 
 [workspace.package]
@@ -50,6 +51,8 @@ tree-sitter-php = "=0.24.2"
 tree-sitter-go = "=0.25.0"
 tree-sitter-ruby = "=0.23.1"
 tree-sitter-rust = "=0.24.2"
+ed25519-dalek = { version = "=2.1.1", features = ["rand_core"] }
+base64 = "=0.22.1"
 kill_tree = "=0.2.4"
 serde_yaml = { package = "yaml_serde", version = "=0.10.4" }
 rust-embed = "=8.7.2"
@@ -67,6 +70,7 @@ dare-agent = { path = "crates/dare-agent" }
 dare-ast = { path = "crates/dare-ast" }
 dare-skills = { path = "crates/dare-skills" }
 dare-review = { path = "crates/dare-review" }
+dare-guard = { path = "crates/dare-guard" }
 ureq = { version = "=2.12.1", default-features = false, features = ["native-tls"] }
 
 [workspace.lints.rust]

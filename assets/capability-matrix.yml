@@ -256,8 +256,9 @@ capabilities:
     title: "dare-guard"
     description: "Capability IDE for dare-guard"
     instructions: |
-      Use the /dare-guard slash command when appropriate.
-    cli_commands: []
+      Use `/dare-guard` or `dare guard [target]|--staged|--all|--sign` for unicode,
+      injection, and provenance checks. FAIL exits 6. Agent preflight uses the same gate.
+    cli_commands: ["guard"]
     outputs:
       claude: .claude/commands/dare-guard.md
       cursor: .cursor/commands/dare-guard.md

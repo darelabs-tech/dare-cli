@@ -22,6 +22,7 @@ dare-verify = { workspace = true }
 dare-agent = { workspace = true }
 dare-skills = { workspace = true }
 dare-review = { workspace = true }
+dare-guard = { workspace = true }
 dare-update = { workspace = true }
 dare-ai = { workspace = true }
 clap = { workspace = true }
