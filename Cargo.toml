@@ -13,6 +13,7 @@ members = [
     "crates/dare-update",
     "crates/dare-verify",
     "crates/dare-agent",
+    "crates/dare-ast",
 ]
 
 [workspace.package]
@@ -38,6 +39,15 @@ tempfile = "=3.20.0"
 proptest = "=1.6.0"
 fs4 = "=1.1.0"
 sha2 = "=0.10.9"
+regex = "=1.11.1"
+tree-sitter = "=0.25.10"
+tree-sitter-typescript = "=0.23.2"
+tree-sitter-javascript = "=0.25.0"
+tree-sitter-python = "=0.25.0"
+tree-sitter-php = "=0.24.2"
+tree-sitter-go = "=0.25.0"
+tree-sitter-ruby = "=0.23.1"
+tree-sitter-rust = "=0.24.2"
 kill_tree = "=0.2.4"
 serde_yaml = { package = "yaml_serde", version = "=0.10.4" }
 rust-embed = "=8.7.2"
@@ -52,6 +62,7 @@ dare-ai = { path = "crates/dare-ai" }
 dare-update = { path = "crates/dare-update" }
 dare-verify = { path = "crates/dare-verify" }
 dare-agent = { path = "crates/dare-agent" }
+dare-ast = { path = "crates/dare-ast" }
 
 [workspace.lints.rust]
 unused = "warn"
