@@ -1,0 +1,45 @@
+[package]
+name = "dare-ast"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+description = "Native tree-sitter AST engine with regex fallback (microplano 035)"
+
+[features]
+default = [
+    "lang-typescript",
+    "lang-tsx",
+    "lang-javascript",
+    "lang-python",
+    "lang-php",
+    "lang-go",
+    "lang-ruby",
+    "lang-rust",
+]
+lang-typescript = ["dep:tree-sitter-typescript"]
+lang-tsx = ["dep:tree-sitter-typescript"]
+lang-javascript = ["dep:tree-sitter-javascript"]
+lang-python = ["dep:tree-sitter-python"]
+lang-php = ["dep:tree-sitter-php"]
+lang-go = ["dep:tree-sitter-go"]
+lang-ruby = ["dep:tree-sitter-ruby"]
+lang-rust = ["dep:tree-sitter-rust"]
+
+[dependencies]
+dare-core = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+regex = { workspace = true }
+tree-sitter = { workspace = true }
+tree-sitter-typescript = { workspace = true, optional = true }
+tree-sitter-javascript = { workspace = true, optional = true }
+tree-sitter-python = { workspace = true, optional = true }
+tree-sitter-php = { workspace = true, optional = true }
+tree-sitter-go = { workspace = true, optional = true }
+tree-sitter-ruby = { workspace = true, optional = true }
+tree-sitter-rust = { workspace = true, optional = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }
