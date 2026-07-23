@@ -12,6 +12,7 @@ pub use budget::BudgetTracker;
 pub use driver::{
     resolve_driver, AgentDriver, AgentRequest, AgentRunResult, AgentRunStatus, DriverHealth,
 };
+pub use drivers::{AntigravityDriver, ClaudeDriver, CodexDriver, CursorDriver};
 pub use mock::{MockDriver, MockMode};
 pub use policy::{apply_fixed, FixedDecision, MAX_AGENT_ATTEMPTS};
 pub use signature::{failure_signature, normalize_stderr};

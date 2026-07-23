@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use dare_core::{CancelFlag, CoreResult};
 use serde::Serialize;
 
+use crate::drivers::{AntigravityDriver, ClaudeDriver, CodexDriver, CursorDriver};
 use crate::mock::MockDriver;
 
 #[derive(Debug, Clone, Serialize)]
@@ -50,10 +51,17 @@ pub trait AgentDriver: Send + Sync {
     fn run(&self, req: &AgentRequest, cancel: &CancelFlag) -> CoreResult<AgentRunResult>;
 }
 
-/// Resolve a driver by id. `mock` and `noop` map to [`MockDriver`]; others are not implemented.
+/// Resolve a driver by id (case-sensitive lowercase).
+///
+/// `mock` / `noop` → [`MockDriver`]; `codex` / `claude` / `cursor` / `antigravity` → real CLI
+/// drivers; anything else → InvalidInput `"driver not implemented: {id}"`.
 pub fn resolve_driver(id: &str) -> CoreResult<Box<dyn AgentDriver>> {
     match id {
         "mock" | "noop" => Ok(Box::new(MockDriver::from_env())),
+        "codex" => Ok(Box::new(CodexDriver::from_env()?)),
+        "claude" => Ok(Box::new(ClaudeDriver::from_env()?)),
+        "cursor" => Ok(Box::new(CursorDriver::from_env()?)),
+        "antigravity" => Ok(Box::new(AntigravityDriver::from_env()?)),
         other => Err(dare_core::CoreError::invalid_input(format!(
             "driver not implemented: {other}"
         ))),
@@ -71,12 +79,38 @@ mod tests {
     }
 
     #[test]
+    fn resolve_real_drivers_from_env_defaults() {
+        std::env::remove_var(crate::drivers::ENV_CODEX);
+        std::env::remove_var(crate::drivers::ENV_CLAUDE);
+        std::env::remove_var(crate::drivers::ENV_CURSOR);
+        std::env::remove_var(crate::drivers::ENV_ANTIGRAVITY);
+        assert_eq!(resolve_driver("codex").unwrap().id(), "codex");
+        assert_eq!(resolve_driver("claude").unwrap().id(), "claude");
+        assert_eq!(resolve_driver("cursor").unwrap().id(), "cursor");
+        assert_eq!(resolve_driver("antigravity").unwrap().id(), "antigravity");
+    }
+
+    #[test]
     fn resolve_unknown_not_implemented() {
-        match resolve_driver("claude") {
+        match resolve_driver("not-a-driver") {
             Ok(_) => panic!("expected error"),
             Err(err) => {
                 let msg = err.to_string();
-                assert!(msg.contains("driver not implemented: claude"), "msg={msg}");
+                assert!(
+                    msg.contains("driver not implemented: not-a-driver"),
+                    "msg={msg}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn resolve_mixed_case_rejected() {
+        match resolve_driver("Claude") {
+            Ok(_) => panic!("expected error"),
+            Err(err) => {
+                let msg = err.to_string();
+                assert!(msg.contains("driver not implemented: Claude"), "msg={msg}");
             }
         }
     }
