@@ -14,6 +14,7 @@ members = [
     "crates/dare-verify",
     "crates/dare-agent",
     "crates/dare-ast",
+    "crates/dare-skills",
 ]
 
 [workspace.package]
@@ -63,6 +64,8 @@ dare-update = { path = "crates/dare-update" }
 dare-verify = { path = "crates/dare-verify" }
 dare-agent = { path = "crates/dare-agent" }
 dare-ast = { path = "crates/dare-ast" }
+dare-skills = { path = "crates/dare-skills" }
+ureq = { version = "=2.12.1", default-features = false, features = ["native-tls"] }
 
 [workspace.lints.rust]
 unused = "warn"

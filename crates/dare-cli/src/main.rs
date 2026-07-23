@@ -13,6 +13,7 @@ use commands::design::run_design;
 use commands::discover::run_discover;
 use commands::execute::{run_execute, ExecuteAction};
 use commands::info::{collect_info, format_human, report_to_json};
+use commands::skill::{run_skill, SkillAction};
 use commands::update::run_update;
 use commands::validate::run_validate;
 use commands::welcome::{render_welcome, WelcomeOptions};
@@ -218,6 +219,22 @@ enum Commands {
     Harness {
         #[command(subcommand)]
         ide: HarnessIde,
+    },
+    /// Skills-pacote registry (microplano 044).
+    Skill {
+        #[command(subcommand)]
+        action: SkillCmd,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+enum SkillCmd {
+    /// List skills from remote > local > mock registries.
+    List,
+    /// Show details for one skill (merged registries).
+    Info {
+        /// Skill package name.
+        name: String,
     },
 }
 
@@ -453,6 +470,13 @@ fn main() -> ExitCode {
                 };
                 run_execute(dag, action, &renderer)
             }
+            Some(Commands::Skill { action }) => {
+                let skill_action = match action {
+                    SkillCmd::List => SkillAction::List,
+                    SkillCmd::Info { name } => SkillAction::Info { name },
+                };
+                run_skill(skill_action, &renderer)
+            }
             other => {
                 let cli = Cli {
                     json: cli.json,
@@ -682,6 +706,7 @@ fn run(cli: Cli) -> Result<(String, serde_json::Value), CoreError> {
         Some(Commands::Validate { .. }) => unreachable!("validate handled in main"),
         Some(Commands::Dag { .. }) => unreachable!("dag handled in main"),
         Some(Commands::Execute { .. }) => unreachable!("execute handled in main"),
+        Some(Commands::Skill { .. }) => unreachable!("skill handled in main"),
     }
 }
 

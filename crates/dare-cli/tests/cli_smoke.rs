@@ -1786,3 +1786,63 @@ fn execute_agent_cleanup_exclusive_exit_2() {
         .assert()
         .code(2);
 }
+
+#[test]
+fn skill_list_shows_mock_skills() {
+    Command::new(cargo_bin("dare"))
+        .env("DARE_REMOTE_REGISTRY", "off")
+        .args(["skill", "list", "--no-color"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("skill list:"))
+        .stdout(predicate::str::contains("dare-ax@"))
+        .stdout(predicate::str::contains("skill-nestjs-api@"));
+}
+
+#[test]
+fn skill_list_json() {
+    let assert = Command::new(cargo_bin("dare"))
+        .env("DARE_REMOTE_REGISTRY", "off")
+        .args(["--json", "skill", "list"])
+        .assert()
+        .success();
+    let out = String::from_utf8_lossy(&assert.get_output().stdout);
+    let v: Value = serde_json::from_str(out.trim()).expect("json");
+    assert_eq!(v["ok"], true);
+    assert_eq!(v["data"]["action"], "skill.list");
+    assert!(v["data"]["count"].as_u64().unwrap() >= 7);
+}
+
+#[test]
+fn skill_info_dare_ax() {
+    Command::new(cargo_bin("dare"))
+        .env("DARE_REMOTE_REGISTRY", "off")
+        .args(["skill", "info", "dare-ax", "--no-color"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("skill info: dare-ax@"))
+        .stdout(predicate::str::contains("kind: generic"))
+        .stdout(predicate::str::contains("source: mock"));
+}
+
+#[test]
+fn skill_info_missing_exit_3() {
+    Command::new(cargo_bin("dare"))
+        .env("DARE_REMOTE_REGISTRY", "off")
+        .args(["skill", "info", "no-such-skill-zzz", "--no-color"])
+        .assert()
+        .code(3)
+        .stderr(predicate::str::contains("skill not found"));
+}
+
+#[test]
+fn skill_help_no_lifecycle_verbs() {
+    Command::new(cargo_bin("dare"))
+        .args(["skill", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("list"))
+        .stdout(predicate::str::contains("info"))
+        .stdout(predicate::str::contains("add").not())
+        .stdout(predicate::str::contains("publish").not());
+}
