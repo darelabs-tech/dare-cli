@@ -1,0 +1,67 @@
+{
+  "skills": [
+    {
+      "name": "dare-ax",
+      "version": "1.0.0",
+      "description": "Agent Experience (AX) — llms.txt, OpenAPI, --json signals",
+      "author": "DARE Labs",
+      "license": "MIT",
+      "dare_version": ">=3.0.0",
+      "depends_on": []
+    },
+    {
+      "name": "dare-frontend-design",
+      "version": "1.0.0",
+      "description": "Frontend architecture patterns for React and Vue",
+      "author": "DARE Labs",
+      "license": "MIT",
+      "dare_version": ">=3.0.0",
+      "depends_on": ["dare-ax"]
+    },
+    {
+      "name": "dare-layered-design",
+      "version": "1.0.0",
+      "description": "Strict 4-layer architecture (Handlers/Services/Repos/Models)",
+      "author": "DARE Labs",
+      "license": "MIT",
+      "dare_version": ">=3.0.0",
+      "depends_on": ["dare-ax"]
+    },
+    {
+      "name": "dare-llm-integration",
+      "version": "1.0.0",
+      "description": "LLM provider abstraction, cache, rate limit, prompt templates",
+      "author": "DARE Labs",
+      "license": "MIT",
+      "dare_version": ">=3.0.0",
+      "depends_on": ["dare-ax"]
+    },
+    {
+      "name": "dare-quality-telemetry",
+      "version": "1.0.0",
+      "description": "Quality metrics aggregation and regression detection",
+      "author": "DARE Labs",
+      "license": "MIT",
+      "dare_version": ">=3.0.0",
+      "depends_on": ["dare-ax"]
+    },
+    {
+      "name": "dare-realtime",
+      "version": "1.0.0",
+      "description": "WebSocket/SSE schemas, reconnect, subscription cleanup",
+      "author": "DARE Labs",
+      "license": "MIT",
+      "dare_version": ">=3.0.0",
+      "depends_on": ["dare-ax"]
+    },
+    {
+      "name": "skill-nestjs-api",
+      "version": "1.0.0",
+      "description": "NestJS + Prisma + Swagger stack skill (example)",
+      "author": "DARE Labs",
+      "license": "MIT",
+      "dare_version": ">=3.0.0",
+      "depends_on": ["dare-ax"]
+    }
+  ]
+}
