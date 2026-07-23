@@ -62,6 +62,16 @@ impl SafeRelativePath {
             }
         }
         if parts.is_empty() {
+            // Allow "." (and "././.") to mean the project root itself (cwd jail).
+            let only_curdir = normalized
+                .split('/')
+                .filter(|s| !s.is_empty())
+                .all(|s| s == ".");
+            if only_curdir {
+                return Ok(Self {
+                    inner: ".".to_string(),
+                });
+            }
             return Err(escape_err());
         }
         Ok(Self {
@@ -137,6 +147,11 @@ impl ProjectRoot {
 
     /// Resolve relative path under jail (symlink escape denied).
     pub fn resolve(&self, rel: &SafeRelativePath) -> CoreResult<SafeAbsolutePath> {
+        if rel.as_str() == "." {
+            return Ok(SafeAbsolutePath {
+                path: self.root.clone(),
+            });
+        }
         let joined = self.root.as_std_path().join(rel.as_str());
         let verified = verify_within_root(&self.root, &joined)?;
         Ok(SafeAbsolutePath { path: verified })
@@ -249,6 +264,8 @@ mod tests {
         assert_eq!(ok.as_str(), "foo/bar");
         let ok2 = SafeRelativePath::new(r"foo\bar").unwrap();
         assert_eq!(ok2.as_str(), "foo/bar");
+        let root_rel = SafeRelativePath::new(".").unwrap();
+        assert_eq!(root_rel.as_str(), ".");
     }
 
     #[test]

@@ -202,10 +202,11 @@ capabilities:
     assets: []
   - id: dare-execute
     title: "dare-execute"
-    description: "Orchestrate DAG via dare execute --status|--next|--watch"
+    description: "Orchestrate DAG via dare execute --status|--next|--watch|--complete|--fail|--reset"
     instructions: |
-      Use /dare-execute or `dare execute` (--status default, --next, --watch).
-      See docs/compatibility/cli-execute-status.md (DEC-029). No Start-on-next.
+      Use /dare-execute or `dare execute` (--status default, --next, --watch,
+      --complete/--fail/--reset with Ralph). See cli-execute-status.md (DEC-029)
+      and cli-execute-mutations.md (DEC-030). No Start-on-next; auto-Start on complete/fail.
     cli_commands: ["execute"]
     outputs:
       claude: .claude/commands/dare-execute.md

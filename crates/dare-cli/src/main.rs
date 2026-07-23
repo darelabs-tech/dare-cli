@@ -99,17 +99,32 @@ enum Commands {
         #[command(subcommand)]
         action: DagCmd,
     },
-    /// Orchestrate DAG execution (status / next / watch).
+    /// Orchestrate DAG execution (status / next / watch / complete / fail / reset).
     Execute {
         /// Show DAG runtime status (default when no action flag is set).
-        #[arg(long, conflicts_with_all = ["next", "watch"])]
+        #[arg(long, conflicts_with_all = ["next", "watch", "complete", "fail", "reset"])]
         status: bool,
         /// Print next executable tasks at the minimum ready rank.
-        #[arg(long, conflicts_with_all = ["status", "watch"])]
+        #[arg(long, conflicts_with_all = ["status", "watch", "complete", "fail", "reset"])]
         next: bool,
         /// Watch status without mutating runtime state.
-        #[arg(long, conflicts_with_all = ["status", "next"])]
+        #[arg(long, conflicts_with_all = ["status", "next", "complete", "fail", "reset"])]
         watch: bool,
+        /// Mark task DONE after Ralph gates pass.
+        #[arg(long, value_name = "TASK_ID", conflicts_with_all = ["status", "next", "watch", "fail", "reset"])]
+        complete: Option<String>,
+        /// Mark task FAILED (cascade skip dependents).
+        #[arg(long, value_name = "TASK_ID", conflicts_with_all = ["status", "next", "watch", "complete", "reset"])]
+        fail: Option<String>,
+        /// Reset task to PENDING (preserves attempts).
+        #[arg(long, value_name = "TASK_ID", conflicts_with_all = ["status", "next", "watch", "complete", "fail"])]
+        reset: Option<String>,
+        /// Completion summary (requires `--complete`; default: Task completed.).
+        #[arg(long, requires = "complete")]
+        output: Option<String>,
+        /// Failure reason (requires `--fail`; default: Task failed.).
+        #[arg(long, requires = "fail")]
+        reason: Option<String>,
         /// Path to dare-dag.yaml (default: DARE/dare-dag.yaml).
         #[arg(long)]
         dag: Option<PathBuf>,
@@ -377,11 +392,22 @@ fn main() -> ExitCode {
                 status,
                 next,
                 watch,
+                complete,
+                fail,
+                reset,
+                output,
+                reason,
                 dag,
                 interval,
                 max_ticks,
             }) => {
-                let action = if watch {
+                let action = if let Some(id) = complete {
+                    ExecuteAction::Complete { id, output }
+                } else if let Some(id) = fail {
+                    ExecuteAction::Fail { id, reason }
+                } else if let Some(id) = reset {
+                    ExecuteAction::Reset { id }
+                } else if watch {
                     ExecuteAction::Watch {
                         interval_secs: interval,
                         max_ticks,

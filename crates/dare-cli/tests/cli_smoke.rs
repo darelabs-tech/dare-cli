@@ -1434,3 +1434,198 @@ fn execute_watch_does_not_mutate_state() {
     );
     assert_eq!(canvas_before, canvas_after, "watch must not rewrite canvas");
 }
+
+fn execute_complete_project() -> tempfile::TempDir {
+    let dir = validate_project_with_dag(&fixture_dag("valid.v21.yaml"), true);
+    std::fs::write(
+        dir.path().join("dare.config.json"),
+        r#"{"backend":"rust-axum"}"#,
+    )
+    .unwrap();
+    dir
+}
+
+fn task_status_from_state(dir: &std::path::Path, id: &str) -> String {
+    let state_path = dir.join(".dare/state.json");
+    let v: Value = serde_json::from_str(&std::fs::read_to_string(&state_path).unwrap()).unwrap();
+    v["tasks"][id]["status"].as_str().unwrap_or("").to_string()
+}
+
+#[test]
+fn execute_complete_pass_marks_done_and_writes_verification() {
+    let dir = execute_complete_project();
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .env("DARE_RALPH_MOCK", "pass")
+        .args(["execute", "--complete", "task-001", "--no-color"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("marked DONE"));
+    assert_eq!(task_status_from_state(dir.path(), "task-001"), "DONE");
+    assert!(dir
+        .path()
+        .join(".dare/verification/task-001.json")
+        .is_file());
+}
+
+#[test]
+fn execute_complete_fail_leaves_running_exit_1() {
+    let dir = execute_complete_project();
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .env("DARE_RALPH_MOCK", "fail")
+        .args(["execute", "--complete", "task-001", "--no-color"])
+        .assert()
+        .code(1)
+        .stderr(predicate::str::contains("left RUNNING"));
+    assert_eq!(task_status_from_state(dir.path(), "task-001"), "RUNNING");
+}
+
+#[test]
+fn execute_complete_timeout_exit_124() {
+    let dir = execute_complete_project();
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .env("DARE_RALPH_MOCK", "timeout")
+        .args(["execute", "--complete", "task-001", "--no-color"])
+        .assert()
+        .code(124);
+    assert_eq!(task_status_from_state(dir.path(), "task-001"), "RUNNING");
+}
+
+#[test]
+fn execute_complete_missing_task_exit_3() {
+    let dir = execute_complete_project();
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .env("DARE_RALPH_MOCK", "pass")
+        .args(["execute", "--complete", "no-such-task", "--no-color"])
+        .assert()
+        .code(3);
+}
+
+#[test]
+fn execute_complete_fail_exclusive_exit_2() {
+    let dir = execute_complete_project();
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args([
+            "execute",
+            "--complete",
+            "task-001",
+            "--fail",
+            "task-001",
+            "--no-color",
+        ])
+        .assert()
+        .code(2);
+}
+
+#[test]
+fn execute_status_complete_exclusive_exit_2() {
+    let dir = execute_complete_project();
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args([
+            "execute",
+            "--status",
+            "--complete",
+            "task-001",
+            "--no-color",
+        ])
+        .assert()
+        .code(2);
+}
+
+#[test]
+fn execute_fail_marks_failed_and_cascades() {
+    let dir = validate_project_with_dag(&fixture_dag("exec-blocked.v21.yaml"), false);
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args([
+            "execute",
+            "--fail",
+            "task-a",
+            "--reason",
+            "boom",
+            "--no-color",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("FAILED"));
+    assert_eq!(task_status_from_state(dir.path(), "task-a"), "FAILED");
+    assert_eq!(task_status_from_state(dir.path(), "task-b"), "SKIPPED");
+}
+
+#[test]
+fn execute_reset_preserves_attempts() {
+    let dir = execute_complete_project();
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .env("DARE_RALPH_MOCK", "pass")
+        .args(["execute", "--complete", "task-001", "--no-color"])
+        .assert()
+        .success();
+    let before = {
+        let v: Value = serde_json::from_str(
+            &std::fs::read_to_string(dir.path().join(".dare/state.json")).unwrap(),
+        )
+        .unwrap();
+        v["tasks"]["task-001"]["attempts"]
+            .as_array()
+            .map(|a| a.len())
+            .unwrap_or(0)
+    };
+    assert!(before >= 1);
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args(["execute", "--reset", "task-001", "--no-color"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("PENDING"));
+    assert_eq!(task_status_from_state(dir.path(), "task-001"), "PENDING");
+    let v: Value = serde_json::from_str(
+        &std::fs::read_to_string(dir.path().join(".dare/state.json")).unwrap(),
+    )
+    .unwrap();
+    let after = v["tasks"]["task-001"]["attempts"]
+        .as_array()
+        .map(|a| a.len())
+        .unwrap_or(0);
+    assert_eq!(after, before, "reset must preserve attempts");
+    assert_eq!(v["tasks"]["task-001"]["output"], "");
+    assert_eq!(v["tasks"]["task-001"]["error"], "");
+}
+
+#[test]
+fn execute_complete_from_done_exit_4() {
+    let dir = execute_complete_project();
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .env("DARE_RALPH_MOCK", "pass")
+        .args(["execute", "--complete", "task-001", "--no-color"])
+        .assert()
+        .success();
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .env("DARE_RALPH_MOCK", "pass")
+        .args(["execute", "--complete", "task-001", "--no-color"])
+        .assert()
+        .code(4);
+}
+
+#[test]
+fn execute_fail_from_done_exit_4() {
+    let dir = execute_complete_project();
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .env("DARE_RALPH_MOCK", "pass")
+        .args(["execute", "--complete", "task-001", "--no-color"])
+        .assert()
+        .success();
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args(["execute", "--fail", "task-001", "--no-color"])
+        .assert()
+        .code(4);
+}
