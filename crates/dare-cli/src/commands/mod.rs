@@ -9,6 +9,7 @@ pub mod execute_agent;
 pub mod guard;
 pub mod info;
 pub mod path_resolve;
+pub mod reverse;
 pub mod review;
 pub mod skill;
 pub mod update;

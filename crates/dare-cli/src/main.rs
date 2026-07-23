@@ -14,6 +14,7 @@ use commands::discover::run_discover;
 use commands::execute::{run_execute, ExecuteAction};
 use commands::guard::{run_guard_cmd, GuardCliOpts};
 use commands::info::{collect_info, format_human, report_to_json};
+use commands::reverse::{run_reverse, ReverseCliOpts};
 use commands::review::{run_review_cmd, ReviewCliArgs};
 use commands::skill::{run_skill, SkillAction};
 use commands::update::run_update;
@@ -87,6 +88,36 @@ enum Commands {
         /// Abort install when stack conflicts are present.
         #[arg(long)]
         strict_conflicts: bool,
+    },
+    /// Brownfield reverse engineering → IDEIA.md + REVERSE specs.
+    Reverse {
+        /// Project directory (default: cwd).
+        #[arg(long, short = 'd')]
+        dir: Option<PathBuf>,
+        /// Analyze only — do not write DARE artifacts.
+        #[arg(long)]
+        check: bool,
+        /// Generate deep Fase-3 stubs (erd, c4, …).
+        #[arg(long)]
+        deep: bool,
+        /// Comma-separated module ids to include.
+        #[arg(long)]
+        modules: Option<String>,
+        /// Optional AST pass via dare-ast (merge endpoints/entities).
+        #[arg(long)]
+        ast: bool,
+        /// Skip Excalidraw module map (default: write).
+        #[arg(long)]
+        no_excalidraw: bool,
+        /// Write confidence-report.md.
+        #[arg(long)]
+        report: bool,
+        /// Optional AI enrichment of IDEIA.md (soft-fail).
+        #[arg(long)]
+        ai: bool,
+        /// AI provider id (requires `--ai`; default: codex).
+        #[arg(long)]
+        provider: Option<String>,
     },
     /// Validate DARE/dare-dag.yaml (read-only).
     Validate {
@@ -672,6 +703,27 @@ fn run(cli: Cli) -> Result<(String, serde_json::Value), CoreError> {
             dry_run,
             strict_conflicts,
         }) => run_discover(dir, check, force, dry_run, strict_conflicts),
+        Some(Commands::Reverse {
+            dir,
+            check,
+            deep,
+            modules,
+            ast,
+            no_excalidraw,
+            report,
+            ai,
+            provider,
+        }) => run_reverse(ReverseCliOpts {
+            dir,
+            check,
+            deep,
+            modules,
+            ast,
+            no_excalidraw,
+            report,
+            ai,
+            provider,
+        }),
         Some(Commands::Update {
             dry_run,
             yes,

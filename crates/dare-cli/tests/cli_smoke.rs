@@ -2108,3 +2108,97 @@ fn execute_agent_preflight_fail_exit_6() {
         .code(6)
         .stderr(predicate::str::contains("guard").or(predicate::str::contains("preflight")));
 }
+
+fn reverse_fixture() -> tempfile::TempDir {
+    let dir = tempfile::tempdir().unwrap();
+    let crate_dir = dir.path().join("crates").join("demo").join("src");
+    std::fs::create_dir_all(&crate_dir).unwrap();
+    std::fs::write(
+        dir.path().join("crates").join("demo").join("Cargo.toml"),
+        "[package]\nname=\"demo\"\nversion=\"0.0.0\"\nedition=\"2021\"\n",
+    )
+    .unwrap();
+    std::fs::write(crate_dir.join("lib.rs"), "pub struct Demo {}\n").unwrap();
+    std::fs::write(
+        dir.path().join("Cargo.toml"),
+        "[workspace]\nmembers=[\"crates/*\"]\n",
+    )
+    .unwrap();
+    dir
+}
+
+#[test]
+fn reverse_happy_writes_ideia() {
+    let dir = reverse_fixture();
+    let path = dir.path().to_str().expect("utf8");
+    Command::new(cargo_bin("dare"))
+        .args(["reverse", "-d", path, "--no-color"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("mode: reverse"))
+        .stdout(predicate::str::contains("IDEIA.md"));
+    assert!(dir.path().join("DARE").join("IDEIA.md").is_file());
+    assert!(dir
+        .path()
+        .join("DARE")
+        .join("REVERSE")
+        .join("reverse-facts.json")
+        .is_file());
+}
+
+#[test]
+fn reverse_check_no_write() {
+    let dir = reverse_fixture();
+    let before: Vec<_> = std::fs::read_dir(dir.path())
+        .unwrap()
+        .flatten()
+        .map(|e| e.file_name())
+        .collect();
+    let path = dir.path().to_str().expect("utf8");
+    Command::new(cargo_bin("dare"))
+        .args(["reverse", "--check", "-d", path, "--no-color"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("zero mutations"));
+    let after: Vec<_> = std::fs::read_dir(dir.path())
+        .unwrap()
+        .flatten()
+        .map(|e| e.file_name())
+        .collect();
+    assert_eq!(before, after);
+    assert!(!dir.path().join("DARE").exists());
+}
+
+#[test]
+fn reverse_missing_dir_exits_3() {
+    Command::new(cargo_bin("dare"))
+        .args([
+            "reverse",
+            "--check",
+            "-d",
+            "__dare_missing_reverse_9f3a2b__",
+            "--no-color",
+        ])
+        .assert()
+        .failure()
+        .code(3);
+}
+
+#[test]
+fn reverse_bad_modules_exits_4() {
+    let dir = reverse_fixture();
+    let path = dir.path().to_str().expect("utf8");
+    Command::new(cargo_bin("dare"))
+        .args([
+            "reverse",
+            "--check",
+            "-d",
+            path,
+            "--modules",
+            "no-such-module",
+            "--no-color",
+        ])
+        .assert()
+        .failure()
+        .code(4);
+}

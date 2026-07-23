@@ -399,10 +399,12 @@ capabilities:
     assets: []
   - id: dare-reverse
     title: "dare-reverse"
-    description: "Capability IDE for dare-reverse"
+    description: "Brownfield reverse engineering → IDEIA.md + REVERSE specs"
     instructions: |
-      Use the /dare-reverse slash command when appropriate.
-    cli_commands: []
+      Run `dare reverse` to generate deterministic IDEIA.md and DARE/REVERSE artifacts.
+      Use /dare-reverse for semantic fill of AGENT markers, or `dare reverse --ai`.
+      Flags: -d --check --deep --modules --ast --no-excalidraw --report --ai --provider.
+    cli_commands: ["reverse"]
     outputs:
       claude: .claude/commands/dare-reverse.md
       cursor: .cursor/commands/dare-reverse.md
