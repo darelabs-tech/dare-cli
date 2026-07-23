@@ -410,10 +410,12 @@ capabilities:
     assets: []
   - id: dare-review
     title: "dare-review"
-    description: "Capability IDE for dare-review"
+    description: "Static anti-stub review + semantic merge via --from-agent"
     instructions: |
-      Use the /dare-review slash command when appropriate.
-    cli_commands: []
+      Run `dare review <task-id>` for static anti-stub/mock/TODO scan before DONE.
+      Use /dare-review for semantic layer, then `dare review <id> --from-agent <json>`.
+      Flags: --strict --errors-only --files --format human|json|github --comment --fail-on error|warning|never.
+    cli_commands: ["review"]
     outputs:
       claude: .claude/commands/dare-review.md
       cursor: .cursor/commands/dare-review.md

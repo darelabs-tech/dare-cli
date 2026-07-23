@@ -13,6 +13,7 @@ members = [
     "crates/dare-update",
     "crates/dare-verify",
     "crates/dare-agent",
+    "crates/dare-review",
 ]
 
 [workspace.package]
@@ -52,6 +53,7 @@ dare-ai = { path = "crates/dare-ai" }
 dare-update = { path = "crates/dare-update" }
 dare-verify = { path = "crates/dare-verify" }
 dare-agent = { path = "crates/dare-agent" }
+dare-review = { path = "crates/dare-review" }
 
 [workspace.lints.rust]
 unused = "warn"

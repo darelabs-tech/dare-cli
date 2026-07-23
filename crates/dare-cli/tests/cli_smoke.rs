@@ -1786,3 +1786,89 @@ fn execute_agent_cleanup_exclusive_exit_2() {
         .assert()
         .code(2);
 }
+
+fn review_project(clean: bool) -> tempfile::TempDir {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(
+        dir.path().join("dare.config.json"),
+        r#"{"backend":"rust-axum"}"#,
+    )
+    .unwrap();
+    std::fs::create_dir_all(dir.path().join("DARE/EXECUTION")).unwrap();
+    std::fs::create_dir_all(dir.path().join("src")).unwrap();
+    std::fs::write(
+        dir.path().join("DARE/EXECUTION/task-r.md"),
+        r#"# TASK
+
+## 3. ARQUIVOS A CRIAR / MODIFICAR
+
+| Ação | Caminho | Descrição |
+|------|---------|-----------|
+| CRIAR | `src/lib.rs` | code |
+
+## 4. IMPLEMENTAÇÃO
+"#,
+    )
+    .unwrap();
+    let body = if clean {
+        "pub fn ok() -> i32 { 1 }\n"
+    } else {
+        "pub fn bad() {\n    // TODO: finish\n}\n"
+    };
+    std::fs::write(dir.path().join("src/lib.rs"), body).unwrap();
+    dir
+}
+
+#[test]
+fn review_clean_pass() {
+    let dir = review_project(true);
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args(["review", "task-r", "--no-color"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Review passed."));
+}
+
+#[test]
+fn review_todo_fail_exit_1() {
+    let dir = review_project(false);
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args(["review", "task-r", "--no-color"])
+        .assert()
+        .code(1)
+        .stdout(predicate::str::contains("todo_marker"));
+}
+
+#[test]
+fn review_github_format() {
+    let dir = review_project(false);
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args(["review", "task-r", "--format", "github", "--no-color"])
+        .assert()
+        .code(1)
+        .stdout(predicate::str::contains("::error file=src/lib.rs,line="));
+}
+
+#[test]
+fn review_fail_on_never_exit_0() {
+    let dir = review_project(false);
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args(["review", "task-r", "--fail-on", "never", "--no-color"])
+        .assert()
+        .code(0)
+        .stdout(predicate::str::contains("todo_marker"));
+}
+
+#[test]
+fn review_missing_spec_exit_3() {
+    let dir = review_project(true);
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args(["review", "no-such-task", "--no-color"])
+        .assert()
+        .code(3);
+}
