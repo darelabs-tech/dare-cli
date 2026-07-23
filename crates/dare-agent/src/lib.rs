@@ -1,7 +1,8 @@
-//! Agent drivers, mock, budget, fixed policy, failure signatures, and worktrees (microplano 030).
+//! Agent drivers, mock, budget, fixed policy, failure signatures, and worktrees (microplano 030+031).
 
 mod budget;
 mod driver;
+pub mod drivers;
 mod mock;
 mod policy;
 mod signature;
