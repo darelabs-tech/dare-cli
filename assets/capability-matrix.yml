@@ -178,10 +178,11 @@ capabilities:
     assets: []
   - id: dare-dna
     title: "dare-dna"
-    description: "Capability IDE for dare-dna"
+    description: "Extract project DNA conventions (dare dna → PROJECT-DNA.md)"
     instructions: |
-      Use the /dare-dna slash command when appropriate.
-    cli_commands: []
+      Use /dare-dna after `dare dna` to enrich AGENT sections.
+      CLI: `dare dna` [--check] [--ast] [-d <dir>].
+    cli_commands: ["dna"]
     outputs:
       claude: .claude/commands/dare-dna.md
       cursor: .cursor/commands/dare-dna.md

@@ -4,6 +4,7 @@ pub mod blueprint;
 pub mod dag;
 pub mod design;
 pub mod discover;
+pub mod dna;
 pub mod execute;
 pub mod execute_agent;
 pub mod guard;

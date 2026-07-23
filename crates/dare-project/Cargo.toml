@@ -12,6 +12,8 @@ dare-harness = { workspace = true }
 dare-assets = { workspace = true }
 dare-config = { workspace = true }
 dare-contracts = { workspace = true }
+dare-ast = { workspace = true }
+dare-graph = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 

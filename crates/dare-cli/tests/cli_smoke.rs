@@ -2108,3 +2108,75 @@ fn execute_agent_preflight_fail_exit_6() {
         .code(6)
         .stderr(predicate::str::contains("guard").or(predicate::str::contains("preflight")));
 }
+
+// --- microplano 037: dare dna ---
+
+fn dna_fixture_rust() -> tempfile::TempDir {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(
+        dir.path().join("Cargo.toml"),
+        "[package]\nname=\"dnafix\"\nedition=\"2021\"\n",
+    )
+    .unwrap();
+    std::fs::create_dir_all(dir.path().join("src")).unwrap();
+    std::fs::write(dir.path().join("src/lib.rs"), "pub fn x() {}\n").unwrap();
+    dir
+}
+
+#[test]
+fn dna_help_lists_command() {
+    Command::new(cargo_bin("dare"))
+        .args(["dna", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("--check"))
+        .stdout(predicate::str::contains("--ast"));
+}
+
+#[test]
+fn dna_write_success() {
+    let dir = dna_fixture_rust();
+    let path = dir.path().to_str().unwrap();
+    Command::new(cargo_bin("dare"))
+        .args(["dna", "-d", path, "--no-color"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("mode: write"))
+        .stdout(predicate::str::contains("DARE/PROJECT-DNA.md"));
+    assert!(dir.path().join("DARE/PROJECT-DNA.md").is_file());
+    assert!(dir.path().join("DARE/dna-facts.json").is_file());
+}
+
+#[test]
+fn dna_check_no_write() {
+    let dir = dna_fixture_rust();
+    let path = dir.path().to_str().unwrap();
+    Command::new(cargo_bin("dare"))
+        .args(["dna", "--check", "-d", path, "--no-color"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("mode: check"))
+        .stdout(predicate::str::contains("zero mutations"));
+    assert!(!dir.path().join("DARE/PROJECT-DNA.md").exists());
+    assert!(!dir.path().join("DARE/dna-facts.json").exists());
+}
+
+#[test]
+fn dna_no_git_still_ok() {
+    let dir = dna_fixture_rust();
+    assert!(!dir.path().join(".git").exists());
+    let path = dir.path().to_str().unwrap();
+    Command::new(cargo_bin("dare"))
+        .args(["dna", "--check", "-d", path, "--json", "--no-color"])
+        .assert()
+        .success();
+    let assert = Command::new(cargo_bin("dare"))
+        .args(["dna", "--check", "-d", path, "--json", "--no-color"])
+        .assert()
+        .success();
+    let out = String::from_utf8_lossy(&assert.get_output().stdout);
+    let v: Value = serde_json::from_str(out.lines().last().unwrap()).unwrap();
+    assert_eq!(v["ok"], true);
+    assert!(v["data"]["gitRoot"].is_null());
+    assert!(v["data"]["facts"].as_array().unwrap().len() > 0);
+}
