@@ -11,6 +11,7 @@ use commands::blueprint::{run_blueprint, BlueprintInput};
 use commands::dag::{run_dag_viz, CliVizFormat};
 use commands::design::run_design;
 use commands::discover::run_discover;
+use commands::dna::run_dna_cmd;
 use commands::execute::{run_execute, ExecuteAction};
 use commands::guard::{run_guard_cmd, GuardCliOpts};
 use commands::info::{collect_info, format_human, report_to_json};
@@ -118,6 +119,18 @@ enum Commands {
         /// AI provider id (requires `--ai`; default: codex).
         #[arg(long)]
         provider: Option<String>,
+    },
+    /// Extract project DNA conventions into DARE/PROJECT-DNA.md.
+    Dna {
+        /// Project directory (default: cwd).
+        #[arg(long, short = 'd')]
+        dir: Option<PathBuf>,
+        /// Collect facts only — do not write PROJECT-DNA.md / dna-facts.json.
+        #[arg(long)]
+        check: bool,
+        /// Enable optional AST sampling via dare-ast.
+        #[arg(long)]
+        ast: bool,
     },
     /// Validate DARE/dare-dag.yaml (read-only).
     Validate {
@@ -724,6 +737,7 @@ fn run(cli: Cli) -> Result<(String, serde_json::Value), CoreError> {
             ai,
             provider,
         }),
+        Some(Commands::Dna { dir, check, ast }) => run_dna_cmd(dir, check, ast),
         Some(Commands::Update {
             dry_run,
             yes,

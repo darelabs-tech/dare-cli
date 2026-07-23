@@ -1,6 +1,7 @@
 //! Brownfield project detection and install.
 
 pub mod detect;
+pub mod dna;
 pub mod git;
 pub mod harnesses;
 pub mod install;
@@ -11,6 +12,10 @@ pub mod root;
 pub mod stacks;
 
 pub use detect::{detect, format_human, report_to_json};
+pub use dna::{
+    format_human as format_dna_human, report_to_json as dna_report_to_json, run_dna, DnaOptions,
+    DnaReport, DNA_FACTS_REL, DNA_SCHEMA_VERSION, PROJECT_DNA_REL,
+};
 pub use git::find_git_root;
 pub use harnesses::{detect_harnesses, empty_harnesses};
 pub use install::{

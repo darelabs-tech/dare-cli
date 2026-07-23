@@ -539,6 +539,7 @@ dependencies = [
  "dare-config",
  "dare-contracts",
  "dare-core",
+ "dare-graph",
  "dare-harness",
  "serde",
  "serde_json",
