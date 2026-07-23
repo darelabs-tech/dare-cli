@@ -11,9 +11,7 @@ use dare_core::{
 use serde_json::Value;
 
 use super::argv::{parse_argv_override, ENV_CODEX};
-use super::common::{
-    executable_not_found, finalize_result, AGENT_DRIVER_TIMEOUT, MSG_MALFORMED,
-};
+use super::common::{executable_not_found, finalize_result, AGENT_DRIVER_TIMEOUT, MSG_MALFORMED};
 use crate::driver::{AgentDriver, AgentRequest, AgentRunResult, AgentRunStatus, DriverHealth};
 
 const DOCTOR_TIMEOUT: Duration = Duration::from_secs(5);
@@ -57,9 +55,7 @@ impl CodexDriver {
     }
 
     fn map_missing_exe(&self, err: CoreError) -> CoreError {
-        if err.kind() == ErrorKind::NotFound
-            || err.message().contains("executable not found")
-        {
+        if err.kind() == ErrorKind::NotFound || err.message().contains("executable not found") {
             CoreError::internal(executable_not_found(&self.program))
         } else {
             err
@@ -101,10 +97,7 @@ impl AgentDriver for CodexDriver {
 
         let health = match self.runner.run(&cmd) {
             Ok(out) => {
-                if out.exit_code == 127
-                    || out.timed_out
-                    || looks_like_missing_exe_output(&out)
-                {
+                if out.exit_code == 127 || out.timed_out || looks_like_missing_exe_output(&out) {
                     DriverHealth {
                         driver: "codex".into(),
                         ok: false,
@@ -230,16 +223,14 @@ fn parse_codex_jsonl(stdout: &str, exit_code: i32, stderr: &str) -> ParsedCodex 
 
     // (1) failure event → Failure
     if terminal_failure {
-        let summary = failure_summary
-            .or(summary_candidate)
-            .unwrap_or_else(|| {
-                let trimmed = stderr.trim();
-                if trimmed.is_empty() {
-                    "failure".into()
-                } else {
-                    trimmed.chars().take(512).collect()
-                }
-            });
+        let summary = failure_summary.or(summary_candidate).unwrap_or_else(|| {
+            let trimmed = stderr.trim();
+            if trimmed.is_empty() {
+                "failure".into()
+            } else {
+                trimmed.chars().take(512).collect()
+            }
+        });
         return ParsedCodex {
             status: AgentRunStatus::Failure,
             summary,
@@ -334,10 +325,7 @@ fn is_failure_terminal(v: &Value) -> bool {
 }
 
 fn extract_tokens(v: &Value) -> Option<u64> {
-    if let Some(t) = v
-        .pointer("/usage/total_tokens")
-        .and_then(|x| x.as_u64())
-    {
+    if let Some(t) = v.pointer("/usage/total_tokens").and_then(|x| x.as_u64()) {
         return Some(t);
     }
     if let Some(t) = v.get("tokens").and_then(|x| x.as_u64()) {
@@ -466,9 +454,7 @@ mod tests {
     fn run_failure_event() {
         let dir = tempdir().expect("temp");
         let mock = MockProcessRunner::new();
-        mock.push(out_ok(
-            r#"{"type":"turn.failed","message":"boom"}"#,
-        ));
+        mock.push(out_ok(r#"{"type":"turn.failed","message":"boom"}"#));
         let driver = driver_with(mock);
         let cancel = Arc::new(AtomicBool::new(false));
         let result = driver
@@ -615,20 +601,26 @@ mod tests {
             inner: mock,
             last_cmd: Mutex::new(None),
         });
-        let driver = CodexDriver::from_env_with_runner(
-            Arc::clone(&recording) as Arc<dyn ProcessRunner>
-        )
-        .unwrap();
+        let driver =
+            CodexDriver::from_env_with_runner(Arc::clone(&recording) as Arc<dyn ProcessRunner>)
+                .unwrap();
 
         let mut req = sample_req(dir.path().to_path_buf());
         req.model = Some("gpt-4.1".into());
         let cancel = Arc::new(AtomicBool::new(false));
         driver.run(&req, &cancel).expect("run");
 
-        let cmd = recording.last_cmd.lock().expect("lock").clone().expect("cmd");
+        let cmd = recording
+            .last_cmd
+            .lock()
+            .expect("lock")
+            .clone()
+            .expect("cmd");
         assert_eq!(cmd.program(), "codex");
         let args = cmd.arg_list();
-        assert!(args.windows(2).any(|w| w[0] == "--model" && w[1] == "gpt-4.1"));
+        assert!(args
+            .windows(2)
+            .any(|w| w[0] == "--model" && w[1] == "gpt-4.1"));
         assert!(args.contains(&"read-only".to_string()));
         assert!(cmd.stdin_bytes().is_some());
     }

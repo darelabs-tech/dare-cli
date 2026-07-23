@@ -18,9 +18,8 @@ use super::{
 
 const DOCTOR_TIMEOUT: Duration = Duration::from_secs(5);
 
-static TOKENS_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"\btokens?\s*[:=]\s*(\d+)\b").expect("tokens regex is valid")
-});
+static TOKENS_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\btokens?\s*[:=]\s*(\d+)\b").expect("tokens regex is valid"));
 
 /// Static defaults for a text CLI agent driver.
 pub(crate) struct TextCliConfig {
@@ -398,7 +397,8 @@ mod tests {
             let h = d.doctor().unwrap();
             assert!(!h.ok, "id={}", cfg.id);
             assert!(
-                h.detail.contains(&format!("executable not found: {}", cfg.default_program)),
+                h.detail
+                    .contains(&format!("executable not found: {}", cfg.default_program)),
                 "detail={}",
                 h.detail
             );
@@ -565,7 +565,8 @@ mod tests {
         let cmd = capture.last.lock().unwrap().clone().expect("captured");
         let args = cmd.arg_list();
         assert!(
-            args.windows(2).any(|w| w[0] == "--model" && w[1] == "sonnet"),
+            args.windows(2)
+                .any(|w| w[0] == "--model" && w[1] == "sonnet"),
             "args={args:?}"
         );
     }
