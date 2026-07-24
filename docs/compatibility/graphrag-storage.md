@@ -41,8 +41,7 @@ Tabela `dare_schema_migrations` só é escrita por `KnowledgeGraph::migrate()` �
 | Trait sync (sem `Promise`) | B | Alinhado a crates 024/030 |
 | Persistência SQLite nativa (sem rewrite sql.js) | B | Schema/BLOB/IDs idênticos |
 | Sem `ensureVectorColumn` silencioso no open | B | Exige `migrate()` (ADR-006) |
-| Storage-only (sem search/BFS/RRF) | — | Escopo 041+ |
-| Sem CLI `dare graph` | — | Escopo 041+ |
+| Ingest / keyword / BFS / RRF / CLI graph | — | Ver [graphrag-ingest.md](graphrag-ingest.md) (041) |
 
 ## API rápida
 
@@ -56,7 +55,5 @@ g.add_node(GraphNode::new("task:t1", NodeType::Task, "T1"))?;
 
 ## Fora de escopo (040)
 
-- `dare graph ingest|query|stats|viz`
-- Keyword / BFS / RRF / hybrid
-- Embeddings / semantic feature
-- Neo4j
+- Embeddings / semantic feature (042)
+- Neo4j (043)

@@ -2526,3 +2526,65 @@ fn patterns_check_no_write() {
     assert!(!dir.path().join("DARE/PATTERNS.md").exists());
     assert!(!dir.path().join("DARE/patterns-facts.json").exists());
 }
+
+#[test]
+fn graph_help_lists_subcommands() {
+    Command::new(cargo_bin("dare"))
+        .args(["graph", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("ingest"))
+        .stdout(predicate::str::contains("query"))
+        .stdout(predicate::str::contains("stats"))
+        .stdout(predicate::str::contains("viz"));
+}
+
+#[test]
+fn graph_ingest_query_stats_viz_tempdir() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let root = dir.path();
+    std::fs::create_dir_all(root.join("src")).unwrap();
+    std::fs::write(
+        root.join("src/lib.rs"),
+        "pub fn alpha_widget() {}\npub fn beta_helper() {}\n",
+    )
+    .unwrap();
+    let path = root.to_str().expect("utf8");
+
+    Command::new(cargo_bin("dare"))
+        .args(["graph", "ingest", "-d", path, "--no-color"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("graph ingest:"));
+
+    Command::new(cargo_bin("dare"))
+        .args(["graph", "query", "alpha", "-d", path, "--no-color"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("graph query:"));
+
+    Command::new(cargo_bin("dare"))
+        .args(["graph", "stats", "-d", path, "--json", "--no-color"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\"ok\":true"));
+
+    let viz_rel = "graph.mmd";
+    Command::new(cargo_bin("dare"))
+        .args(["graph", "viz", "-d", path, "-o", viz_rel, "--no-color"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("graph viz:"));
+    let body = std::fs::read_to_string(root.join(viz_rel)).unwrap();
+    assert!(body.contains("flowchart"));
+}
+
+#[test]
+fn graph_query_empty_exit_4() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let path = dir.path().to_str().expect("utf8");
+    Command::new(cargo_bin("dare"))
+        .args(["graph", "query", "   ", "-d", path, "--no-color"])
+        .assert()
+        .code(4);
+}

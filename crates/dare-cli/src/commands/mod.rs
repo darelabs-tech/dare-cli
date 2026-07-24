@@ -7,6 +7,7 @@ pub mod discover;
 pub mod dna;
 pub mod execute;
 pub mod execute_agent;
+pub mod graph;
 pub mod guard;
 pub mod info;
 pub mod path_resolve;

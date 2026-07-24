@@ -463,6 +463,7 @@ dependencies = [
  "dare-contracts",
  "dare-core",
  "dare-dag",
+ "dare-graph",
  "dare-guard",
  "dare-harness",
  "dare-project",
@@ -535,9 +536,11 @@ version = "0.1.0-alpha.0"
 dependencies = [
  "dare-contracts",
  "dare-core",
+ "regex",
  "rusqlite",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
  "tempfile",
  "yaml_serde",
 ]
