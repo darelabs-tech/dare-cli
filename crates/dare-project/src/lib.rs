@@ -5,6 +5,7 @@ pub mod dna;
 pub mod git;
 pub mod harnesses;
 pub mod install;
+pub mod migrate;
 pub mod monorepo;
 pub mod patterns;
 pub mod report;
@@ -23,6 +24,11 @@ pub use install::{
     apply_install, format_install_human, install, install_report_to_json, plan_install, select_ide,
     InstallOptions, InstallPlan, InstallReport, StepResult, INSTALL_READ_CAP,
     INSTALL_SCHEMA_VERSION,
+};
+pub use migrate::{
+    build_blocking_gaps, build_phases, compare_migration, sort_blocking_gaps, target_family,
+    validate_migrate_target, BlockingGap, MigrateOptions, MigrateReport, MigrationPhase,
+    MIGRATE_SCHEMA_VERSION, MIGRATE_TARGET_ALLOWLIST,
 };
 pub use monorepo::detect_monorepo;
 pub use patterns::{
