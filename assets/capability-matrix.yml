@@ -341,10 +341,12 @@ capabilities:
     assets: []
   - id: dare-migrate
     title: "dare-migrate"
-    description: "Capability IDE for dare-migrate"
+    description: "Brownfield migration plan + parity Gherkin (dare migrate → DARE/MIGRATION/**)"
     instructions: |
-      Use the /dare-migrate slash command when appropriate.
-    cli_commands: []
+      Pre-req: `dare reverse` (IDEIA.md + modules). Then `dare migrate --to <stack>`
+      [--check] [--ai] [-d DIR]. Writes only under DARE/MIGRATION/ (no source rewrite).
+      Use /dare-migrate to enrich AGENT sections after the CLI run.
+    cli_commands: ["migrate"]
     outputs:
       claude: .claude/commands/dare-migrate.md
       cursor: .cursor/commands/dare-migrate.md
