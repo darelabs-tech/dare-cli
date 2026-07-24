@@ -341,11 +341,14 @@ capabilities:
     assets: []
   - id: dare-migrate
     title: "dare-migrate"
-    description: "Brownfield migration plan + parity Gherkin (dare migrate → DARE/MIGRATION/**)"
+    description: "Brownfield migrate plan: dare migrate --to (allowlist) → MIGRATION.md + migration-facts schema v1 + parity/*.feature skeletons"
     instructions: |
       Pre-req: `dare reverse` (IDEIA.md + modules). Then `dare migrate --to <stack>`
-      [--check] [--ai] [-d DIR]. Writes only under DARE/MIGRATION/ (no source rewrite).
-      Use /dare-migrate to enrich AGENT sections after the CLI run.
+      [--check] [--ai] [--provider] [-d DIR] [--json] [--no-color].
+      Writes only under DARE/MIGRATION/ (non-destructive; no source rewrite).
+      Gherkin parity files are skeletons — use /dare-migrate to fill real scenarios
+      and AGENT sections (CLI --ai is soft-fail enrich of MIGRATION.md only).
+      Not config migrate (008) and not KnowledgeGraph::migrate / graph schema (040).
     cli_commands: ["migrate"]
     outputs:
       claude: .claude/commands/dare-migrate.md
