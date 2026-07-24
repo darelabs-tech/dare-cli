@@ -10,6 +10,10 @@ publish = false
 name = "dare"
 path = "src/main.rs"
 
+[features]
+default = []
+semantic = ["dare-graph/semantic"]
+
 [dependencies]
 dare-core = { workspace = true }
 dare-contracts = { workspace = true }

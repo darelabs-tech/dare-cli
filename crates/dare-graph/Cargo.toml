@@ -7,6 +7,10 @@ license.workspace = true
 publish = false
 description = "GraphRAG storage + ingest/search (keyword/BFS/RRF) — microplanos 040–041"
 
+[features]
+default = []
+semantic = ["dep:fastembed"]
+
 [dependencies]
 dare-core = { workspace = true }
 dare-contracts = { workspace = true }
@@ -16,6 +20,20 @@ serde_yaml = { workspace = true }
 rusqlite = { workspace = true }
 sha2 = { workspace = true }
 regex = { workspace = true }
+
+# windows-gnu: ort has no prebuilt binaries — load-dynamic (ORT_DYLIB_PATH at runtime).
+# Other targets: download-binaries + hf-hub-native-tls (fastembed default set).
+[target.'cfg(all(windows, target_env = "gnu"))'.dependencies]
+fastembed = { workspace = true, optional = true, features = [
+    "hf-hub-native-tls",
+    "ort-load-dynamic",
+] }
+
+[target.'cfg(not(all(windows, target_env = "gnu")))'.dependencies]
+fastembed = { workspace = true, optional = true, features = [
+    "hf-hub-native-tls",
+    "ort-download-binaries",
+] }
 
 [dev-dependencies]
 tempfile = { workspace = true }
