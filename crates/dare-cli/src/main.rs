@@ -16,6 +16,7 @@ use commands::execute::{run_execute, ExecuteAction};
 use commands::graph::{run_graph, GraphAction};
 use commands::guard::{run_guard_cmd, GuardCliOpts};
 use commands::info::{collect_info, format_human, report_to_json};
+use commands::migrate::{run_migrate_cmd, MigrateCliOpts};
 use commands::patterns::run_patterns_cmd;
 use commands::refine::{run_refine_cmd, RefineCliArgs};
 use commands::reverse::{run_reverse, ReverseCliOpts};
@@ -152,6 +153,24 @@ enum Commands {
         /// Enable optional AST sampling via dare-ast (call-idiom).
         #[arg(long)]
         ast: bool,
+    },
+    /// Brownfield migration plan → MIGRATION.md + parity skeletons.
+    Migrate {
+        /// Target stack id (required; closed allowlist).
+        #[arg(long)]
+        to: String,
+        /// Project directory (default: cwd).
+        #[arg(long, short = 'd')]
+        dir: Option<PathBuf>,
+        /// Plan only — do not write DARE/MIGRATION artifacts.
+        #[arg(long)]
+        check: bool,
+        /// Optional AI enrichment of MIGRATION.md (soft-fail).
+        #[arg(long)]
+        ai: bool,
+        /// AI provider id (requires `--ai`; default: codex).
+        #[arg(long)]
+        provider: Option<String>,
     },
     /// Validate DARE/dare-dag.yaml (read-only).
     Validate {
@@ -922,6 +941,19 @@ fn run(cli: Cli) -> Result<(String, serde_json::Value), CoreError> {
             inject,
             ast,
         }) => run_patterns_cmd(dir, check, inject, ast, modules),
+        Some(Commands::Migrate {
+            to,
+            dir,
+            check,
+            ai,
+            provider,
+        }) => run_migrate_cmd(MigrateCliOpts {
+            to,
+            dir,
+            check,
+            ai,
+            provider,
+        }),
         Some(Commands::Update {
             dry_run,
             yes,
