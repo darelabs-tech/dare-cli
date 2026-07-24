@@ -26,9 +26,11 @@ pub use install::{
     INSTALL_SCHEMA_VERSION,
 };
 pub use migrate::{
-    build_blocking_gaps, build_phases, compare_migration, sort_blocking_gaps, target_family,
-    validate_migrate_target, BlockingGap, MigrateOptions, MigrateReport, MigrationPhase,
-    MIGRATE_SCHEMA_VERSION, MIGRATE_TARGET_ALLOWLIST,
+    build_blocking_gaps, build_phases, compare_migration, format_migrate_human,
+    migrate_report_to_json, run_migrate, sort_blocking_gaps, target_family, validate_migrate_target,
+    BlockingGap, MigrateOptions, MigrateReport, MigrationPhase, MIGRATE_SCHEMA_VERSION,
+    MIGRATE_TARGET_ALLOWLIST, MIGRATION_DIR, MIGRATION_FACTS_REL, MIGRATION_MD_REL, MSG_CHECK,
+    PARITY_DIR_REL,
 };
 pub use monorepo::detect_monorepo;
 pub use patterns::{
