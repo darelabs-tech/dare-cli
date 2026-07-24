@@ -101,6 +101,13 @@ impl SqliteGraph {
     }
 }
 
+impl SqliteGraph {
+    /// Best-effort FTS5 index rebuild (keyword acceleration; LIKE remains SoT).
+    pub fn try_rebuild_fts5(&mut self) -> CoreResult<()> {
+        crate::ingest::rebuild_fts5(&self.conn)
+    }
+}
+
 impl KnowledgeGraph for SqliteGraph {
     fn schema_version(&self) -> u32 {
         self.version

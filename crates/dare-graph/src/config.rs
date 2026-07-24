@@ -233,6 +233,16 @@ impl KnowledgeGraph for GraphHandle {
     }
 }
 
+impl GraphHandle {
+    /// Best-effort FTS5 rebuild after ingest (SQLite only; JSON is a no-op).
+    pub fn try_rebuild_fts5(&mut self) -> CoreResult<()> {
+        match self {
+            Self::Sqlite(g) => g.try_rebuild_fts5(),
+            Self::Json(_) => Ok(()),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -13,6 +13,7 @@ use commands::design::run_design;
 use commands::discover::run_discover;
 use commands::dna::run_dna_cmd;
 use commands::execute::{run_execute, ExecuteAction};
+use commands::graph::{run_graph, GraphAction};
 use commands::guard::{run_guard_cmd, GuardCliOpts};
 use commands::info::{collect_info, format_human, report_to_json};
 use commands::reverse::{run_reverse, ReverseCliOpts};
@@ -332,6 +333,11 @@ enum Commands {
         #[command(subcommand)]
         action: SkillCmd,
     },
+    /// GraphRAG ingest / query / stats / viz (microplano 041).
+    Graph {
+        #[command(subcommand)]
+        action: GraphCmd,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -342,6 +348,51 @@ enum SkillCmd {
     Info {
         /// Skill package name.
         name: String,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+enum GraphCmd {
+    /// Index project sources into the knowledge graph (contentHash + regex symbols).
+    Ingest {
+        /// Project directory (default: cwd).
+        #[arg(long, short = 'd')]
+        dir: Option<PathBuf>,
+    },
+    /// Hybrid keyword + BFS query fused by RRF (no semantic embeddings).
+    Query {
+        /// Search query string.
+        query: String,
+        /// Project directory (default: cwd).
+        #[arg(long, short = 'd')]
+        dir: Option<PathBuf>,
+        /// Max hits to return.
+        #[arg(long, default_value_t = 20)]
+        limit: usize,
+        /// BFS hop limit (default 2, max 5).
+        #[arg(long, default_value_t = 2)]
+        max_hops: usize,
+        /// Max neighbors per node during BFS (default 50, max 200).
+        #[arg(long, default_value_t = 50)]
+        fanout: usize,
+    },
+    /// Show graph node/edge statistics.
+    Stats {
+        /// Project directory (default: cwd).
+        #[arg(long, short = 'd')]
+        dir: Option<PathBuf>,
+    },
+    /// Render a Mermaid subset of the graph.
+    Viz {
+        /// Project directory (default: cwd).
+        #[arg(long, short = 'd')]
+        dir: Option<PathBuf>,
+        /// Write Mermaid to this path (project-relative or under root).
+        #[arg(short = 'o', long = "output")]
+        output: Option<PathBuf>,
+        /// Max nodes to include.
+        #[arg(long, default_value_t = 80)]
+        max_nodes: usize,
     },
 }
 
@@ -634,6 +685,35 @@ fn main() -> ExitCode {
                 };
                 run_skill(skill_action, &renderer)
             }
+            Some(Commands::Graph { action }) => {
+                let graph_action = match action {
+                    GraphCmd::Ingest { dir } => GraphAction::Ingest { dir },
+                    GraphCmd::Query {
+                        query,
+                        dir,
+                        limit,
+                        max_hops,
+                        fanout,
+                    } => GraphAction::Query {
+                        dir,
+                        query,
+                        limit,
+                        max_hops,
+                        fanout,
+                    },
+                    GraphCmd::Stats { dir } => GraphAction::Stats { dir },
+                    GraphCmd::Viz {
+                        dir,
+                        output,
+                        max_nodes,
+                    } => GraphAction::Viz {
+                        dir,
+                        output,
+                        max_nodes,
+                    },
+                };
+                run_graph(graph_action, &renderer)
+            }
             other => {
                 let cli = Cli {
                     json: cli.json,
@@ -888,6 +968,7 @@ fn run(cli: Cli) -> Result<(String, serde_json::Value), CoreError> {
         Some(Commands::Dag { .. }) => unreachable!("dag handled in main"),
         Some(Commands::Execute { .. }) => unreachable!("execute handled in main"),
         Some(Commands::Skill { .. }) => unreachable!("skill handled in main"),
+        Some(Commands::Graph { .. }) => unreachable!("graph handled in main"),
     }
 }
 

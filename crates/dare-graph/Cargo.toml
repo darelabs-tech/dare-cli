@@ -5,7 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 publish = false
-description = "GraphRAG storage: KnowledgeGraph trait, SQLite + JSON backends (microplano 040)"
+description = "GraphRAG storage + ingest/search (keyword/BFS/RRF) — microplanos 040–041"
 
 [dependencies]
 dare-core = { workspace = true }
@@ -14,6 +14,8 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 serde_yaml = { workspace = true }
 rusqlite = { workspace = true }
+sha2 = { workspace = true }
+regex = { workspace = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }

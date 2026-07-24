@@ -245,8 +245,9 @@ capabilities:
     title: "dare-graph"
     description: "Capability IDE for dare-graph"
     instructions: |
-      Use the /dare-graph slash command when appropriate.
-    cli_commands: []
+      Use /dare-graph or `dare graph ingest|query|stats|viz` for GraphRAG
+      (contentHash ingest, keyword+BFS+RRF; no semantic embeddings in 041).
+    cli_commands: ["graph"]
     outputs:
       claude: .claude/commands/dare-graph.md
       cursor: .cursor/commands/dare-graph.md
