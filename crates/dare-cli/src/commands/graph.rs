@@ -89,6 +89,7 @@ fn run_graph_inner(action: GraphAction) -> CoreResult<(String, Value)> {
                 limit,
                 max_hops,
                 fanout,
+                no_semantic: false,
             };
             let hits = hybrid_query(&g, &query, &opts)?;
             let human = format_query_human(&query, &hits);
