@@ -16,6 +16,7 @@ use commands::execute::{run_execute, ExecuteAction};
 use commands::guard::{run_guard_cmd, GuardCliOpts};
 use commands::info::{collect_info, format_human, report_to_json};
 use commands::patterns::run_patterns_cmd;
+use commands::refine::{run_refine_cmd, RefineCliArgs};
 use commands::reverse::{run_reverse, ReverseCliOpts};
 use commands::review::{run_review_cmd, ReviewCliArgs};
 use commands::skill::{run_skill, SkillAction};
@@ -308,6 +309,23 @@ enum Commands {
         #[arg(long)]
         provider: Option<String>,
     },
+    /// Measure task complexity and optionally splice a sub-DAG.
+    Refine {
+        /// Task id from DARE/dare-dag.yaml.
+        task_id: String,
+        /// Include a split proposal even when not applying.
+        #[arg(long)]
+        split: bool,
+        /// Apply splice to dare-dag.yaml and .dare/state.json.
+        #[arg(long)]
+        apply: bool,
+        /// Exit 2 when level is HIGH or CRITICAL.
+        #[arg(long)]
+        strict: bool,
+        /// Output format: human | json.
+        #[arg(long = "format", default_value = "human")]
+        format: String,
+    },
     /// Plan (`--dry-run`) or apply project asset updates.
     Update {
         /// Plan only; no writes (`--force` ignored).
@@ -564,6 +582,22 @@ fn main() -> ExitCode {
                     fail_on,
                     ai,
                     provider,
+                },
+                &renderer,
+            ),
+            Some(Commands::Refine {
+                task_id,
+                split,
+                apply,
+                strict,
+                format,
+            }) => run_refine_cmd(
+                RefineCliArgs {
+                    task_id,
+                    split,
+                    apply,
+                    strict,
+                    format,
                 },
                 &renderer,
             ),
@@ -910,6 +944,7 @@ fn run(cli: Cli) -> Result<(String, serde_json::Value), CoreError> {
         },
         Some(Commands::Validate { .. }) => unreachable!("validate handled in main"),
         Some(Commands::Review { .. }) => unreachable!("review handled in main"),
+        Some(Commands::Refine { .. }) => unreachable!("refine handled in main"),
         Some(Commands::Guard { .. }) => unreachable!("guard handled in main"),
         Some(Commands::Dag { .. }) => unreachable!("dag handled in main"),
         Some(Commands::Execute { .. }) => unreachable!("execute handled in main"),

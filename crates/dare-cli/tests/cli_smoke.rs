@@ -2048,6 +2048,96 @@ fn review_missing_spec_exit_3() {
         .code(3);
 }
 
+fn refine_project(high: bool) -> tempfile::TempDir {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(dir.path().join("dare.config.json"), "{}").unwrap();
+    std::fs::create_dir_all(dir.path().join("DARE/EXECUTION")).unwrap();
+    let yaml = if high {
+        r#"
+title: "T"
+version: "1.0.0"
+tasks:
+  - id: task-rfn
+    title: "Big refactor auth migration security rewrite workspace"
+    depends_on: []
+    complexity: HIGH
+    subtask_prompt: "refactor auth migration security rewrite workspace graph oauth crypto distributed. Implement a large feature with many moving parts across the codebase carefully. Include migration scripts and auth security hardening and workspace layout changes."
+    spec_file: EXECUTION/task-rfn.md
+"#
+    } else {
+        r#"
+title: "T"
+version: "1.0.0"
+tasks:
+  - id: task-rfn
+    title: "Tiny task"
+    depends_on: []
+    complexity: LOW
+    subtask_prompt: "Do one small thing."
+    spec_file: EXECUTION/task-rfn.md
+"#
+    };
+    std::fs::write(dir.path().join("DARE/dare-dag.yaml"), yaml).unwrap();
+    let spec = if high {
+        r#"# TASK
+## 3. ARQUIVOS A CRIAR / MODIFICAR
+| Ação | Caminho | Descrição |
+|------|---------|-----------|
+| CRIAR | `src/a.rs` | a |
+| CRIAR | `src/b.rs` | b |
+| CRIAR | `src/c.rs` | c |
+| CRIAR | `src/d.rs` | d |
+| CRIAR | `src/e.rs` | e |
+"#
+    } else {
+        r#"# TASK
+## 3. ARQUIVOS A CRIAR / MODIFICAR
+| Ação | Caminho | Descrição |
+|------|---------|-----------|
+| CRIAR | `src/a.rs` | a |
+"#
+    };
+    std::fs::write(dir.path().join("DARE/EXECUTION/task-rfn.md"), spec).unwrap();
+    dir
+}
+
+#[test]
+fn refine_noop_low_exit_0() {
+    let dir = refine_project(false);
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args(["refine", "task-rfn", "--no-color"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("noop=true").or(predicate::str::contains("No-op")));
+}
+
+#[test]
+fn refine_strict_high_exit_2() {
+    let dir = refine_project(true);
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args(["refine", "task-rfn", "--strict", "--no-color"])
+        .assert()
+        .code(2)
+        .stdout(predicate::str::contains("HIGH").or(predicate::str::contains("CRITICAL")));
+}
+
+#[test]
+fn refine_apply_happy() {
+    let dir = refine_project(true);
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args(["refine", "task-rfn", "--apply", "--no-color"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("applied=true"));
+    let dag = std::fs::read_to_string(dir.path().join("DARE/dare-dag.yaml")).unwrap();
+    assert!(dag.contains("task-rfn-a"), "expected child in dag: {dag}");
+    let state = std::fs::read_to_string(dir.path().join(".dare/state.json")).unwrap();
+    assert!(state.contains("parentId") || state.contains("\"SPLIT\""));
+}
+
 #[test]
 fn guard_help_lists_command() {
     Command::new(cargo_bin("dare"))

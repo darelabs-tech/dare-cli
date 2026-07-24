@@ -388,10 +388,12 @@ capabilities:
     assets: []
   - id: dare-refine
     title: "dare-refine"
-    description: "Capability IDE for dare-refine"
+    description: "Complexity score + optional sub-DAG splice"
     instructions: |
-      Use the /dare-refine slash command when appropriate.
-    cli_commands: []
+      Run `dare refine <task-id>` to score LOW|MED|HIGH|CRITICAL and propose a split.
+      Use `--apply` to splice into DARE/dare-dag.yaml and .dare/state.json (parentId).
+      `--strict` exits 2 when level is HIGH or CRITICAL. Use /dare-refine for semantic review.
+    cli_commands: ["refine"]
     outputs:
       claude: .claude/commands/dare-refine.md
       cursor: .cursor/commands/dare-refine.md
