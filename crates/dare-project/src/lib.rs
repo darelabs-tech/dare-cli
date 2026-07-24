@@ -6,6 +6,7 @@ pub mod git;
 pub mod harnesses;
 pub mod install;
 pub mod monorepo;
+pub mod patterns;
 pub mod report;
 pub mod reverse;
 pub mod root;
@@ -24,6 +25,11 @@ pub use install::{
     INSTALL_SCHEMA_VERSION,
 };
 pub use monorepo::detect_monorepo;
+pub use patterns::{
+    format_human as format_patterns_human, report_to_json as patterns_report_to_json, run_patterns,
+    Cooccurrence, DiscoveredPattern, PatternsOptions, PatternsReport, PATTERNS_FACTS_REL,
+    PATTERNS_MD_REL, PATTERNS_SCHEMA_VERSION, PATTERN_KINDS,
+};
 pub use report::{
     DetectionReport, HarnessHit, StackConflict, StackHit, DETECTION_SCHEMA_VERSION,
     MANIFEST_READ_CAP, MONOREPO_MAX_DEPTH, MONOREPO_MAX_ENTRIES,

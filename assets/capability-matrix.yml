@@ -354,8 +354,8 @@ capabilities:
     title: "dare-patterns"
     description: "Capability IDE for dare-patterns"
     instructions: |
-      Use the /dare-patterns slash command when appropriate.
-    cli_commands: []
+      Use /dare-patterns after `dare patterns` to enrich AGENT sections.
+    cli_commands: ["patterns"]
     outputs:
       claude: .claude/commands/dare-patterns.md
       cursor: .cursor/commands/dare-patterns.md

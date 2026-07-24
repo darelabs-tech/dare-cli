@@ -10,6 +10,7 @@ pub mod execute_agent;
 pub mod guard;
 pub mod info;
 pub mod path_resolve;
+pub mod patterns;
 pub mod reverse;
 pub mod review;
 pub mod skill;

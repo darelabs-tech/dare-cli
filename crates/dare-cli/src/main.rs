@@ -15,6 +15,7 @@ use commands::dna::run_dna_cmd;
 use commands::execute::{run_execute, ExecuteAction};
 use commands::guard::{run_guard_cmd, GuardCliOpts};
 use commands::info::{collect_info, format_human, report_to_json};
+use commands::patterns::run_patterns_cmd;
 use commands::reverse::{run_reverse, ReverseCliOpts};
 use commands::review::{run_review_cmd, ReviewCliArgs};
 use commands::skill::{run_skill, SkillAction};
@@ -129,6 +130,24 @@ enum Commands {
         #[arg(long)]
         check: bool,
         /// Enable optional AST sampling via dare-ast.
+        #[arg(long)]
+        ast: bool,
+    },
+    /// Mine recurring code patterns into DARE/PATTERNS.md.
+    Patterns {
+        /// Project directory (default: cwd).
+        #[arg(long, short = 'd')]
+        dir: Option<PathBuf>,
+        /// Mine only — do not write PATTERNS.md / patterns-facts.json.
+        #[arg(long)]
+        check: bool,
+        /// Comma-separated module ids to include.
+        #[arg(long)]
+        modules: Option<String>,
+        /// Preserve existing AGENT section bodies when rewriting PATTERNS.md.
+        #[arg(long)]
+        inject: bool,
+        /// Enable optional AST sampling via dare-ast (call-idiom).
         #[arg(long)]
         ast: bool,
     },
@@ -738,6 +757,13 @@ fn run(cli: Cli) -> Result<(String, serde_json::Value), CoreError> {
             provider,
         }),
         Some(Commands::Dna { dir, check, ast }) => run_dna_cmd(dir, check, ast),
+        Some(Commands::Patterns {
+            dir,
+            check,
+            modules,
+            inject,
+            ast,
+        }) => run_patterns_cmd(dir, check, inject, ast, modules),
         Some(Commands::Update {
             dry_run,
             yes,
