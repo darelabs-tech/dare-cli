@@ -7,6 +7,7 @@ mod graph;
 mod report;
 mod state;
 mod status;
+pub mod subdag;
 mod validate;
 pub mod viz;
 
@@ -30,6 +31,13 @@ pub use state::{
     Transition, STATE_REL,
 };
 pub use status::TaskStatus;
+pub use subdag::{
+    assess_complexity, format_refine_human, level_from_score, propose_split, refine_report_to_json,
+    run_refine, run_refine_default, splice_sub_dag, strict_should_exit_2, task_depth,
+    ComplexityReport, ComplexitySignals, ProposedSubtask, RefineLevel, RefineOptions, RefineReport,
+    SplitProposal, SubDagError, MAX_SUBDAG_DEPTH, MSG_STRICT,
+    REPORT_SCHEMA as REFINE_REPORT_SCHEMA, STATUS_SPLIT,
+};
 pub use validate::{is_kebab_id, validate_dag, validate_path, ValidateFsContext};
 pub use viz::{VizFormat, VizOptions, OUTPUT_CAP, TITLE_MAX_DEFAULT};
 
