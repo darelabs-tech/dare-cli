@@ -10,6 +10,7 @@ pub mod execute_agent;
 pub mod graph;
 pub mod guard;
 pub mod info;
+pub mod migrate;
 pub mod path_resolve;
 pub mod patterns;
 pub mod refine;
