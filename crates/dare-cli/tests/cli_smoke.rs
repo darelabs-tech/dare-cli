@@ -2527,6 +2527,128 @@ fn patterns_check_no_write() {
     assert!(!dir.path().join("DARE/patterns-facts.json").exists());
 }
 
+// --- microplano 039: dare migrate ---
+
+fn migrate_fixture_rust() -> tempfile::TempDir {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(
+        dir.path().join("Cargo.toml"),
+        "[package]\nname=\"migratefix\"\nversion=\"0.0.0\"\nedition=\"2021\"\n",
+    )
+    .unwrap();
+    std::fs::create_dir_all(dir.path().join("src")).unwrap();
+    std::fs::write(dir.path().join("src/lib.rs"), "pub fn migrate_demo() {}\n").unwrap();
+    std::fs::create_dir_all(dir.path().join("DARE/REVERSE")).unwrap();
+    std::fs::write(
+        dir.path().join("DARE/IDEIA.md"),
+        "# IDEIA\n\nlegacy migrate fixture\n",
+    )
+    .unwrap();
+    let facts = r#"{"schemaVersion":1,"projectRoot":".","stacks":["rust"],"modules":[{"id":"alpha","path":"src","languages":["rust"],"loc":1,"fileCount":1,"dependsOn":[]}],"deep":false}"#;
+    std::fs::write(dir.path().join("DARE/REVERSE/reverse-facts.json"), facts).unwrap();
+    std::fs::write(
+        dir.path().join("DARE/REVERSE/module-alpha.md"),
+        "# module alpha\n",
+    )
+    .unwrap();
+    dir
+}
+
+#[test]
+fn migrate_help_requires_to() {
+    Command::new(cargo_bin("dare"))
+        .args(["migrate", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("--to"))
+        .stdout(predicate::str::contains("--check"));
+    Command::new(cargo_bin("dare"))
+        .args(["migrate", "--no-color"])
+        .assert()
+        .code(2)
+        .stderr(
+            predicate::str::contains("--to")
+                .or(predicate::str::contains("required"))
+                .or(predicate::str::contains("Usage")),
+        );
+}
+
+#[test]
+fn migrate_write_success() {
+    let dir = migrate_fixture_rust();
+    let path = dir.path().to_str().unwrap();
+    Command::new(cargo_bin("dare"))
+        .args(["migrate", "--to", "node-nestjs", "-d", path, "--no-color"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("mode: write"))
+        .stdout(predicate::str::contains("mode: migrate"));
+    assert!(dir.path().join("DARE/MIGRATION/MIGRATION.md").is_file());
+    assert!(dir
+        .path()
+        .join("DARE/MIGRATION/migration-facts.json")
+        .is_file());
+    assert!(dir
+        .path()
+        .join("DARE/MIGRATION/parity/alpha.feature")
+        .is_file());
+}
+
+#[test]
+fn migrate_check_no_write() {
+    let dir = migrate_fixture_rust();
+    let path = dir.path().to_str().unwrap();
+    Command::new(cargo_bin("dare"))
+        .args([
+            "migrate",
+            "--to",
+            "node-nestjs",
+            "--check",
+            "-d",
+            path,
+            "--no-color",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("mode: check"))
+        .stdout(predicate::str::contains("zero mutations"));
+    assert!(!dir.path().join("DARE/MIGRATION").exists());
+}
+
+#[test]
+fn migrate_bad_target_exit_4() {
+    let dir = migrate_fixture_rust();
+    let path = dir.path().to_str().unwrap();
+    Command::new(cargo_bin("dare"))
+        .args(["migrate", "--to", "Not-A-Stack", "-d", path, "--no-color"])
+        .assert()
+        .failure()
+        .code(4)
+        .stderr(
+            predicate::str::contains("unknown migrate target")
+                .or(predicate::str::contains("allowlist")),
+        );
+}
+
+#[test]
+fn migrate_missing_reverse_exit_4() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(
+        dir.path().join("Cargo.toml"),
+        "[package]\nname=\"migrate-bare\"\nversion=\"0.0.0\"\nedition=\"2021\"\n",
+    )
+    .unwrap();
+    std::fs::create_dir_all(dir.path().join("src")).unwrap();
+    std::fs::write(dir.path().join("src/lib.rs"), "pub fn x() {}\n").unwrap();
+    let path = dir.path().to_str().unwrap();
+    Command::new(cargo_bin("dare"))
+        .args(["migrate", "--to", "rust-axum", "-d", path, "--no-color"])
+        .assert()
+        .failure()
+        .code(4)
+        .stderr(predicate::str::contains("reverse"));
+}
+
 #[test]
 fn graph_help_lists_subcommands() {
     Command::new(cargo_bin("dare"))
