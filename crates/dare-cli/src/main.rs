@@ -364,7 +364,7 @@ enum Commands {
         #[command(subcommand)]
         ide: HarnessIde,
     },
-    /// Skills-pacote registry (microplano 044).
+    /// Skills-pacote registry and lifecycle (microplanos 044–045).
     Skill {
         #[command(subcommand)]
         action: SkillCmd,
@@ -379,6 +379,38 @@ enum SkillCmd {
     Info {
         /// Skill package name.
         name: String,
+    },
+    /// Install a skill into packages/skills (atomic).
+    Add {
+        /// Skill package name.
+        name: String,
+        /// Optional version pin.
+        #[arg(long)]
+        version: Option<String>,
+        /// Install from a local archive (.tar/.tar.gz/.zip).
+        #[arg(long)]
+        from: Option<PathBuf>,
+    },
+    /// Remove an installed skill (blocked if reverse dependents exist).
+    Remove {
+        /// Skill package name.
+        name: String,
+    },
+    /// Re-copy skill content and refresh the project manifest.
+    Update {
+        /// Skill package name.
+        name: String,
+        /// Optional archive source.
+        #[arg(long)]
+        from: Option<PathBuf>,
+    },
+    /// Pack an installed skill as tar.gz + sha256 (+ signature if keyed).
+    Publish {
+        /// Skill package name.
+        name: String,
+        /// Output directory (default: ./dist).
+        #[arg(long)]
+        out: Option<PathBuf>,
     },
 }
 
@@ -684,6 +716,18 @@ fn main() -> ExitCode {
                 let skill_action = match action {
                     SkillCmd::List => SkillAction::List,
                     SkillCmd::Info { name } => SkillAction::Info { name },
+                    SkillCmd::Add {
+                        name,
+                        version,
+                        from,
+                    } => SkillAction::Add {
+                        name,
+                        version,
+                        from,
+                    },
+                    SkillCmd::Remove { name } => SkillAction::Remove { name },
+                    SkillCmd::Update { name, from } => SkillAction::Update { name, from },
+                    SkillCmd::Publish { name, out } => SkillAction::Publish { name, out },
                 };
                 run_skill(skill_action, &renderer)
             }

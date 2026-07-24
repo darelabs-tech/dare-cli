@@ -1951,15 +1951,114 @@ fn skill_info_missing_exit_3() {
 }
 
 #[test]
-fn skill_help_no_lifecycle_verbs() {
+fn skill_help_includes_lifecycle_verbs() {
     Command::new(cargo_bin("dare"))
         .args(["skill", "--help"])
         .assert()
         .success()
         .stdout(predicate::str::contains("list"))
         .stdout(predicate::str::contains("info"))
-        .stdout(predicate::str::contains("add").not())
-        .stdout(predicate::str::contains("publish").not());
+        .stdout(predicate::str::contains("add"))
+        .stdout(predicate::str::contains("remove"))
+        .stdout(predicate::str::contains("update"))
+        .stdout(predicate::str::contains("publish"));
+}
+
+#[test]
+fn skill_add_remove_roundtrip() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(
+        dir.path().join("dare.config.json"),
+        r#"{"backend":"rust-axum"}"#,
+    )
+    .unwrap();
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .env("DARE_REMOTE_REGISTRY", "off")
+        .args(["skill", "add", "dare-ax", "--no-color"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("skill add: dare-ax@"));
+    assert!(dir
+        .path()
+        .join("packages/skills/dare-ax/skill.yml")
+        .is_file());
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .env("DARE_REMOTE_REGISTRY", "off")
+        .args(["skill", "remove", "dare-ax", "--no-color"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("skill remove: dare-ax"));
+    assert!(!dir.path().join("packages/skills/dare-ax").exists());
+}
+
+#[test]
+fn skill_publish_smoke() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(
+        dir.path().join("dare.config.json"),
+        r#"{"backend":"rust-axum"}"#,
+    )
+    .unwrap();
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .env("DARE_REMOTE_REGISTRY", "off")
+        .args(["skill", "add", "dare-ax", "--no-color"])
+        .assert()
+        .success();
+    let out = dir.path().join("dist");
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .env("DARE_REMOTE_REGISTRY", "off")
+        .args([
+            "skill",
+            "publish",
+            "dare-ax",
+            "--out",
+            out.to_str().unwrap(),
+            "--no-color",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("skill publish: dare-ax@"))
+        .stdout(predicate::str::contains("sha256="));
+    assert!(out.join("dare-ax-1.0.0.tar.gz").is_file());
+    assert!(out.join("dare-ax-1.0.0.tar.gz.sha256").is_file());
+}
+
+#[test]
+fn skill_add_from_malicious_zip_blocked() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(
+        dir.path().join("dare.config.json"),
+        r#"{"backend":"rust-axum"}"#,
+    )
+    .unwrap();
+    let zip_path = dir.path().join("evil.zip");
+    {
+        use std::io::Write;
+        let f = std::fs::File::create(&zip_path).unwrap();
+        let mut zip = zip::ZipWriter::new(f);
+        let opts = zip::write::SimpleFileOptions::default();
+        zip.start_file("../evil.txt", opts).unwrap();
+        zip.write_all(b"boom").unwrap();
+        zip.finish().unwrap();
+    }
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .env("DARE_REMOTE_REGISTRY", "off")
+        .args([
+            "skill",
+            "add",
+            "evil-skill",
+            "--from",
+            zip_path.to_str().unwrap(),
+            "--no-color",
+        ])
+        .assert()
+        .code(4)
+        .stderr(predicate::str::contains("unsafe archive"));
 }
 
 fn review_project(clean: bool) -> tempfile::TempDir {
