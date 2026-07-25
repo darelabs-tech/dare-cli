@@ -1,0 +1,11 @@
+[project]
+name = "{{project_name}}"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+  "mcp>=1.0",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"

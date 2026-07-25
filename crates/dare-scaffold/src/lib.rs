@@ -2,6 +2,7 @@
 
 mod ax;
 mod registry;
+mod render;
 mod trait_api;
 mod types;
 
@@ -12,6 +13,7 @@ pub use ax::{
 pub use registry::{
     list_stack_ids, scaffolder_for, MSG_HINT_RAILS, MSG_UNKNOWN_STACK, STACK_IDS,
 };
+pub use render::{render_template, scan_secrets};
 pub use trait_api::{GenericScaffolder, StackScaffolder};
 pub use types::{
     FrontendKind, PlanAction, PlanItemKind, ScaffoldApplyReport, ScaffoldPlan, ScaffoldPlanItem,
