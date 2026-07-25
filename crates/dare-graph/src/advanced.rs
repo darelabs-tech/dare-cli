@@ -1,6 +1,6 @@
-//! Advanced GraphRAG queries (043): locate, owners, drift.
+//! Advanced GraphRAG queries (043): locate, owners, impact, trace, drift.
 
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
 
 use dare_core::{CoreError, CoreResult};
 use serde::Serialize;
@@ -184,6 +184,218 @@ pub fn owners(g: &dyn KnowledgeGraph, seed: &str) -> CoreResult<Vec<String>> {
     Ok(out.into_iter().collect())
 }
 
+
+/// Caps for impact / trace BFS.
+#[derive(Debug, Clone)]
+pub struct TraverseOptions {
+    /// Clamp to `0..=MAX_HOPS_CAP`.
+    pub max_hops: usize,
+    /// Clamp to `1..=MAX_FANOUT_CAP`.
+    pub fanout: usize,
+    /// Clamp to `1..=MAX_LIMIT_CAP`.
+    pub limit: usize,
+}
+
+impl Default for TraverseOptions {
+    fn default() -> Self {
+        Self {
+            max_hops: DEFAULT_MAX_HOPS,
+            fanout: DEFAULT_FANOUT,
+            limit: DEFAULT_LIMIT,
+        }
+    }
+}
+
+impl TraverseOptions {
+    fn clamped(&self) -> Self {
+        Self {
+            max_hops: self.max_hops.clamp(0, MAX_HOPS_CAP),
+            fanout: self.fanout.clamp(1, MAX_FANOUT_CAP),
+            limit: self.limit.clamp(1, MAX_LIMIT_CAP),
+        }
+    }
+}
+
+const IMPACT_EDGE_TYPES: &[EdgeType] = &[
+    EdgeType::DependsOn,
+    EdgeType::Uses,
+    EdgeType::Contains,
+    EdgeType::Affects,
+    EdgeType::Implements,
+];
+
+fn require_node(g: &dyn KnowledgeGraph, id: &str) -> CoreResult<()> {
+    match g.get_node(id)? {
+        Some(_) => Ok(()),
+        None => Err(CoreError::InvalidInput("unknown node".into())),
+    }
+}
+
+/// Out-neighbors filtered by optional edge-type allowlist, sorted ASC, fanout-capped.
+fn out_neighbors(
+    g: &dyn KnowledgeGraph,
+    node_id: &str,
+    fanout: usize,
+    edge_filter: Option<&[EdgeType]>,
+) -> CoreResult<Vec<String>> {
+    let edges = g.get_edges(node_id, EdgeDirection::Out)?;
+    let mut neighbors: Vec<String> = Vec::new();
+    for e in edges {
+        if let Some(allow) = edge_filter {
+            if !allow.iter().any(|t| t.as_str() == e.edge_type) {
+                continue;
+            }
+        }
+        if e.target_id != node_id {
+            neighbors.push(e.target_id);
+        }
+    }
+    neighbors.sort();
+    neighbors.dedup();
+    if neighbors.len() > fanout {
+        neighbors.truncate(fanout);
+    }
+    Ok(neighbors)
+}
+
+/// BFS blast-radius from `seeds` (Out, impact edge types). Seeds excluded; ids ASC; `limit`.
+pub fn impact(
+    g: &dyn KnowledgeGraph,
+    seeds: &[String],
+    opts: &TraverseOptions,
+) -> CoreResult<Vec<String>> {
+    let opts = opts.clamped();
+    for s in seeds {
+        require_node(g, s)?;
+    }
+
+    let seed_set: HashSet<String> = seeds.iter().cloned().collect();
+    let mut visited: BTreeSet<String> = BTreeSet::new();
+    let mut queue: VecDeque<(String, usize)> = VecDeque::new();
+
+    let mut seed_sorted: Vec<String> = seeds.to_vec();
+    seed_sorted.sort();
+    seed_sorted.dedup();
+    for s in &seed_sorted {
+        if visited.insert(s.clone()) {
+            queue.push_back((s.clone(), 0));
+        }
+    }
+
+    let mut impacted: BTreeSet<String> = BTreeSet::new();
+
+    while let Some((node_id, depth)) = queue.pop_front() {
+        if depth >= opts.max_hops {
+            continue;
+        }
+        let neighbors = out_neighbors(g, &node_id, opts.fanout, Some(IMPACT_EDGE_TYPES))?;
+        for nb in neighbors {
+            if visited.insert(nb.clone()) {
+                if !seed_set.contains(&nb) {
+                    impacted.insert(nb.clone());
+                }
+                queue.push_back((nb, depth + 1));
+            }
+        }
+    }
+
+    Ok(impacted.into_iter().take(opts.limit).collect())
+}
+
+/// All unweighted shortest paths `from`->`to` within `max_hops` (Out, any edge type).
+/// Sorted by path length ASC, then lexicographic join of ids. Empty if none.
+pub fn trace(
+    g: &dyn KnowledgeGraph,
+    from: &str,
+    to: &str,
+    opts: &TraverseOptions,
+) -> CoreResult<Vec<Vec<String>>> {
+    let opts = opts.clamped();
+    require_node(g, from)?;
+    require_node(g, to)?;
+
+    if from == to {
+        return Ok(vec![vec![from.to_string()]]
+            .into_iter()
+            .take(opts.limit)
+            .collect());
+    }
+
+    let mut dist: HashMap<String, usize> = HashMap::new();
+    let mut preds: HashMap<String, Vec<String>> = HashMap::new();
+    let mut queue: VecDeque<String> = VecDeque::new();
+
+    dist.insert(from.to_string(), 0);
+    queue.push_back(from.to_string());
+
+    let mut shortest: Option<usize> = None;
+
+    while let Some(node_id) = queue.pop_front() {
+        let d = *dist.get(&node_id).expect("enqueued nodes have dist");
+        if let Some(s) = shortest {
+            if d >= s {
+                continue;
+            }
+        }
+        if d >= opts.max_hops {
+            continue;
+        }
+        let neighbors = out_neighbors(g, &node_id, opts.fanout, None)?;
+        for nb in neighbors {
+            let nd = d + 1;
+            match dist.get(&nb).copied() {
+                None => {
+                    dist.insert(nb.clone(), nd);
+                    preds.insert(nb.clone(), vec![node_id.clone()]);
+                    queue.push_back(nb.clone());
+                    if nb == to {
+                        shortest = Some(nd);
+                    }
+                }
+                Some(existing) if existing == nd => {
+                    preds.entry(nb).or_default().push(node_id.clone());
+                }
+                Some(_) => {}
+            }
+        }
+    }
+
+    let Some(target_dist) = dist.get(to).copied() else {
+        return Ok(Vec::new());
+    };
+    if target_dist > opts.max_hops {
+        return Ok(Vec::new());
+    }
+
+    let mut paths: Vec<Vec<String>> = Vec::new();
+    let mut stack: Vec<(String, Vec<String>)> = vec![(to.to_string(), vec![to.to_string()])];
+    while let Some((cur, rev_path)) = stack.pop() {
+        if cur == from {
+            let mut path = rev_path;
+            path.reverse();
+            paths.push(path);
+            continue;
+        }
+        let Some(ps) = preds.get(&cur) else {
+            continue;
+        };
+        for p in ps {
+            let mut next = rev_path.clone();
+            next.push(p.clone());
+            stack.push((p.clone(), next));
+        }
+    }
+
+    paths.sort_by(|a, b| {
+        a.len()
+            .cmp(&b.len())
+            .then_with(|| a.join("\0").cmp(&b.join("\0")))
+    });
+
+    paths.truncate(opts.limit);
+    Ok(paths)
+}
+
 /// Options for [`drift`]. Default threshold is `1`.
 #[derive(Debug, Clone)]
 pub struct DriftOptions {
@@ -269,7 +481,7 @@ pub fn drift(g: &dyn KnowledgeGraph, opts: &DriftOptions) -> CoreResult<DriftRep
     })
 }
 
-/// Helper for CLI strict mode: `threshold == 0` ⇒ `violations > 0`; else `violations >= threshold`.
+/// Helper for CLI strict mode: `threshold == 0` => `violations > 0`; else `violations >= threshold`.
 pub fn drift_exceeds_threshold(report: &DriftReport) -> bool {
     if report.threshold == 0 {
         report.violations > 0
@@ -519,4 +731,161 @@ mod tests {
         assert!(drift_exceeds_threshold(&mk(2, 2)));
         assert!(drift_exceeds_threshold(&mk(5, 3)));
     }
+
+    fn open_empty() -> (tempfile::TempDir, crate::GraphHandle) {
+        let dir = tempdir().unwrap();
+        let root = ProjectRoot::new(dir.path()).unwrap();
+        let cfg = load_graph_config(&root, None).unwrap();
+        let mut g = open_graph(&root, &cfg).unwrap();
+        g.migrate().unwrap();
+        (dir, g)
+    }
+
+    fn add_n(g: &mut crate::GraphHandle, id: &str) {
+        g.add_node(GraphNode::new(id, NodeType::File, id)).unwrap();
+    }
+
+    fn add_e(g: &mut crate::GraphHandle, src: &str, tgt: &str, ty: EdgeType) {
+        g.add_edge(GraphEdge::new(
+            canonical_edge_id(ty.as_str(), src, tgt),
+            src,
+            tgt,
+            ty,
+        ))
+        .unwrap();
+    }
+
+    #[test]
+    fn impact_excludes_seeds_caps() {
+        let (_dir, mut g) = open_empty();
+        for id in ["A", "B", "C", "D", "X", "Y"] {
+            add_n(&mut g, id);
+        }
+        add_e(&mut g, "A", "B", EdgeType::DependsOn);
+        add_e(&mut g, "B", "C", EdgeType::Uses);
+        add_e(&mut g, "C", "D", EdgeType::Contains);
+        add_e(&mut g, "A", "X", EdgeType::RelatedTo);
+        add_e(&mut g, "B", "Y", EdgeType::References);
+        g.flush().unwrap();
+
+        let seeds = vec!["A".to_string()];
+        let all = impact(
+            &g,
+            &seeds,
+            &TraverseOptions {
+                max_hops: 5,
+                fanout: 50,
+                limit: 100,
+            },
+        )
+        .unwrap();
+        assert_eq!(all, vec!["B".to_string(), "C".to_string(), "D".to_string()]);
+        assert!(!all.iter().any(|id| id == "A"));
+        assert!(!all.iter().any(|id| id == "X" || id == "Y"));
+
+        let hops1 = impact(
+            &g,
+            &seeds,
+            &TraverseOptions {
+                max_hops: 1,
+                fanout: 50,
+                limit: 100,
+            },
+        )
+        .unwrap();
+        assert_eq!(hops1, vec!["B".to_string()]);
+
+        let limited = impact(
+            &g,
+            &seeds,
+            &TraverseOptions {
+                max_hops: 5,
+                fanout: 50,
+                limit: 2,
+            },
+        )
+        .unwrap();
+        assert_eq!(limited, vec!["B".to_string(), "C".to_string()]);
+
+        let over = TraverseOptions {
+            max_hops: 99,
+            fanout: 999,
+            limit: 999,
+        }
+        .clamped();
+        assert_eq!(over.max_hops, MAX_HOPS_CAP);
+        assert_eq!(over.fanout, MAX_FANOUT_CAP);
+        assert_eq!(over.limit, MAX_LIMIT_CAP);
+
+        let err = impact(&g, &["missing".into()], &TraverseOptions::default()).unwrap_err();
+        assert!(matches!(err, CoreError::InvalidInput(ref m) if m == "unknown node"));
+    }
+
+    #[test]
+    fn trace_shortest_paths() {
+        let (_dir, mut g) = open_empty();
+        for id in ["A", "B", "C", "D", "E", "F", "Z"] {
+            add_n(&mut g, id);
+        }
+        add_e(&mut g, "A", "B", EdgeType::DependsOn);
+        add_e(&mut g, "B", "D", EdgeType::Uses);
+        add_e(&mut g, "A", "C", EdgeType::Contains);
+        add_e(&mut g, "C", "D", EdgeType::Affects);
+        add_e(&mut g, "A", "E", EdgeType::Implements);
+        add_e(&mut g, "E", "F", EdgeType::Uses);
+        add_e(&mut g, "F", "D", EdgeType::DependsOn);
+        g.flush().unwrap();
+
+        let paths = trace(
+            &g,
+            "A",
+            "D",
+            &TraverseOptions {
+                max_hops: 5,
+                fanout: 50,
+                limit: 100,
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            paths,
+            vec![
+                vec!["A".to_string(), "B".to_string(), "D".to_string()],
+                vec!["A".to_string(), "C".to_string(), "D".to_string()],
+            ]
+        );
+
+        let hops1 = trace(
+            &g,
+            "A",
+            "D",
+            &TraverseOptions {
+                max_hops: 1,
+                fanout: 50,
+                limit: 100,
+            },
+        )
+        .unwrap();
+        assert!(hops1.is_empty());
+
+        let none = trace(
+            &g,
+            "A",
+            "Z",
+            &TraverseOptions {
+                max_hops: 5,
+                fanout: 50,
+                limit: 100,
+            },
+        )
+        .unwrap();
+        assert!(none.is_empty());
+
+        let same = trace(&g, "A", "A", &TraverseOptions::default()).unwrap();
+        assert_eq!(same, vec![vec!["A".to_string()]]);
+
+        let err = trace(&g, "A", "missing", &TraverseOptions::default()).unwrap_err();
+        assert!(matches!(err, CoreError::InvalidInput(ref m) if m == "unknown node"));
+    }
+
 }
