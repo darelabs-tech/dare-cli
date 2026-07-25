@@ -76,7 +76,7 @@ dare-graph = { path = "crates/dare-graph" }
 ureq = { version = "=2.12.1", default-features = false, features = ["native-tls"] }
 rusqlite = { version = "=0.32.1", features = ["bundled"] }
 fastembed = { version = "=4.9.1", default-features = false }
-tar = "=0.4.43"
+tar = "=0.4.45"
 flate2 = "=1.0.35"
 zip = { version = "=2.4.2", default-features = false, features = ["deflate"] }
 
