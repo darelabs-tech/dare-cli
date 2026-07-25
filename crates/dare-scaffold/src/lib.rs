@@ -7,6 +7,7 @@ mod registry;
 mod render;
 mod trait_api;
 mod types;
+mod validate;
 
 pub use apply::{apply_scaffold, run_scaffold};
 pub use ax::{ax_artifact_paths, generate_ax_files, AX_ARTIFACT_COUNT, OPENAPI_STUB_VERSION};
@@ -16,6 +17,7 @@ pub use registry::{
 };
 pub use render::{render_template, scan_secrets, SECRET_SCAN_NEEDLES};
 pub use trait_api::{GenericScaffolder, StackScaffolder};
+pub use validate::validate_stack_output;
 pub use types::{
     FrontendKind, PlanAction, PlanItemKind, ScaffoldApplyReport, ScaffoldPlan, ScaffoldPlanItem,
     ScaffoldRequest, StackKind, StackMetadata, Toolchain, Transport, ValidationReport,

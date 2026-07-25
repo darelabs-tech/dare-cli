@@ -4,6 +4,7 @@ use dare_core::{CoreResult, ProjectRoot};
 
 use crate::plan::plan_scaffold;
 use crate::types::{ScaffoldPlan, ScaffoldRequest, StackMetadata, ValidationReport};
+use crate::validate::validate_stack_output;
 
 /// Domain trait for per-stack scaffolding (BLUEPRINT-046 §0.5).
 pub trait StackScaffolder: Send + Sync {
@@ -24,21 +25,6 @@ impl GenericScaffolder {
         Self { id, metadata }
     }
 
-    /// Expected AX + meta paths for validate (honest empty-project report).
-    fn expected_paths(&self) -> Vec<String> {
-        let mut paths = vec![
-            ".env.example".to_string(),
-            "Dockerfile".to_string(),
-            "README.md".to_string(),
-            "dare.config.json".to_string(),
-            "docker-compose.yml".to_string(),
-            "llms.txt".to_string(),
-            "openapi.json".to_string(),
-            self.metadata.rate_limit_rel.clone(),
-        ];
-        paths.sort();
-        paths
-    }
 }
 
 impl StackScaffolder for GenericScaffolder {
@@ -54,13 +40,7 @@ impl StackScaffolder for GenericScaffolder {
         plan_scaffold(root, req)
     }
 
-    fn validate(&self, _root: &ProjectRoot) -> CoreResult<ValidationReport> {
-        let missing = self.expected_paths();
-        Ok(ValidationReport {
-            stack_id: self.id.to_string(),
-            ok: false,
-            missing,
-            secret_hits: vec![],
-        })
+    fn validate(&self, root: &ProjectRoot) -> CoreResult<ValidationReport> {
+        validate_stack_output(root, self.id)
     }
 }
