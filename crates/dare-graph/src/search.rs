@@ -4,8 +4,15 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use dare_core::{CoreError, CoreResult};
 
+use dare_core::redact;
+
 use crate::knowledge_graph::{EdgeDirection, KnowledgeGraph};
+use crate::semantic::{self, MAX_CANDIDATES};
 use crate::types::GraphNode;
+use crate::vector;
+
+/// Re-export cosine for callers that historically imported it from `search`.
+pub use vector::cosine_similarity;
 
 /// Reciprocal Rank Fusion constant (TS / Mestre: `1/(60+rank)`).
 pub const RRF_K: u32 = 60;
@@ -60,41 +67,6 @@ pub struct RankedHit {
     pub score: f64,
     pub label: String,
     pub node_type: String,
-}
-
-/// Cosine similarity over equal-length finite vectors.
-///
-/// Returns `0.0` on length mismatch, zero-norm, or non-finite inputs/results (never NaN).
-pub fn cosine_similarity(a: &[f32], b: &[f32]) -> f64 {
-    if a.len() != b.len() {
-        return 0.0;
-    }
-    let mut dot = 0.0_f64;
-    let mut norm_a = 0.0_f64;
-    let mut norm_b = 0.0_f64;
-    for (&x, &y) in a.iter().zip(b.iter()) {
-        let xf = f64::from(x);
-        let yf = f64::from(y);
-        if !xf.is_finite() || !yf.is_finite() {
-            return 0.0;
-        }
-        dot += xf * yf;
-        norm_a += xf * xf;
-        norm_b += yf * yf;
-    }
-    if norm_a == 0.0 || norm_b == 0.0 {
-        return 0.0;
-    }
-    let denom = norm_a.sqrt() * norm_b.sqrt();
-    if denom == 0.0 || !denom.is_finite() {
-        return 0.0;
-    }
-    let score = dot / denom;
-    if score.is_finite() {
-        score
-    } else {
-        0.0
-    }
 }
 
 /// Case-insensitive LIKE-style match against id / label / description.
@@ -231,6 +203,7 @@ pub fn hybrid_query(
 /// Same as [`hybrid_query`], returning soft-fail warnings for the semantic channel.
 ///
 /// When `no_semantic` or semantic is unavailable: 2-list RRF identical to microplano 041.
+/// With feature `semantic` and model OK: 3-list RRF (keyword ∪ BFS ∪ vector).
 pub fn hybrid_query_with_warnings(
     graph: &dyn KnowledgeGraph,
     query: &str,
@@ -248,20 +221,25 @@ pub fn hybrid_query_with_warnings(
     let graph_ranking = expanded;
 
     let mut warnings: Vec<String> = Vec::new();
-    let mut rankings: Vec<Vec<String>> = vec![kw_ranking, graph_ranking];
+    let mut rankings: Vec<Vec<String>> = vec![kw_ranking.clone(), graph_ranking.clone()];
 
     if !opts.no_semantic {
-        match try_semantic_vector_ranking() {
+        match resolve_vector_ranking(graph, query, &kw_ranking, &graph_ranking) {
             Ok(Some(vector_ids)) => {
                 rankings.push(vector_ids);
             }
             Ok(None) => {
-                warnings.push(format!(
-                    "{MSG_SEMANTIC_UNAVAILABLE}semantic feature not enabled"
-                ));
+                // Feature off / skipped — parity 041, no warning.
             }
             Err(reason) => {
-                warnings.push(format!("{MSG_SEMANTIC_UNAVAILABLE}{reason}"));
+                let clean = reason
+                    .strip_prefix(MSG_SEMANTIC_UNAVAILABLE)
+                    .or_else(|| reason.strip_prefix(semantic::MSG_SEMANTIC_UNAVAILABLE))
+                    .unwrap_or(reason.as_str());
+                warnings.push(format!(
+                    "{MSG_SEMANTIC_UNAVAILABLE}{}",
+                    redact(clean)
+                ));
             }
         }
     }
@@ -288,37 +266,117 @@ pub fn hybrid_query_with_warnings(
     Ok((hits, warnings))
 }
 
+/// Build candidate (id, passage) list: keyword ∪ BFS ids, sorted id ASC, capped at 512.
+pub fn semantic_candidates(
+    graph: &dyn KnowledgeGraph,
+    kw_ids: &[String],
+    bfs_ids: &[String],
+) -> CoreResult<Vec<(String, String)>> {
+    let mut id_set: BTreeSet<String> = BTreeSet::new();
+    for id in kw_ids.iter().chain(bfs_ids.iter()) {
+        id_set.insert(id.clone());
+    }
+    let mut ids: Vec<String> = id_set.into_iter().collect();
+    ids.sort();
+    ids.truncate(MAX_CANDIDATES);
+
+    let mut out = Vec::with_capacity(ids.len());
+    for id in ids {
+        if let Some(n) = graph.get_node(&id)? {
+            let passage = semantic::node_passage(&n.label, n.description.as_deref());
+            out.push((id, passage));
+        } else {
+            out.push((id.clone(), semantic::node_passage(&id, None)));
+        }
+    }
+    Ok(out)
+}
+
 /// Attempt to obtain a vector ranking list for RRF.
 ///
 /// - `Ok(Some(ids))` — use as third RRF list
-/// - `Ok(None)` — semantic unavailable (no attempt / feature off)
-/// - `Err(reason)` — attempt skipped/failed with a cause string (no `semantic unavailable:` prefix)
-#[cfg(test)]
-fn try_semantic_vector_ranking() -> Result<Option<Vec<String>>, String> {
-    match TEST_VECTOR_RANKING.lock().map(|g| g.clone()) {
-        Ok(None) => Ok(None),
-        Ok(Some(Ok(ids))) => Ok(Some(ids)),
-        Ok(Some(Err(reason))) => Err(reason),
-        Err(_) => Ok(None),
+/// - `Ok(None)` — semantic skipped (feature off / no attempt)
+/// - `Err(reason)` — soft-fail cause (no `semantic unavailable:` prefix required)
+fn resolve_vector_ranking(
+    graph: &dyn KnowledgeGraph,
+    query: &str,
+    kw_ids: &[String],
+    bfs_ids: &[String],
+) -> Result<Option<Vec<String>>, String> {
+    #[cfg(test)]
+    {
+        if let Ok(guard) = TEST_VECTOR_RANKING.lock() {
+            if let Some(ref injected) = *guard {
+                return match injected {
+                    Ok(ids) => Ok(Some(ids.clone())),
+                    Err(reason) => Err(reason.clone()),
+                };
+            }
+        }
+    }
+
+    #[cfg(feature = "semantic")]
+    {
+        try_real_vector_ranking(graph, query, kw_ids, bfs_ids).map(Some)
+    }
+
+    #[cfg(not(feature = "semantic"))]
+    {
+        let _ = (graph, query, kw_ids, bfs_ids);
+        Ok(None)
     }
 }
 
-#[cfg(not(test))]
-fn try_semantic_vector_ranking() -> Result<Option<Vec<String>>, String> {
-    // Semantic runtime lands in mp042-002/003; until then always unavailable.
-    Ok(None)
+#[cfg(feature = "semantic")]
+fn try_real_vector_ranking(
+    graph: &dyn KnowledgeGraph,
+    query: &str,
+    kw_ids: &[String],
+    bfs_ids: &[String],
+) -> Result<Vec<String>, String> {
+    if !semantic::model_is_cached() {
+        return Err("model not cached (run dare graph enable)".to_string());
+    }
+    let opts = semantic::SemanticOptions {
+        yes: true,
+        max_candidates: MAX_CANDIDATES,
+    };
+    let handle = semantic::ensure_model(&opts).map_err(|e| e.message().to_string())?;
+    let candidates = semantic_candidates(graph, kw_ids, bfs_ids).map_err(|e| e.message().to_string())?;
+    semantic::vector_rank(&handle, query, &candidates).map_err(|e| e.message().to_string())
 }
 
 #[cfg(test)]
 static TEST_VECTOR_RANKING: std::sync::Mutex<Option<Result<Vec<String>, String>>> =
     std::sync::Mutex::new(None);
 
+/// Serializes tests that mutate [`TEST_VECTOR_RANKING`] (parallel rustc harness).
+#[cfg(test)]
+static TEST_VECTOR_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 /// Test-only hook to inject (or fail) the vector ranking channel.
+///
+/// `None` = use real path (feature on) or skip (feature off).
 #[cfg(test)]
 pub fn set_test_vector_ranking(value: Option<Result<Vec<String>, String>>) {
     if let Ok(mut guard) = TEST_VECTOR_RANKING.lock() {
         *guard = value;
     }
+}
+
+/// Run `f` with an exclusive vector-ranking inject (cleared afterward).
+#[cfg(test)]
+fn with_test_vector_ranking<R>(
+    value: Option<Result<Vec<String>, String>>,
+    f: impl FnOnce() -> R,
+) -> R {
+    let _serial = TEST_VECTOR_LOCK
+        .lock()
+        .unwrap_or_else(|e| e.into_inner());
+    set_test_vector_ranking(value);
+    let out = f();
+    set_test_vector_ranking(None);
+    out
 }
 
 /// Render a Mermaid flowchart of a node/edge subset (deterministic).
@@ -419,37 +477,6 @@ mod tests {
     }
 
     #[test]
-    fn cosine_zero_norm() {
-        let a = [0.0_f32, 0.0, 0.0];
-        let b = [1.0_f32, 2.0, 3.0];
-        let s = cosine_similarity(&a, &b);
-        assert_eq!(s, 0.0);
-        assert!(s.is_finite());
-        let s2 = cosine_similarity(&b, &a);
-        assert_eq!(s2, 0.0);
-    }
-
-    #[test]
-    fn cosine_len_mismatch() {
-        let a = [1.0_f32, 0.0];
-        let b = [1.0_f32, 0.0, 0.0];
-        let s = cosine_similarity(&a, &b);
-        assert_eq!(s, 0.0);
-        assert!(!s.is_nan());
-    }
-
-    #[test]
-    fn cosine_orthogonal_ish() {
-        let a = [1.0_f32, 0.0];
-        let b = [0.0_f32, 1.0];
-        let s = cosine_similarity(&a, &b);
-        assert!((s - 0.0).abs() < 1e-12);
-        assert!(s.is_finite());
-        let parallel = cosine_similarity(&[1.0, 2.0], &[2.0, 4.0]);
-        assert!((parallel - 1.0).abs() < 1e-6);
-    }
-
-    #[test]
     fn rrf_k60_formula() {
         let fused = rrf_fuse(
             &[vec!["a".into(), "b".into()], vec!["b".into(), "c".into()]],
@@ -459,6 +486,27 @@ mod tests {
         assert_eq!(fused[0].0, "b");
         let score_b = 1.0 / 62.0 + 1.0 / 61.0;
         assert!((fused[0].1 - score_b).abs() < 1e-12);
+    }
+
+    #[test]
+    fn rrf_three_list_fuse_order_golden() {
+        let fused = rrf_fuse(
+            &[
+                vec!["a".into(), "b".into()],
+                vec!["b".into(), "c".into()],
+                vec!["c".into(), "a".into()],
+            ],
+            RRF_K,
+        );
+        // Each id appears twice → equal score 1/61+1/62; tie-break id ASC.
+        let expected = 1.0 / 61.0 + 1.0 / 62.0;
+        assert_eq!(
+            fused.iter().map(|(id, _)| id.as_str()).collect::<Vec<_>>(),
+            vec!["a", "b", "c"]
+        );
+        for (_, s) in &fused {
+            assert!((s - expected).abs() < 1e-12);
+        }
     }
 
     #[test]
@@ -475,56 +523,60 @@ mod tests {
 
     #[test]
     fn golden_hybrid_ranking_order() {
-        set_test_vector_ranking(None);
-        let dir = tempdir().unwrap();
-        let root = ProjectRoot::new(dir.path()).unwrap();
-        let g = seed_graph(&root);
-        let hits = hybrid_query(&g, "alpha", &SearchOptions::default()).unwrap();
-        assert!(!hits.is_empty());
-        let ids: Vec<String> = hits.iter().map(|h| h.id.clone()).collect();
-        let golden = golden_041_ids();
-        assert_eq!(ids, golden);
-        let hits2 = hybrid_query(&g, "alpha", &SearchOptions::default()).unwrap();
-        assert_eq!(
-            hits2.iter().map(|h| h.id.clone()).collect::<Vec<_>>(),
-            golden
-        );
+        with_test_vector_ranking(None, || {
+            let dir = tempdir().unwrap();
+            let root = ProjectRoot::new(dir.path()).unwrap();
+            let g = seed_graph(&root);
+            // 2-list golden: force no_semantic when a real model might activate 3-list.
+            #[cfg(feature = "semantic")]
+            let force_no_semantic = semantic::model_is_cached();
+            #[cfg(not(feature = "semantic"))]
+            let force_no_semantic = false;
+            let opts = SearchOptions {
+                no_semantic: force_no_semantic,
+                ..SearchOptions::default()
+            };
+            let hits = hybrid_query(&g, "alpha", &opts).unwrap();
+            assert!(!hits.is_empty());
+            let ids: Vec<String> = hits.iter().map(|h| h.id.clone()).collect();
+            let golden = golden_041_ids();
+            assert_eq!(ids, golden);
+            let hits2 = hybrid_query(&g, "alpha", &opts).unwrap();
+            assert_eq!(
+                hits2.iter().map(|h| h.id.clone()).collect::<Vec<_>>(),
+                golden
+            );
+        });
     }
 
     #[test]
     fn hybrid_no_semantic_matches_041_golden() {
-        set_test_vector_ranking(None);
-        let dir = tempdir().unwrap();
-        let root = ProjectRoot::new(dir.path()).unwrap();
-        let g = seed_graph(&root);
-        let opts = SearchOptions {
-            no_semantic: true,
-            ..SearchOptions::default()
-        };
-        let (hits, warnings) = hybrid_query_with_warnings(&g, "alpha", &opts).unwrap();
-        assert!(warnings.is_empty(), "no_semantic must not emit skip warnings");
-        let ids: Vec<String> = hits.iter().map(|h| h.id.clone()).collect();
-        assert_eq!(ids, golden_041_ids());
-
-        let baseline = hybrid_query(&g, "alpha", &SearchOptions::default()).unwrap();
-        assert_eq!(
-            hits.iter().map(|h| h.id.clone()).collect::<Vec<_>>(),
-            baseline.iter().map(|h| h.id.clone()).collect::<Vec<_>>()
-        );
-        assert_eq!(
-            hits.iter().map(|h| h.score).collect::<Vec<_>>(),
-            baseline.iter().map(|h| h.score).collect::<Vec<_>>()
-        );
+        with_test_vector_ranking(None, || {
+            let dir = tempdir().unwrap();
+            let root = ProjectRoot::new(dir.path()).unwrap();
+            let g = seed_graph(&root);
+            let opts = SearchOptions {
+                no_semantic: true,
+                ..SearchOptions::default()
+            };
+            let (hits, warnings) = hybrid_query_with_warnings(&g, "alpha", &opts).unwrap();
+            assert!(warnings.is_empty(), "no_semantic must not emit skip warnings");
+            let ids: Vec<String> = hits.iter().map(|h| h.id.clone()).collect();
+            assert_eq!(ids, golden_041_ids());
+        });
     }
 
     #[test]
     fn hybrid_query_rejects_empty() {
-        set_test_vector_ranking(None);
-        let dir = tempdir().unwrap();
-        let root = ProjectRoot::new(dir.path()).unwrap();
-        let g = seed_graph(&root);
-        let err = hybrid_query(&g, "   ", &SearchOptions::default()).unwrap_err();
-        assert!(matches!(err, CoreError::InvalidInput(ref m) if m.contains("query must not be empty")));
+        with_test_vector_ranking(None, || {
+            let dir = tempdir().unwrap();
+            let root = ProjectRoot::new(dir.path()).unwrap();
+            let g = seed_graph(&root);
+            let err = hybrid_query(&g, "   ", &SearchOptions::default()).unwrap_err();
+            assert!(
+                matches!(err, CoreError::InvalidInput(ref m) if m.contains("query must not be empty"))
+            );
+        });
     }
 
     #[test]
@@ -533,12 +585,96 @@ mod tests {
         let root = ProjectRoot::new(dir.path()).unwrap();
         let g = seed_graph(&root);
         let c = canonical_file_node_id("src/other.rs");
-        set_test_vector_ranking(Some(Ok(vec![c.clone()])));
-        let result = hybrid_query_with_warnings(&g, "alpha", &SearchOptions::default());
-        set_test_vector_ranking(None);
-        let (hits, warnings) = result.unwrap();
+        let (hits, warnings) = with_test_vector_ranking(Some(Ok(vec![c.clone()])), || {
+            hybrid_query_with_warnings(&g, "alpha", &SearchOptions::default()).unwrap()
+        });
         assert!(warnings.is_empty());
         assert_eq!(hits[0].id, c);
+    }
+
+    #[test]
+    fn hybrid_fallback_warning_on_vector_err() {
+        let dir = tempdir().unwrap();
+        let root = ProjectRoot::new(dir.path()).unwrap();
+        let g = seed_graph(&root);
+        let (hits, warnings) = with_test_vector_ranking(
+            Some(Err("model not cached (run dare graph enable)".into())),
+            || hybrid_query_with_warnings(&g, "alpha", &SearchOptions::default()).unwrap(),
+        );
+        assert_eq!(
+            hits.iter().map(|h| h.id.clone()).collect::<Vec<_>>(),
+            golden_041_ids()
+        );
+        assert_eq!(warnings.len(), 1);
+        assert!(
+            warnings[0].starts_with(MSG_SEMANTIC_UNAVAILABLE),
+            "got {}",
+            warnings[0]
+        );
+        assert!(warnings[0].contains("model not cached"));
+        assert!(!warnings[0].contains("token="));
+    }
+
+    #[test]
+    fn hybrid_no_semantic_ignores_injected_vector() {
+        let dir = tempdir().unwrap();
+        let root = ProjectRoot::new(dir.path()).unwrap();
+        let g = seed_graph(&root);
+        let c = canonical_file_node_id("src/other.rs");
+        let opts = SearchOptions {
+            no_semantic: true,
+            ..SearchOptions::default()
+        };
+        let (hits, warnings) = with_test_vector_ranking(Some(Ok(vec![c])), || {
+            hybrid_query_with_warnings(&g, "alpha", &opts).unwrap()
+        });
+        assert!(warnings.is_empty());
+        assert_eq!(
+            hits.iter().map(|h| h.id.clone()).collect::<Vec<_>>(),
+            golden_041_ids()
+        );
+    }
+
+    #[test]
+    fn semantic_candidates_union_sorted_capped() {
+        let dir = tempdir().unwrap();
+        let root = ProjectRoot::new(dir.path()).unwrap();
+        let g = seed_graph(&root);
+        let a = canonical_file_node_id("src/alpha.rs");
+        let b = "code_symbol:src/alpha.rs::helper".to_string();
+        let c = canonical_file_node_id("src/other.rs");
+        let cands = semantic_candidates(&g, &[c.clone(), a.clone()], &[b.clone(), a.clone()])
+            .unwrap();
+        let ids: Vec<_> = cands.iter().map(|(id, _)| id.clone()).collect();
+        let mut expected = vec![a, b, c];
+        expected.sort();
+        assert_eq!(ids, expected);
+        for (id, passage) in &cands {
+            assert!(!passage.is_empty(), "empty passage for {id}");
+            assert!(passage.chars().count() <= crate::semantic::MAX_PASSAGE_CHARS);
+        }
+    }
+
+    #[cfg(feature = "semantic")]
+    #[test]
+    fn hybrid_fallback_when_model_not_cached() {
+        with_test_vector_ranking(None, || {
+            if semantic::model_is_cached() {
+                return;
+            }
+            let dir = tempdir().unwrap();
+            let root = ProjectRoot::new(dir.path()).unwrap();
+            let g = seed_graph(&root);
+            let (hits, warnings) =
+                hybrid_query_with_warnings(&g, "alpha", &SearchOptions::default()).unwrap();
+            assert_eq!(
+                hits.iter().map(|h| h.id.clone()).collect::<Vec<_>>(),
+                golden_041_ids()
+            );
+            assert_eq!(warnings.len(), 1);
+            assert!(warnings[0].starts_with(MSG_SEMANTIC_UNAVAILABLE));
+            assert!(warnings[0].contains("model not cached"));
+        });
     }
 
     #[test]

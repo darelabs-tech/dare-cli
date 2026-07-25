@@ -32,9 +32,9 @@ pub use knowledge_graph::{EdgeDirection, KnowledgeGraph};
 pub use migrations::{detect_sqlite_schema_version, CURRENT_SCHEMA_VERSION, SCHEMA_SQL};
 pub use search::{
     bfs_expand, cosine_similarity, hybrid_query, hybrid_query_with_warnings, keyword_search,
-    node_matches_keyword, render_mermaid_subset, rrf_fuse, RankedHit, SearchOptions,
-    DEFAULT_FANOUT, DEFAULT_LIMIT, DEFAULT_MAX_HOPS, MAX_FANOUT_CAP, MAX_HOPS_CAP, MAX_LIMIT_CAP,
-    MSG_SEMANTIC_UNAVAILABLE, RRF_K,
+    node_matches_keyword, render_mermaid_subset, rrf_fuse, semantic_candidates, RankedHit,
+    SearchOptions, DEFAULT_FANOUT, DEFAULT_LIMIT, DEFAULT_MAX_HOPS, MAX_FANOUT_CAP, MAX_HOPS_CAP,
+    MAX_LIMIT_CAP, MSG_SEMANTIC_UNAVAILABLE, RRF_K,
 };
 pub use storage::{JsonGraph, SqliteGraph};
 pub use types::{
@@ -42,11 +42,13 @@ pub use types::{
     GraphStoreDocument, NodeType, VectorRow, ALL_EDGE_TYPES, ALL_NODE_TYPES,
 };
 pub use semantic::{
-    semantic_doctor, SemanticDoctorReport, ALLOWLIST_HOSTS, EMBED_DIM, EXPECTED_MODEL_BYTES,
-    MAX_CANDIDATES, MAX_PASSAGE_CHARS, MAX_QUERY_CHARS, SEMANTIC_MODEL_DISPLAY, SEMANTIC_MODEL_ID,
+    node_passage, rank_by_cosine, semantic_doctor, SemanticDoctorReport, ALLOWLIST_HOSTS,
+    EMBED_DIM, EXPECTED_MODEL_BYTES, MAX_CANDIDATES, MAX_PASSAGE_CHARS, MAX_QUERY_CHARS,
+    SEMANTIC_MODEL_DISPLAY, SEMANTIC_MODEL_ID,
 };
 #[cfg(feature = "semantic")]
 pub use semantic::{
-    embed_texts, ensure_model, model_is_cached, models_cache_dir, ModelHandle, SemanticOptions,
+    embed_texts, ensure_model, model_is_cached, models_cache_dir, vector_rank, ModelHandle,
+    SemanticOptions,
 };
 pub use vector::{deserialize_f32_le, serialize_f32_le};
