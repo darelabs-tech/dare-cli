@@ -807,6 +807,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "dare-scaffold"
+version = "0.1.0-alpha.0"
+dependencies = [
+ "dare-assets",
+ "dare-contracts",
+ "dare-core",
+ "serde",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
 name = "dare-skills"
 version = "0.1.0-alpha.0"
 dependencies = [
