@@ -1,8 +1,8 @@
-//! GraphRAG storage + ingest/search (microplanos 040–042).
+//! GraphRAG storage + ingest/search (microplanos 040–043).
 //!
-//! Backends: SQLite (`.dare/graph.db`) and JSON (`.dare/graph.json`).
+//! Backends: SQLite (`.dare/graph.db`), JSON (`.dare/graph.json`), optional Neo4j HTTP.
 //! Ingest (contentHash + regex symbols), keyword LIKE, BFS, RRF k=60.
-//! Cosine + optional semantic channel (feature `semantic`) → 042; Neo4j → 043.
+//! Cosine + optional semantic channel (feature `semantic`) → 042; Neo4j feature → 043.
 
 pub mod advanced;
 mod config;
@@ -10,6 +10,8 @@ mod ids;
 mod ingest;
 mod knowledge_graph;
 mod migrations;
+#[cfg(feature = "neo4j")]
+mod neo4j;
 mod search;
 pub mod semantic;
 mod storage;
@@ -21,8 +23,13 @@ pub use advanced::{
     LocateOptions, TraverseOptions, LOCATE_DECAY,
 };
 pub use config::{
-    load_graph_config, open_graph, GraphBackend, GraphConfig, GraphHandle, GRAPH_DB_REL,
-    GRAPH_JSON_REL, GRAPH_YML_REL,
+    load_graph_config, open_graph, GraphBackend, GraphConfig, GraphHandle, Neo4jConnectConfig,
+    GRAPH_DB_REL, GRAPH_JSON_REL, GRAPH_YML_REL, MSG_NEO4J_FEATURE_REQUIRED,
+};
+#[cfg(feature = "neo4j")]
+pub use neo4j::{
+    validate_neo4j_url, Neo4jGraph, MSG_NEO4J_WRITES, NEO4J_BACKOFF_MS, NEO4J_DEFAULT_DB,
+    NEO4J_HTTP_RETRIES, NEO4J_HTTP_TIMEOUT_MS,
 };
 pub use ids::{
     canonical_code_symbol_node_id, canonical_edge_id, canonical_file_node_id,

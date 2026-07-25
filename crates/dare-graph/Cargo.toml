@@ -10,6 +10,7 @@ description = "GraphRAG storage + ingest/search (keyword/BFS/RRF) — microplano
 [features]
 default = []
 semantic = ["dep:fastembed"]
+neo4j = ["dep:ureq", "dep:base64"]
 
 [dependencies]
 dare-core = { workspace = true }
@@ -20,6 +21,8 @@ serde_yaml = { workspace = true }
 rusqlite = { workspace = true }
 sha2 = { workspace = true }
 regex = { workspace = true }
+ureq = { workspace = true, optional = true }
+base64 = { workspace = true, optional = true }
 
 # windows-gnu: ort has no prebuilt binaries — load-dynamic (ORT_DYLIB_PATH at runtime).
 # Other targets: download-binaries + hf-hub-native-tls (fastembed default set).

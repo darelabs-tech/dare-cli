@@ -13,6 +13,7 @@ path = "src/main.rs"
 [features]
 default = []
 semantic = ["dare-graph/semantic"]
+neo4j = ["dare-graph/neo4j"]
 
 [dependencies]
 dare-core = { workspace = true }

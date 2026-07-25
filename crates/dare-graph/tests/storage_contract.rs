@@ -152,6 +152,7 @@ fn json_sqlite_contract_parity() {
         &GraphConfig {
             backend: GraphBackend::Sqlite,
             path: GRAPH_DB_REL.into(),
+            neo4j: None,
         },
     )
     .unwrap();
@@ -160,6 +161,7 @@ fn json_sqlite_contract_parity() {
         &GraphConfig {
             backend: GraphBackend::Json,
             path: GRAPH_JSON_REL.into(),
+            neo4j: None,
         },
     )
     .unwrap();
