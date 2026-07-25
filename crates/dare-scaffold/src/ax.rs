@@ -3,6 +3,7 @@
 use dare_core::{CoreError, CoreResult};
 use serde_json::{json, Value};
 
+use crate::render::{scan_secrets, SECRET_SCAN_NEEDLES};
 use crate::types::{StackKind, StackMetadata};
 
 /// Exact count of AX artifacts per stack.
@@ -10,11 +11,6 @@ pub const AX_ARTIFACT_COUNT: usize = 7;
 
 /// OpenAPI stub document version.
 pub const OPENAPI_STUB_VERSION: &str = "3.0.3";
-
-/// Forbidden secret needles (ASCII case-insensitive substring match).
-pub const SECRET_SCAN_NEEDLES: &[&str] = &["password=", "api_key=", "BEGIN PRIVATE KEY"];
-
-const MSG_SECRET_PATTERN: &str = "template contains forbidden secret pattern";
 
 /// Canonical relative paths for the 7 AX artifacts (order frozen in §0.3).
 pub fn ax_artifact_paths(meta: &StackMetadata) -> Vec<String> {
@@ -62,18 +58,6 @@ pub fn generate_ax_files(
         out.push((path.clone(), content));
     }
     Ok(out)
-}
-
-/// Scan content for forbidden secret needles (case-insensitive).
-pub fn scan_secrets(content: &str) -> CoreResult<()> {
-    let lower = content.to_ascii_lowercase();
-    for needle in SECRET_SCAN_NEEDLES {
-        let n = needle.to_ascii_lowercase();
-        if lower.contains(&n) {
-            return Err(CoreError::InvalidInput(MSG_SECRET_PATTERN.to_string()));
-        }
-    }
-    Ok(())
 }
 
 fn render_llms_txt(meta: &StackMetadata, project_name: &str) -> String {

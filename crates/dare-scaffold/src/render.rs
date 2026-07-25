@@ -4,7 +4,8 @@ use dare_core::{CoreError, CoreResult};
 
 const MSG_SECRET: &str = "template contains forbidden secret pattern";
 
-const SECRET_NEEDLES: &[&str] = &["password=", "api_key=", "BEGIN PRIVATE KEY"];
+/// Forbidden secret needles (ASCII case-insensitive substring match).
+pub const SECRET_SCAN_NEEDLES: &[&str] = &["password=", "api_key=", "BEGIN PRIVATE KEY"];
 
 /// Replace only `{{project_name}}` and `{{stack_id}}`, then scan for secrets.
 pub fn render_template(text: &str, project_name: &str, stack_id: &str) -> CoreResult<String> {
@@ -18,7 +19,7 @@ pub fn render_template(text: &str, project_name: &str, stack_id: &str) -> CoreRe
 /// Case-insensitive contains check for forbidden secret needles.
 pub fn scan_secrets(text: &str) -> CoreResult<()> {
     let lower = text.to_ascii_lowercase();
-    for needle in SECRET_NEEDLES {
+    for needle in SECRET_SCAN_NEEDLES {
         let needle_lower = needle.to_ascii_lowercase();
         if lower.contains(&needle_lower) {
             return Err(CoreError::InvalidInput(MSG_SECRET.to_string()));
