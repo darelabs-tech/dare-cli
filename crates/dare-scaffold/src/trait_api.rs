@@ -2,9 +2,8 @@
 
 use dare_core::{CoreResult, ProjectRoot};
 
-use crate::types::{
-    ScaffoldPlan, ScaffoldRequest, StackMetadata, ValidationReport, SCHEMA_VERSION,
-};
+use crate::plan::plan_scaffold;
+use crate::types::{ScaffoldPlan, ScaffoldRequest, StackMetadata, ValidationReport};
 
 /// Domain trait for per-stack scaffolding (BLUEPRINT-046 §0.5).
 pub trait StackScaffolder: Send + Sync {
@@ -51,13 +50,8 @@ impl StackScaffolder for GenericScaffolder {
         &self.metadata
     }
 
-    fn plan(&self, _root: &ProjectRoot, req: &ScaffoldRequest) -> CoreResult<ScaffoldPlan> {
-        Ok(ScaffoldPlan {
-            schema_version: SCHEMA_VERSION,
-            stack_id: self.id.to_string(),
-            project_name: req.project_name.clone(),
-            items: vec![],
-        })
+    fn plan(&self, root: &ProjectRoot, req: &ScaffoldRequest) -> CoreResult<ScaffoldPlan> {
+        plan_scaffold(root, req)
     }
 
     fn validate(&self, _root: &ProjectRoot) -> CoreResult<ValidationReport> {
