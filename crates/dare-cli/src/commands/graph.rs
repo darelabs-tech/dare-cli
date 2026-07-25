@@ -1,4 +1,4 @@
-//! `dare graph ingest|query|stats|viz` (microplano 041).
+//! `dare graph ingest|query|stats|viz|doctor|enable` (microplanos 041–042).
 
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
@@ -6,9 +6,11 @@ use std::process::ExitCode;
 use dare_core::fs::atomic_write;
 use dare_core::{CoreError, CoreResult, ProjectRoot, SafeRelativePath};
 use dare_graph::{
-    hybrid_query, ingest_project, load_graph_config, open_graph, render_mermaid_subset,
-    IngestOptions, KnowledgeGraph, SearchOptions,
+    hybrid_query_with_warnings, ingest_project, load_graph_config, open_graph, render_mermaid_subset,
+    semantic_doctor, IngestOptions, KnowledgeGraph, SearchOptions,
 };
+#[cfg(feature = "semantic")]
+use dare_graph::MSG_DOWNLOAD_CANCELLED;
 use serde_json::{json, Value};
 
 use crate::output::OutputRenderer;
@@ -24,6 +26,7 @@ pub enum GraphAction {
         limit: usize,
         max_hops: usize,
         fanout: usize,
+        no_semantic: bool,
     },
     Stats {
         dir: Option<PathBuf>,
@@ -32,6 +35,13 @@ pub enum GraphAction {
         dir: Option<PathBuf>,
         output: Option<PathBuf>,
         max_nodes: usize,
+    },
+    Doctor {
+        dir: Option<PathBuf>,
+    },
+    Enable {
+        dir: Option<PathBuf>,
+        yes: bool,
     },
 }
 
@@ -77,6 +87,7 @@ fn run_graph_inner(action: GraphAction) -> CoreResult<(String, Value)> {
             limit,
             max_hops,
             fanout,
+            no_semantic,
         } => {
             if query.trim().is_empty() {
                 return Err(CoreError::invalid_input("query must not be empty"));
@@ -89,15 +100,20 @@ fn run_graph_inner(action: GraphAction) -> CoreResult<(String, Value)> {
                 limit,
                 max_hops,
                 fanout,
-                no_semantic: false,
+                no_semantic,
             };
-            let hits = hybrid_query(&g, &query, &opts)?;
-            let human = format_query_human(&query, &hits);
+            let (hits, warnings) = hybrid_query_with_warnings(&g, &query, &opts)?;
+            let mut human = format_query_human(&query, &hits);
+            for w in &warnings {
+                human.push_str(&format!("\nwarning: {w}"));
+            }
             let data = json!({
                 "action": "graph.query",
                 "query": query,
                 "count": hits.len(),
                 "hits": hits,
+                "warnings": warnings,
+                "noSemantic": no_semantic,
             });
             Ok((human, data))
         }
@@ -146,6 +162,70 @@ fn run_graph_inner(action: GraphAction) -> CoreResult<(String, Value)> {
                 });
                 Ok((mermaid, data))
             }
+        }
+        GraphAction::Doctor { dir } => {
+            let _root = resolve_root(dir)?;
+            let report = semantic_doctor();
+            let human = format!(
+                "semanticCompiled: {}\nmodelPresent: {}\ncacheDir: {}\nembedDim: {}",
+                report.semantic_compiled,
+                report.model_present,
+                report.cache_dir,
+                report.embed_dim
+            );
+            let data = json!({
+                "action": "graph.doctor",
+                "report": report,
+            });
+            Ok((human, data))
+        }
+        GraphAction::Enable { dir, yes } => {
+            let _root = resolve_root(dir)?;
+            run_enable(yes)
+        }
+    }
+}
+
+fn run_enable(yes: bool) -> CoreResult<(String, Value)> {
+    #[cfg(not(feature = "semantic"))]
+    {
+        let _ = yes;
+        Err(CoreError::invalid_input(
+            "semantic feature not compiled into this binary",
+        ))
+    }
+
+    #[cfg(feature = "semantic")]
+    {
+        use dare_graph::{ensure_model, model_is_cached, SemanticOptions, MAX_CANDIDATES};
+
+        let already = model_is_cached();
+        let opts = SemanticOptions {
+            yes,
+            max_candidates: MAX_CANDIDATES,
+        };
+        match ensure_model(&opts) {
+            Ok(_) => {
+                let human = if already {
+                    "model already present".to_string()
+                } else {
+                    "graph enable: model ready".to_string()
+                };
+                let data = json!({
+                    "action": "graph.enable",
+                    "modelPresent": true,
+                    "alreadyCached": already,
+                });
+                Ok((human, data))
+            }
+            Err(e) if e.message() == MSG_DOWNLOAD_CANCELLED => {
+                let data = json!({
+                    "action": "graph.enable",
+                    "cancelled": true,
+                });
+                Ok((MSG_DOWNLOAD_CANCELLED.to_string(), data))
+            }
+            Err(e) => Err(e),
         }
     }
 }

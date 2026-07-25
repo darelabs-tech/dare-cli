@@ -447,7 +447,7 @@ enum GraphCmd {
         #[arg(long, short = 'd')]
         dir: Option<PathBuf>,
     },
-    /// Hybrid keyword + BFS query fused by RRF (no semantic embeddings).
+    /// Hybrid keyword + BFS (+ optional semantic) query fused by RRF.
     Query {
         /// Search query string.
         query: String,
@@ -463,6 +463,9 @@ enum GraphCmd {
         /// Max neighbors per node during BFS (default 50, max 200).
         #[arg(long, default_value_t = 50)]
         fanout: usize,
+        /// Force keyword+BFS only (skip semantic channel even if compiled).
+        #[arg(long = "no-semantic")]
+        no_semantic: bool,
     },
     /// Show graph node/edge statistics.
     Stats {
@@ -481,6 +484,21 @@ enum GraphCmd {
         /// Max nodes to include.
         #[arg(long, default_value_t = 80)]
         max_nodes: usize,
+    },
+    /// Report semantic feature / model cache status.
+    Doctor {
+        /// Project directory (default: cwd; unused by doctor report).
+        #[arg(long, short = 'd')]
+        dir: Option<PathBuf>,
+    },
+    /// Download / confirm the optional MiniLM embedding model (feature `semantic`).
+    Enable {
+        /// Project directory (default: cwd; unused by enable).
+        #[arg(long, short = 'd')]
+        dir: Option<PathBuf>,
+        /// Skip interactive confirm / allow non-TTY download.
+        #[arg(long)]
+        yes: bool,
     },
 }
 
@@ -810,12 +828,14 @@ fn main() -> ExitCode {
                         limit,
                         max_hops,
                         fanout,
+                        no_semantic,
                     } => GraphAction::Query {
                         dir,
                         query,
                         limit,
                         max_hops,
                         fanout,
+                        no_semantic,
                     },
                     GraphCmd::Stats { dir } => GraphAction::Stats { dir },
                     GraphCmd::Viz {
@@ -827,6 +847,8 @@ fn main() -> ExitCode {
                         output,
                         max_nodes,
                     },
+                    GraphCmd::Doctor { dir } => GraphAction::Doctor { dir },
+                    GraphCmd::Enable { dir, yes } => GraphAction::Enable { dir, yes },
                 };
                 run_graph(graph_action, &renderer)
             }
