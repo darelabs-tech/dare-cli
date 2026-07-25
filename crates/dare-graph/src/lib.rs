@@ -4,6 +4,7 @@
 //! Ingest (contentHash + regex symbols), keyword LIKE, BFS, RRF k=60.
 //! Cosine + optional semantic channel (feature `semantic`) → 042; Neo4j → 043.
 
+pub mod advanced;
 mod config;
 mod ids;
 mod ingest;
@@ -15,6 +16,7 @@ mod storage;
 mod types;
 mod vector;
 
+pub use advanced::{locate, owners, LocateOptions, LOCATE_DECAY};
 pub use config::{
     load_graph_config, open_graph, GraphBackend, GraphConfig, GraphHandle, GRAPH_DB_REL,
     GRAPH_JSON_REL, GRAPH_YML_REL,
