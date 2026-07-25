@@ -10,7 +10,7 @@ Library-first crate `dare-graph`: trait `KnowledgeGraph`, backends SQLite + JSON
 | `.dare/graph.json` | JSON |
 | `dare-graph.yml` | Seleção de backend (`backend: sqlite\|json`) |
 
-Neo4j → `InvalidInput` `"not implemented"` até o microplano **043**.
+Neo4j → feature Cargo **`neo4j`** (não default); ver [graphrag-advanced.md](graphrag-advanced.md) (**043** / DEC-046). Sem a feature: `InvalidInput` `"neo4j backend requires the neo4j feature"`.
 
 ## Schema SQLite (versão 1)
 

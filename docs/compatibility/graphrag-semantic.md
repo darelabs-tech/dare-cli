@@ -68,6 +68,6 @@ Hosts only:
 
 ## Out of scope
 
-- Neo4j, locate, impact, owners, drift (**043**)
+- Neo4j, locate, impact, owners, drift → [graphrag-advanced.md](graphrag-advanced.md) (**043** / DEC-046)
 - Cloud embedding APIs
 - Making `semantic` default on stable release
