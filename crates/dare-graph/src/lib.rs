@@ -10,6 +10,7 @@ mod ingest;
 mod knowledge_graph;
 mod migrations;
 mod search;
+pub mod semantic;
 mod storage;
 mod types;
 mod vector;
@@ -39,5 +40,13 @@ pub use storage::{JsonGraph, SqliteGraph};
 pub use types::{
     empty_edges_by_type, empty_nodes_by_type, EdgeType, GraphEdge, GraphNode, GraphStatistics,
     GraphStoreDocument, NodeType, VectorRow, ALL_EDGE_TYPES, ALL_NODE_TYPES,
+};
+pub use semantic::{
+    semantic_doctor, SemanticDoctorReport, ALLOWLIST_HOSTS, EMBED_DIM, EXPECTED_MODEL_BYTES,
+    MAX_CANDIDATES, MAX_PASSAGE_CHARS, MAX_QUERY_CHARS, SEMANTIC_MODEL_DISPLAY, SEMANTIC_MODEL_ID,
+};
+#[cfg(feature = "semantic")]
+pub use semantic::{
+    embed_texts, ensure_model, model_is_cached, models_cache_dir, ModelHandle, SemanticOptions,
 };
 pub use vector::{deserialize_f32_le, serialize_f32_le};
