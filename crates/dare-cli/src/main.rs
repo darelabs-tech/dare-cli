@@ -389,7 +389,7 @@ enum Commands {
         #[command(subcommand)]
         action: SkillCmd,
     },
-    /// GraphRAG ingest / query / stats / viz (microplano 041).
+    /// GraphRAG ingest / query / stats / viz / advanced (microplanos 041–043).
     Graph {
         #[command(subcommand)]
         action: GraphCmd,
@@ -499,6 +499,81 @@ enum GraphCmd {
         /// Skip interactive confirm / allow non-TTY download.
         #[arg(long)]
         yes: bool,
+    },
+    /// Keyword locate with hop decay (default decay 0.7).
+    Locate {
+        /// Search query string.
+        query: String,
+        /// Project directory (default: cwd).
+        #[arg(long, short = 'd')]
+        dir: Option<PathBuf>,
+        /// Max hits to return.
+        #[arg(long, default_value_t = 20)]
+        limit: usize,
+        /// BFS hop limit (default 2, max 5).
+        #[arg(long, default_value_t = 2)]
+        max_hops: usize,
+        /// Max neighbors per node during BFS (default 50, max 200).
+        #[arg(long, default_value_t = 50)]
+        fanout: usize,
+    },
+    /// Resolve owners of a seed node (metadata owner + incoming contains).
+    Owners {
+        /// Seed node id.
+        seed: String,
+        /// Project directory (default: cwd).
+        #[arg(long, short = 'd')]
+        dir: Option<PathBuf>,
+    },
+    /// Blast-radius impact from one or more seeds (comma-separated).
+    Impact {
+        /// Seed node id(s), comma-separated.
+        seeds: String,
+        /// Project directory (default: cwd).
+        #[arg(long, short = 'd')]
+        dir: Option<PathBuf>,
+        /// Max impacted ids to return.
+        #[arg(long, default_value_t = 20)]
+        limit: usize,
+        /// BFS hop limit (default 2, max 5).
+        #[arg(long, default_value_t = 2)]
+        max_hops: usize,
+        /// Max neighbors per node during BFS (default 50, max 200).
+        #[arg(long, default_value_t = 50)]
+        fanout: usize,
+    },
+    /// Shortest paths between two nodes.
+    Trace {
+        /// Source node id.
+        #[arg(long)]
+        from: String,
+        /// Target node id.
+        #[arg(long)]
+        to: String,
+        /// Project directory (default: cwd).
+        #[arg(long, short = 'd')]
+        dir: Option<PathBuf>,
+        /// BFS hop limit (default 2, max 5).
+        #[arg(long, default_value_t = 2)]
+        max_hops: usize,
+        /// Max neighbors per node during BFS (default 50, max 200).
+        #[arg(long, default_value_t = 50)]
+        fanout: usize,
+        /// Max paths to return.
+        #[arg(long, default_value_t = 20)]
+        limit: usize,
+    },
+    /// Classify orphan requirements/code and stale nodes.
+    Drift {
+        /// Project directory (default: cwd).
+        #[arg(long, short = 'd')]
+        dir: Option<PathBuf>,
+        /// Exit 7 when violations meet or exceed --threshold.
+        #[arg(long)]
+        strict: bool,
+        /// Violation count threshold (default 1).
+        #[arg(long, default_value_t = 1)]
+        threshold: u32,
     },
 }
 
@@ -849,6 +924,57 @@ fn main() -> ExitCode {
                     },
                     GraphCmd::Doctor { dir } => GraphAction::Doctor { dir },
                     GraphCmd::Enable { dir, yes } => GraphAction::Enable { dir, yes },
+                    GraphCmd::Locate {
+                        query,
+                        dir,
+                        limit,
+                        max_hops,
+                        fanout,
+                    } => GraphAction::Locate {
+                        dir,
+                        query,
+                        limit,
+                        max_hops,
+                        fanout,
+                    },
+                    GraphCmd::Owners { seed, dir } => GraphAction::Owners { dir, seed },
+                    GraphCmd::Impact {
+                        seeds,
+                        dir,
+                        limit,
+                        max_hops,
+                        fanout,
+                    } => GraphAction::Impact {
+                        dir,
+                        seeds,
+                        limit,
+                        max_hops,
+                        fanout,
+                    },
+                    GraphCmd::Trace {
+                        from,
+                        to,
+                        dir,
+                        max_hops,
+                        fanout,
+                        limit,
+                    } => GraphAction::Trace {
+                        dir,
+                        from,
+                        to,
+                        max_hops,
+                        fanout,
+                        limit,
+                    },
+                    GraphCmd::Drift {
+                        dir,
+                        strict,
+                        threshold,
+                    } => GraphAction::Drift {
+                        dir,
+                        strict,
+                        threshold,
+                    },
                 };
                 run_graph(graph_action, &renderer)
             }

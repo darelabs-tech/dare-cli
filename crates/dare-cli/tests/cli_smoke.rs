@@ -2775,3 +2775,184 @@ fn graph_enable_without_feature_exit_4() {
         .code(4)
         .stderr(predicate::str::contains("semantic feature not compiled"));
 }
+
+/// Shared JSON-backend fixture for advanced graph CLI smokes (043).
+fn write_advanced_graph_fixture(root: &std::path::Path) {
+    std::fs::create_dir_all(root.join(".dare")).unwrap();
+    std::fs::write(root.join("dare-graph.yml"), "backend: json\n").unwrap();
+    let doc = serde_json::json!({
+        "nodes": [
+            {"id": "file:src/seed.rs", "type": "file", "label": "seed module"},
+            {"id": "file:src/mid.rs", "type": "file", "label": "mid"},
+            {"id": "file:src/parent.rs", "type": "file", "label": "parent"},
+            {
+                "id": "file:src/child.rs",
+                "type": "file",
+                "label": "child",
+                "metadata": {"owner": "alice"}
+            },
+            {"id": "A", "type": "file", "label": "A"},
+            {"id": "B", "type": "file", "label": "B"},
+            {"id": "C", "type": "file", "label": "C"},
+            {"id": "requirement:orphan", "type": "requirement", "label": "orphan req"},
+            {"id": "requirement:ok", "type": "requirement", "label": "ok req"},
+            {"id": "file:src/ok.rs", "type": "file", "label": "ok.rs"}
+        ],
+        "edges": [
+            {
+                "id": "related_to:file:src/seed.rs->file:src/mid.rs",
+                "sourceId": "file:src/seed.rs",
+                "targetId": "file:src/mid.rs",
+                "type": "related_to"
+            },
+            {
+                "id": "contains:file:src/parent.rs->file:src/child.rs",
+                "sourceId": "file:src/parent.rs",
+                "targetId": "file:src/child.rs",
+                "type": "contains"
+            },
+            {
+                "id": "depends_on:A->B",
+                "sourceId": "A",
+                "targetId": "B",
+                "type": "depends_on"
+            },
+            {
+                "id": "uses:B->C",
+                "sourceId": "B",
+                "targetId": "C",
+                "type": "uses"
+            },
+            {
+                "id": "implements:requirement:ok->file:src/ok.rs",
+                "sourceId": "requirement:ok",
+                "targetId": "file:src/ok.rs",
+                "type": "implements"
+            }
+        ]
+    });
+    std::fs::write(
+        root.join(".dare/graph.json"),
+        serde_json::to_string_pretty(&doc).unwrap(),
+    )
+    .unwrap();
+}
+
+#[test]
+fn graph_locate_hits_seed() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    write_advanced_graph_fixture(dir.path());
+    let path = dir.path().to_str().expect("utf8");
+
+    Command::new(cargo_bin("dare"))
+        .args(["graph", "locate", "seed", "-d", path, "--no-color"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("graph locate:"))
+        .stdout(predicate::str::contains("file:src/seed.rs"));
+}
+
+#[test]
+fn graph_owners_lists_parent_and_metadata() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    write_advanced_graph_fixture(dir.path());
+    let path = dir.path().to_str().expect("utf8");
+
+    let assert = Command::new(cargo_bin("dare"))
+        .args([
+            "graph",
+            "owners",
+            "file:src/child.rs",
+            "-d",
+            path,
+            "--json",
+            "--no-color",
+        ])
+        .assert()
+        .success();
+    let out = String::from_utf8_lossy(&assert.get_output().stdout);
+    let v: Value = serde_json::from_str(out.trim()).expect("json");
+    assert_eq!(v["ok"], true);
+    let owners = v["data"]["owners"].as_array().expect("owners");
+    let ids: Vec<&str> = owners.iter().filter_map(|x| x.as_str()).collect();
+    assert!(ids.contains(&"alice"));
+    assert!(ids.contains(&"file:src/parent.rs"));
+}
+
+#[test]
+fn graph_impact_blast_radius() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    write_advanced_graph_fixture(dir.path());
+    let path = dir.path().to_str().expect("utf8");
+
+    Command::new(cargo_bin("dare"))
+        .args([
+            "graph",
+            "impact",
+            "A",
+            "-d",
+            path,
+            "--max-hops",
+            "5",
+            "--no-color",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("graph impact:"))
+        .stdout(predicate::str::contains("B"))
+        .stdout(predicate::str::contains("C"));
+}
+
+#[test]
+fn graph_trace_shortest_path() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    write_advanced_graph_fixture(dir.path());
+    let path = dir.path().to_str().expect("utf8");
+
+    Command::new(cargo_bin("dare"))
+        .args([
+            "graph",
+            "trace",
+            "--from",
+            "A",
+            "--to",
+            "C",
+            "-d",
+            path,
+            "--max-hops",
+            "5",
+            "--no-color",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("graph trace:"))
+        .stdout(predicate::str::contains("A -> B -> C"));
+}
+
+#[test]
+fn graph_drift_report_ok() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    write_advanced_graph_fixture(dir.path());
+    let path = dir.path().to_str().expect("utf8");
+
+    // Without --strict, report always exits 0 even when violations > 0.
+    Command::new(cargo_bin("dare"))
+        .args(["graph", "drift", "-d", path, "--no-color"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("graph drift:"))
+        .stdout(predicate::str::contains("violations="));
+}
+
+#[test]
+fn graph_drift_strict_exit_7() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    write_advanced_graph_fixture(dir.path());
+    let path = dir.path().to_str().expect("utf8");
+
+    Command::new(cargo_bin("dare"))
+        .args(["graph", "drift", "--strict", "-d", path, "--no-color"])
+        .assert()
+        .code(7)
+        .stderr(predicate::str::contains("DRIFT_THRESHOLD"));
+}
