@@ -44,7 +44,7 @@ pub use types::{
 pub use semantic::{
     node_passage, rank_by_cosine, semantic_doctor, SemanticDoctorReport, ALLOWLIST_HOSTS,
     EMBED_DIM, EXPECTED_MODEL_BYTES, MAX_CANDIDATES, MAX_PASSAGE_CHARS, MAX_QUERY_CHARS,
-    SEMANTIC_MODEL_DISPLAY, SEMANTIC_MODEL_ID,
+    MSG_DOWNLOAD_CANCELLED, SEMANTIC_MODEL_DISPLAY, SEMANTIC_MODEL_ID,
 };
 #[cfg(feature = "semantic")]
 pub use semantic::{

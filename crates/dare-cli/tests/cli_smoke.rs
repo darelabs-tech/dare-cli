@@ -2710,3 +2710,68 @@ fn graph_query_empty_exit_4() {
         .assert()
         .code(4);
 }
+
+#[test]
+fn graph_doctor_reports_compiled() {
+    let assert = Command::new(cargo_bin("dare"))
+        .args(["graph", "doctor", "--json", "--no-color"])
+        .assert()
+        .success();
+    let out = String::from_utf8_lossy(&assert.get_output().stdout);
+    let v: Value = serde_json::from_str(out.trim()).expect("json");
+    assert_eq!(v["ok"], true);
+    assert_eq!(
+        v["data"]["report"]["semanticCompiled"],
+        false,
+        "default dare-cli binary must not enable feature semantic"
+    );
+    assert!(v["data"]["report"]["embedDim"].as_u64().is_some());
+    assert!(v["data"]["report"]["cacheDir"].is_string());
+
+    Command::new(cargo_bin("dare"))
+        .args(["graph", "doctor", "--no-color"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("semanticCompiled:"));
+}
+
+#[test]
+fn graph_query_no_semantic_ok() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let root = dir.path();
+    std::fs::create_dir_all(root.join("src")).unwrap();
+    std::fs::write(
+        root.join("src/lib.rs"),
+        "pub fn alpha_widget() {}\npub fn beta_helper() {}\n",
+    )
+    .unwrap();
+    let path = root.to_str().expect("utf8");
+
+    Command::new(cargo_bin("dare"))
+        .args(["graph", "ingest", "-d", path, "--no-color"])
+        .assert()
+        .success();
+
+    Command::new(cargo_bin("dare"))
+        .args([
+            "graph",
+            "query",
+            "alpha",
+            "-d",
+            path,
+            "--no-semantic",
+            "--no-color",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("graph query:"));
+}
+
+#[test]
+fn graph_enable_without_feature_exit_4() {
+    Command::new(cargo_bin("dare"))
+        .args(["graph", "enable", "--no-color"])
+        .assert()
+        .code(4)
+        .stderr(predicate::str::contains("semantic feature not compiled"));
+}
