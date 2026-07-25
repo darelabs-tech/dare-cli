@@ -3,7 +3,7 @@
 use dare_core::{CoreError, CoreResult};
 use serde_json::{json, Value};
 
-use crate::render::{scan_secrets, SECRET_SCAN_NEEDLES};
+use crate::render::scan_secrets;
 use crate::types::{StackKind, StackMetadata};
 
 /// Exact count of AX artifacts per stack.
@@ -417,6 +417,7 @@ fn render_rate_limit(meta: &StackMetadata, project_name: &str) -> String {
 mod tests {
     use super::*;
     use crate::registry::{list_stack_ids, scaffolder_for};
+    use crate::render::SECRET_SCAN_NEEDLES;
 
     #[test]
     fn ax_paths_for_each_stack() {
@@ -523,7 +524,7 @@ mod tests {
             let err = scan_secrets(&format!("leak {needle} value")).expect_err("must reject");
             match err {
                 CoreError::InvalidInput(msg) => {
-                    assert_eq!(msg, MSG_SECRET_PATTERN);
+                    assert_eq!(msg, "template contains forbidden secret pattern");
                 }
                 other => panic!("expected InvalidInput, got {other:?}"),
             }
