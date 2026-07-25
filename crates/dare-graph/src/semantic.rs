@@ -355,6 +355,92 @@ pub fn embed_texts(handle: &ModelHandle, texts: &[String]) -> CoreResult<Vec<Vec
     Ok(embeddings)
 }
 
+/// Truncate to at most `limit` Unicode scalar values.
+fn truncate_unicode(s: &str, limit: usize) -> String {
+    if s.chars().count() <= limit {
+        s.to_string()
+    } else {
+        s.chars().take(limit).collect()
+    }
+}
+
+/// Rank candidate passages by cosine similarity to the query embedding.
+///
+/// Returns ids ordered score DESC, id ASC (ranks 1..n for RRF). Caps query/passages.
+#[cfg(feature = "semantic")]
+pub fn vector_rank(
+    handle: &ModelHandle,
+    query: &str,
+    candidates: &[(String, String)],
+) -> CoreResult<Vec<String>> {
+    if candidates.is_empty() {
+        return Ok(Vec::new());
+    }
+    let q = truncate_unicode(query, MAX_QUERY_CHARS);
+    let passages: Vec<String> = candidates
+        .iter()
+        .map(|(_, p)| truncate_unicode(p, MAX_PASSAGE_CHARS))
+        .collect();
+
+    let q_vecs = embed_texts(handle, &[q])?;
+    let q_vec = q_vecs.first().ok_or_else(|| {
+        CoreError::internal("embed_texts returned empty for query")
+    })?;
+    if q_vec.len() != EMBED_DIM {
+        return Err(CoreError::internal(format!(
+            "embedding dim mismatch: got {}, expected {EMBED_DIM}",
+            q_vec.len()
+        )));
+    }
+
+    let p_vecs = embed_texts(handle, &passages)?;
+    if p_vecs.len() != candidates.len() {
+        return Err(CoreError::internal(format!(
+            "embed_texts passage count mismatch: got {}, expected {}",
+            p_vecs.len(),
+            candidates.len()
+        )));
+    }
+
+    let mut scored: Vec<(String, f64)> = Vec::with_capacity(candidates.len());
+    for ((id, _), p_vec) in candidates.iter().zip(p_vecs.iter()) {
+        if p_vec.len() != EMBED_DIM {
+            return Err(CoreError::internal(format!(
+                "embedding dim mismatch for id {id}: got {}, expected {EMBED_DIM}",
+                p_vec.len()
+            )));
+        }
+        let score = crate::vector::cosine_similarity(q_vec, p_vec);
+        scored.push((id.clone(), score));
+    }
+    scored.sort_by(|a, b| {
+        b.1.partial_cmp(&a.1)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| a.0.cmp(&b.0))
+    });
+    Ok(scored.into_iter().map(|(id, _)| id).collect())
+}
+
+/// Rank precomputed embeddings (test / fixture helper). Same sort contract as [`vector_rank`].
+pub fn rank_by_cosine(query: &[f32], candidates: &[(String, Vec<f32>)]) -> Vec<String> {
+    let mut scored: Vec<(String, f64)> = candidates
+        .iter()
+        .map(|(id, vec)| (id.clone(), crate::vector::cosine_similarity(query, vec)))
+        .collect();
+    scored.sort_by(|a, b| {
+        b.1.partial_cmp(&a.1)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| a.0.cmp(&b.0))
+    });
+    scored.into_iter().map(|(id, _)| id).collect()
+}
+
+/// Build passage text: `label + " " + description` (empty desc → trailing space ok / trim not required).
+pub fn node_passage(label: &str, description: Option<&str>) -> String {
+    let desc = description.unwrap_or("");
+    truncate_unicode(&format!("{label} {desc}"), MAX_PASSAGE_CHARS)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -400,6 +486,28 @@ mod tests {
     fn reject_separator_and_absolute_segments() {
         assert!(validate_model_id_segment("a/b").is_err());
         assert!(validate_model_id_segment("a\\b").is_err());
+    }
+
+    #[test]
+    fn rank_by_cosine_score_desc_id_asc() {
+        // query aligned with "high"; tie between a/b on equal score → id ASC
+        let query = vec![1.0_f32, 0.0, 0.0];
+        let ranked = rank_by_cosine(
+            &query,
+            &[
+                ("b".into(), vec![1.0, 0.0, 0.0]),
+                ("a".into(), vec![1.0, 0.0, 0.0]),
+                ("c".into(), vec![0.0, 1.0, 0.0]),
+            ],
+        );
+        assert_eq!(ranked, vec!["a", "b", "c"]);
+    }
+
+    #[test]
+    fn node_passage_truncates_to_max_passage_chars() {
+        let long = "x".repeat(MAX_PASSAGE_CHARS + 50);
+        let p = node_passage(&long, Some("tail"));
+        assert_eq!(p.chars().count(), MAX_PASSAGE_CHARS);
     }
 
     #[cfg(feature = "semantic")]
