@@ -16,7 +16,10 @@ mod storage;
 mod types;
 mod vector;
 
-pub use advanced::{locate, owners, LocateOptions, LOCATE_DECAY};
+pub use advanced::{
+    drift, drift_exceeds_threshold, locate, owners, DriftOptions, DriftReport, LocateOptions,
+    LOCATE_DECAY,
+};
 pub use config::{
     load_graph_config, open_graph, GraphBackend, GraphConfig, GraphHandle, GRAPH_DB_REL,
     GRAPH_JSON_REL, GRAPH_YML_REL,

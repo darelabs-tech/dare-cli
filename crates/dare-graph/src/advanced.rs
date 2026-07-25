@@ -1,8 +1,9 @@
-//! Advanced GraphRAG queries: locate (decay BFS) and owners (043).
+//! Advanced GraphRAG queries (043): locate, owners, drift.
 
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use dare_core::{CoreError, CoreResult};
+use serde::Serialize;
 use serde_json::Value;
 
 use crate::knowledge_graph::{EdgeDirection, KnowledgeGraph};
@@ -10,7 +11,7 @@ use crate::search::{
     node_matches_keyword, RankedHit, DEFAULT_FANOUT, DEFAULT_LIMIT, DEFAULT_MAX_HOPS,
     MAX_FANOUT_CAP, MAX_HOPS_CAP, MAX_LIMIT_CAP,
 };
-use crate::types::EdgeType;
+use crate::types::{EdgeType, NodeType};
 
 /// Hop decay factor for [`locate`] (score = `1.0 * LOCATE_DECAY.powi(hop)`).
 pub const LOCATE_DECAY: f64 = 0.7;
@@ -54,9 +55,7 @@ fn validate_decay(decay: f64) -> CoreResult<()> {
     if decay > 0.0 && decay <= 1.0 {
         Ok(())
     } else {
-        Err(CoreError::invalid_input(
-            "decay must be in (0.0, 1.0]",
-        ))
+        Err(CoreError::invalid_input("decay must be in (0.0, 1.0]"))
     }
 }
 
@@ -185,11 +184,105 @@ pub fn owners(g: &dyn KnowledgeGraph, seed: &str) -> CoreResult<Vec<String>> {
     Ok(out.into_iter().collect())
 }
 
+/// Options for [`drift`]. Default threshold is `1`.
+#[derive(Debug, Clone)]
+pub struct DriftOptions {
+    /// Violation count threshold used by [`drift_exceeds_threshold`].
+    /// `0` means any positive violation count exceeds.
+    pub threshold: u32,
+}
+
+impl Default for DriftOptions {
+    fn default() -> Self {
+        Self { threshold: 1 }
+    }
+}
+
+/// Drift classification report (JSON camelCase).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DriftReport {
+    pub orphan_requirements: Vec<String>,
+    pub orphan_code: Vec<String>,
+    pub stale: Vec<String>,
+    pub violations: u32,
+    pub threshold: u32,
+}
+
+fn is_stale_metadata(value: &Value) -> bool {
+    match value {
+        Value::Bool(true) => true,
+        Value::String(s) => s.eq_ignore_ascii_case("true"),
+        _ => false,
+    }
+}
+
+/// Classify orphan requirements, orphan code, and stale nodes.
+///
+/// Always returns `Ok(report)` when the graph is readable; exit code 7 is CLI-only.
+pub fn drift(g: &dyn KnowledgeGraph, opts: &DriftOptions) -> CoreResult<DriftReport> {
+    let doc = g.export_document()?;
+    let implements = EdgeType::Implements.as_str();
+
+    let mut implements_out: BTreeSet<&str> = BTreeSet::new();
+    let mut implements_in: BTreeSet<&str> = BTreeSet::new();
+    for e in &doc.edges {
+        if e.edge_type == implements {
+            implements_out.insert(e.source_id.as_str());
+            implements_in.insert(e.target_id.as_str());
+        }
+    }
+
+    let req_ty = NodeType::Requirement.as_str();
+    let file_ty = NodeType::File.as_str();
+    let symbol_ty = NodeType::CodeSymbol.as_str();
+
+    let mut orphan_requirements: BTreeSet<String> = BTreeSet::new();
+    let mut orphan_code: BTreeSet<String> = BTreeSet::new();
+    let mut stale: BTreeSet<String> = BTreeSet::new();
+
+    for n in &doc.nodes {
+        if n.node_type == req_ty && !implements_out.contains(n.id.as_str()) {
+            orphan_requirements.insert(n.id.clone());
+        }
+        if (n.node_type == file_ty || n.node_type == symbol_ty)
+            && !implements_in.contains(n.id.as_str())
+        {
+            orphan_code.insert(n.id.clone());
+        }
+        if n.metadata.get("stale").is_some_and(is_stale_metadata) {
+            stale.insert(n.id.clone());
+        }
+    }
+
+    let orphan_requirements: Vec<String> = orphan_requirements.into_iter().collect();
+    let orphan_code: Vec<String> = orphan_code.into_iter().collect();
+    let stale: Vec<String> = stale.into_iter().collect();
+    let violations = (orphan_requirements.len() + orphan_code.len() + stale.len()) as u32;
+
+    Ok(DriftReport {
+        orphan_requirements,
+        orphan_code,
+        stale,
+        violations,
+        threshold: opts.threshold,
+    })
+}
+
+/// Helper for CLI strict mode: `threshold == 0` ⇒ `violations > 0`; else `violations >= threshold`.
+pub fn drift_exceeds_threshold(report: &DriftReport) -> bool {
+    if report.threshold == 0 {
+        report.violations > 0
+    } else {
+        report.violations >= report.threshold
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::ids::{canonical_edge_id, canonical_file_node_id};
-    use crate::types::{EdgeType, GraphEdge, GraphNode, NodeType};
+    use crate::types::{GraphEdge, GraphNode};
     use crate::{load_graph_config, open_graph};
     use dare_core::ProjectRoot;
     use serde_json::json;
@@ -252,7 +345,6 @@ mod tests {
         assert!((by_id[a.as_str()] - 1.0).abs() < 1e-12);
         assert!((by_id[b.as_str()] - 0.7).abs() < 1e-12);
         assert!((by_id[c.as_str()] - 0.49).abs() < 1e-12);
-        // score DESC: a (1.0), b (0.7), c (0.49)
         assert_eq!(hits[0].id, a);
         assert_eq!(hits[1].id, b);
         assert_eq!(hits[2].id, c);
@@ -312,5 +404,119 @@ mod tests {
             err,
             CoreError::InvalidInput(ref m) if m.contains("unknown node")
         ));
+    }
+
+    #[test]
+    fn drift_three_buckets() {
+        let dir = tempdir().unwrap();
+        let root = ProjectRoot::new(dir.path()).unwrap();
+        let cfg = load_graph_config(&root, None).unwrap();
+        let mut g = open_graph(&root, &cfg).unwrap();
+        g.migrate().unwrap();
+
+        let req_ok = "requirement:r-ok".to_string();
+        let file_ok = "file:src/ok.rs".to_string();
+        g.add_node(GraphNode::new(req_ok.clone(), NodeType::Requirement, "ok"))
+            .unwrap();
+        g.add_node(GraphNode::new(file_ok.clone(), NodeType::File, "ok.rs"))
+            .unwrap();
+        g.add_edge(GraphEdge::new(
+            canonical_edge_id(EdgeType::Implements.as_str(), &req_ok, &file_ok),
+            req_ok.clone(),
+            file_ok.clone(),
+            EdgeType::Implements,
+        ))
+        .unwrap();
+
+        let req_orphan = "requirement:r-orphan".to_string();
+        g.add_node(GraphNode::new(
+            req_orphan.clone(),
+            NodeType::Requirement,
+            "orphan",
+        ))
+        .unwrap();
+
+        let file_orphan = "file:src/orphan.rs".to_string();
+        let sym_orphan = "code_symbol:src/orphan.rs::f".to_string();
+        g.add_node(GraphNode::new(
+            file_orphan.clone(),
+            NodeType::File,
+            "orphan.rs",
+        ))
+        .unwrap();
+        g.add_node(GraphNode::new(
+            sym_orphan.clone(),
+            NodeType::CodeSymbol,
+            "f",
+        ))
+        .unwrap();
+
+        let mut stale_bool = GraphNode::new("file:stale-bool.rs", NodeType::File, "stale-bool");
+        stale_bool
+            .metadata
+            .insert("stale".into(), Value::Bool(true));
+        g.add_node(stale_bool).unwrap();
+
+        let mut stale_str = GraphNode::new("task:stale-str", NodeType::Task, "stale-str");
+        stale_str
+            .metadata
+            .insert("stale".into(), json!("TRUE"));
+        g.add_node(stale_str).unwrap();
+
+        let mut not_stale = GraphNode::new("task:fresh", NodeType::Task, "fresh");
+        not_stale
+            .metadata
+            .insert("stale".into(), json!("false"));
+        g.add_node(not_stale).unwrap();
+
+        g.flush().unwrap();
+
+        let report = drift(&g, &DriftOptions::default()).unwrap();
+
+        assert_eq!(report.orphan_requirements, vec![req_orphan]);
+        assert_eq!(
+            report.orphan_code,
+            vec![
+                "code_symbol:src/orphan.rs::f".to_string(),
+                "file:src/orphan.rs".to_string(),
+                "file:stale-bool.rs".to_string(),
+            ]
+        );
+        assert_eq!(
+            report.stale,
+            vec![
+                "file:stale-bool.rs".to_string(),
+                "task:stale-str".to_string(),
+            ]
+        );
+        assert_eq!(report.threshold, 1);
+        assert_eq!(
+            report.violations,
+            (report.orphan_requirements.len()
+                + report.orphan_code.len()
+                + report.stale.len()) as u32
+        );
+        assert!(!report.orphan_requirements.contains(&req_ok));
+        assert!(!report.orphan_code.contains(&file_ok));
+        assert!(!report.stale.iter().any(|id| id == "task:fresh"));
+    }
+
+    #[test]
+    fn drift_exceeds_threshold_cases() {
+        let mk = |violations: u32, threshold: u32| DriftReport {
+            orphan_requirements: vec![],
+            orphan_code: vec![],
+            stale: vec![],
+            violations,
+            threshold,
+        };
+
+        assert!(!drift_exceeds_threshold(&mk(0, 0)));
+        assert!(drift_exceeds_threshold(&mk(1, 0)));
+        assert!(!drift_exceeds_threshold(&mk(0, 1)));
+        assert!(drift_exceeds_threshold(&mk(1, 1)));
+        assert!(!drift_exceeds_threshold(&mk(1, 2)));
+        assert!(drift_exceeds_threshold(&mk(2, 2)));
+        assert!(drift_exceeds_threshold(&mk(5, 3)));
     }
 }
