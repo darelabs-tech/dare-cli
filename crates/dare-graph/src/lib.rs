@@ -1,8 +1,8 @@
-//! GraphRAG storage + ingest/search (microplanos 040–041).
+//! GraphRAG storage + ingest/search (microplanos 040–042).
 //!
 //! Backends: SQLite (`.dare/graph.db`) and JSON (`.dare/graph.json`).
 //! Ingest (contentHash + regex symbols), keyword LIKE, BFS, RRF k=60.
-//! Semantic embeddings → 042; Neo4j → 043.
+//! Cosine + optional semantic channel (feature `semantic`) → 042; Neo4j → 043.
 
 mod config;
 mod ids;
@@ -30,9 +30,10 @@ pub use ingest::{
 pub use knowledge_graph::{EdgeDirection, KnowledgeGraph};
 pub use migrations::{detect_sqlite_schema_version, CURRENT_SCHEMA_VERSION, SCHEMA_SQL};
 pub use search::{
-    bfs_expand, hybrid_query, keyword_search, node_matches_keyword, render_mermaid_subset,
-    rrf_fuse, RankedHit, SearchOptions, DEFAULT_FANOUT, DEFAULT_LIMIT, DEFAULT_MAX_HOPS,
-    MAX_FANOUT_CAP, MAX_HOPS_CAP, MAX_LIMIT_CAP, RRF_K,
+    bfs_expand, cosine_similarity, hybrid_query, hybrid_query_with_warnings, keyword_search,
+    node_matches_keyword, render_mermaid_subset, rrf_fuse, RankedHit, SearchOptions,
+    DEFAULT_FANOUT, DEFAULT_LIMIT, DEFAULT_MAX_HOPS, MAX_FANOUT_CAP, MAX_HOPS_CAP, MAX_LIMIT_CAP,
+    MSG_SEMANTIC_UNAVAILABLE, RRF_K,
 };
 pub use storage::{JsonGraph, SqliteGraph};
 pub use types::{
