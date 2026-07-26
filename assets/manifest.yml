@@ -26,7 +26,7 @@ assets:
   kind: canonical
 - id: capability-matrix
   path: capability-matrix.yml
-  sha256: 71d8c7257457c4c4bc7c8468c22098f657c572187b3227e8f446e928c6878e60
+  sha256: 0be176ef70f43f7d5977b79c5ef02c3c8d0185a12c87496a26609d2597d13c4e
   kind: canonical
 - id: update-manifest-v2
   path: update-manifest.v2.json
