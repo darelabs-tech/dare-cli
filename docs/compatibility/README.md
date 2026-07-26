@@ -36,6 +36,7 @@ Microplano **001** (governança, baseline e ADRs prioritárias) concluído em 20
 | [`disk-and-json-policy.md`](disk-and-json-policy.md) | Disco, paths, ordenação e writers JSON/YAML | RF-09 |
 | [`breaking-change-process.md`](breaking-change-process.md) | Máquina de estados e lista fechada de breaking types | RF-11 |
 | [`fixtures-inventory.md`](fixtures-inventory.md) | Inventário de fixtures de regressão | RF-12 |
+| [`scaffold-contracts.md`](scaffold-contracts.md) | Crate `dare-scaffold`: 11 stacks, 7 AX, plan/apply (046 / DEC-047) | — |
 
 ## Relacionamentos
 

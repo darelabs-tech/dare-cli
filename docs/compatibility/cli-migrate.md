@@ -110,6 +110,10 @@ mode: check (zero mutations)
 - `--ai` soft-fail: provider/parse/inject errors become warnings, exit **0** (non-corrupt plan remains)
 - No shell concatenation
 
+## Scaffold stack ids (046)
+
+Greenfield scaffold registry ids and AX contracts live in [`scaffold-contracts.md`](scaffold-contracts.md). The migrate allowlist id `rails` maps to scaffold id **`ruby-rails-8`** for future **`dare init`** (microplano 047); `dare-scaffold` rejects bare `rails` with a hint.
+
 ## Compatibility notes
 
 | Diff | Class | Note |
