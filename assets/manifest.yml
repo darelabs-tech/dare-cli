@@ -30,9 +30,9 @@ assets:
   kind: canonical
 - id: update-manifest-v2
   path: update-manifest.v2.json
-  sha256: f4f3246c1c72e2802cdc8ee05537e3bc9527b50cdd2d4d911e21031563267c96
+  sha256: 1ad5109d903d00f97c0c053d631395c9860491ff7636e694bdec53d3a81bc14e
   kind: canonical
 - id: rules-scan
   path: rules/scan-rules.json
-  sha256: 66639638ec028c89ba170dffab6d21e99d2a4bd256b111025684f7a8016c84a9
+  sha256: b92bc0d5171e285a02cf77c6323f3aa336b6b5cea9bea598c7963fff704a8839
   kind: canonical
