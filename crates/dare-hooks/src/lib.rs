@@ -1,6 +1,6 @@
-//! Closed hook events, allowlisted actions, defs load, trust helpers, and idempotency.
+//! Closed hook events, allowlisted actions, defs load, trust helpers, idempotency, and run.
 //!
-//! Microplano 048 — domain crate only; no CLI / spawn here.
+//! Microplano 048 — domain crate; CLI wiring is separate.
 
 mod action;
 mod config;
@@ -9,6 +9,7 @@ mod event;
 mod idempotency;
 mod list_validate;
 mod report;
+mod run;
 
 pub use action::{action_argv, HookAction};
 pub use config::{hooks_enabled, hooks_trusted, MSG_HOOKS_DISABLED, MSG_HOOKS_TRUST};
@@ -23,5 +24,7 @@ pub use idempotency::{
 };
 pub use list_validate::{list_hooks, validate_hooks};
 pub use report::{
-    HookListItem, HooksListReport, HooksValidateReport, HOOKS_LIST_SCHEMA, HOOKS_VALIDATE_SCHEMA,
+    HookActionResult, HookListItem, HooksListReport, HooksRunReport, HooksValidateReport,
+    HOOKS_LIST_SCHEMA, HOOKS_RUN_SCHEMA, HOOKS_VALIDATE_SCHEMA,
 };
+pub use run::{run_hooks, RunHooksRequest};
