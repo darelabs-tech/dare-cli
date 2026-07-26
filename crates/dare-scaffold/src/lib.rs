@@ -19,7 +19,7 @@ pub use render::{render_template, scan_secrets, SECRET_SCAN_NEEDLES};
 pub use trait_api::{GenericScaffolder, StackScaffolder};
 pub use validate::validate_stack_output;
 pub use types::{
-    FrontendKind, PlanAction, PlanItemKind, ScaffoldApplyReport, ScaffoldPlan, ScaffoldPlanItem,
-    ScaffoldRequest, StackKind, StackMetadata, Toolchain, Transport, ValidationReport,
-    SCHEMA_VERSION,
+    ConflictPolicy, FrontendKind, PlanAction, PlanItemKind, ScaffoldApplyReport, ScaffoldPlan,
+    ScaffoldPlanItem, ScaffoldRequest, StackKind, StackMetadata, Toolchain, Transport,
+    ValidationReport, SCHEMA_VERSION,
 };

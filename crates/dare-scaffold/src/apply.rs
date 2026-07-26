@@ -10,7 +10,8 @@ use crate::ax::generate_ax_files;
 use crate::plan::plan_scaffold;
 use crate::render::render_template;
 use crate::types::{
-    PlanAction, PlanItemKind, ScaffoldApplyReport, ScaffoldPlan, ScaffoldRequest, SCHEMA_VERSION,
+    FrontendKind, PlanAction, PlanItemKind, ScaffoldApplyReport, ScaffoldPlan, ScaffoldRequest,
+    SCHEMA_VERSION,
 };
 
 const JOURNAL_DIR_PREFIX: &str = ".dare/scaffold-session";
@@ -133,6 +134,33 @@ fn remove_journal_dir(root: &ProjectRoot, journal_root: &SafeRelativePath) -> Co
     Ok(())
 }
 
+fn frontend_asset_id(kind: FrontendKind) -> &'static str {
+    match kind {
+        FrontendKind::React => "react",
+        FrontendKind::Vue => "vue",
+    }
+}
+
+fn embedded_frontend_asset_key(frontend: FrontendKind, dest_path: &str) -> CoreResult<String> {
+    let rel = dest_path.strip_prefix("frontend/").ok_or_else(|| {
+        CoreError::internal(format!(
+            "frontend asset dest must start with `frontend/`: `{dest_path}`"
+        ))
+    })?;
+    let fe_id = frontend_asset_id(frontend);
+    let tpl = format!("stacks/_frontend/{fe_id}/{rel}.tpl");
+    if EmbeddedAssets::get(&tpl).is_some() {
+        return Ok(tpl);
+    }
+    let plain = format!("stacks/_frontend/{fe_id}/{rel}");
+    if EmbeddedAssets::get(&plain).is_some() {
+        return Ok(plain);
+    }
+    Err(CoreError::not_found(format!(
+        "embedded frontend asset missing for `{dest_path}` (frontend `{fe_id}`)"
+    )))
+}
+
 fn embedded_asset_key(stack_id: &str, dest_path: &str) -> CoreResult<String> {
     let tpl = format!("stacks/{stack_id}/{dest_path}.tpl");
     if EmbeddedAssets::get(&tpl).is_some() {
@@ -153,6 +181,7 @@ fn resolve_item_bytes(
     project_name: &str,
     dest_path: &str,
     ax_index: &HashMap<String, String>,
+    frontend: Option<FrontendKind>,
 ) -> CoreResult<Vec<u8>> {
     match item_kind {
         PlanItemKind::Ax => {
@@ -162,7 +191,16 @@ fn resolve_item_bytes(
             Ok(content.as_bytes().to_vec())
         }
         PlanItemKind::Meta | PlanItemKind::Template => {
-            let key = embedded_asset_key(stack_id, dest_path)?;
+            let key = if dest_path.starts_with("frontend/") {
+                let fe = frontend.ok_or_else(|| {
+                    CoreError::internal(format!(
+                        "frontend asset `{dest_path}` requires plan.frontend"
+                    ))
+                })?;
+                embedded_frontend_asset_key(fe, dest_path)?
+            } else {
+                embedded_asset_key(stack_id, dest_path)?
+            };
             let file = EmbeddedAssets::get(&key).ok_or_else(|| {
                 CoreError::not_found(format!("embedded asset missing: {key}"))
             })?;
@@ -225,10 +263,12 @@ fn apply_scaffold_inner(
 
     let mut created = Vec::new();
     let mut replaced = Vec::new();
+    let mut skipped = Vec::new();
 
     let mut apply_body = || -> CoreResult<()> {
         for item in &plan.items {
             if item.action == PlanAction::Skip {
+                skipped.push(item.path.clone());
                 continue;
             }
 
@@ -245,6 +285,7 @@ fn apply_scaffold_inner(
                 &plan.project_name,
                 &item.path,
                 &ax_index,
+                plan.frontend,
             )?;
             atomic_write(root, &dest, &bytes)?;
 
@@ -279,6 +320,7 @@ fn apply_scaffold_inner(
 
     created.sort();
     replaced.sort();
+    skipped.sort();
     remove_journal_dir(root, &journal_root)?;
 
     Ok(ScaffoldApplyReport {
@@ -286,7 +328,7 @@ fn apply_scaffold_inner(
         stack_id: plan.stack_id.clone(),
         created,
         replaced,
-        skipped: vec![],
+        skipped,
         rolled_back: false,
         check: false,
     })
@@ -351,6 +393,7 @@ mod tests {
             toolchain: Toolchain::None,
             transport: None,
             frontend: None,
+            conflict_policy: crate::types::ConflictPolicy::FailFast,
             force,
             check,
         }

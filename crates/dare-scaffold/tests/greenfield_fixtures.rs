@@ -13,6 +13,7 @@ fn scaffold_request(stack_id: &str) -> ScaffoldRequest {
         toolchain: Toolchain::None,
         transport: None,
         frontend: None,
+        conflict_policy: dare_scaffold::ConflictPolicy::FailFast,
         force: false,
         check: false,
     }

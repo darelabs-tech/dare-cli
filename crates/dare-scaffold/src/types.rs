@@ -29,12 +29,19 @@ pub enum Transport {
     Sse,
 }
 
-/// Reserved for microplano 047 — always `None` in 046.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum FrontendKind {
     React,
     Vue,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ConflictPolicy {
+    #[default]
+    FailFast,
+    SkipExisting,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -56,6 +63,7 @@ pub struct ScaffoldRequest {
     pub toolchain: Toolchain,
     pub transport: Option<Transport>,
     pub frontend: Option<FrontendKind>,
+    pub conflict_policy: ConflictPolicy,
     pub force: bool,
     pub check: bool,
 }
@@ -90,6 +98,7 @@ pub struct ScaffoldPlan {
     pub schema_version: u32,
     pub stack_id: String,
     pub project_name: String,
+    pub frontend: Option<FrontendKind>,
     pub items: Vec<ScaffoldPlanItem>,
 }
 
