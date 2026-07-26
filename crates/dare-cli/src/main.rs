@@ -8,6 +8,7 @@ use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
 use commands::blueprint::{run_blueprint, BlueprintInput};
+use commands::bootstrap::{run_bootstrap_cmd, BootstrapCliOpts};
 use commands::dag::{run_dag_viz, CliVizFormat};
 use commands::design::run_design;
 use commands::discover::run_discover;
@@ -16,6 +17,7 @@ use commands::execute::{run_execute, ExecuteAction};
 use commands::graph::{run_graph, GraphAction};
 use commands::guard::{run_guard_cmd, GuardCliOpts};
 use commands::info::{collect_info, format_human, report_to_json};
+use commands::init::{run_init_cmd, InitCliOpts};
 use commands::migrate::{run_migrate_cmd, MigrateCliOpts};
 use commands::patterns::run_patterns_cmd;
 use commands::refine::{run_refine_cmd, RefineCliArgs};
@@ -93,6 +95,53 @@ enum Commands {
         /// Abort install when stack conflicts are present.
         #[arg(long)]
         strict_conflicts: bool,
+    },
+    /// Greenfield init: scaffold + config + harnesses (microplano 047).
+    Init {
+        /// Project name (directory name under parent).
+        name: Option<String>,
+        /// Backend stack id (alias: rails → ruby-rails-8).
+        #[arg(long)]
+        stack: Option<String>,
+        /// MCP language alias (mutually exclusive with --stack).
+        #[arg(long)]
+        mcp: Option<String>,
+        /// Fullstack frontend companion (react|vue; requires --stack).
+        #[arg(long)]
+        fullstack: Option<String>,
+        /// MCP transport (stdio|http|sse; MCP stacks only).
+        #[arg(long)]
+        transport: Option<String>,
+        /// Toolchain overlay (none|docker).
+        #[arg(long)]
+        toolchain: Option<String>,
+        /// Non-interactive mode (requires name + --stack or --mcp).
+        #[arg(long)]
+        non_interactive: bool,
+        /// Overwrite when target exists.
+        #[arg(long)]
+        force: bool,
+        /// Plan only — zero writes.
+        #[arg(long)]
+        check: bool,
+        /// Parent directory (default: cwd); target = {dir}/{name}.
+        #[arg(long, short = 'd')]
+        dir: Option<PathBuf>,
+    },
+    /// Re-apply scaffold on existing greenfield project (microplano 047).
+    Bootstrap {
+        /// Overwrite existing scaffold files (Replace policy).
+        #[arg(long)]
+        force: bool,
+        /// Toolchain overlay (none|docker).
+        #[arg(long)]
+        toolchain: Option<String>,
+        /// Plan only — zero writes.
+        #[arg(long)]
+        check: bool,
+        /// Project directory (default: cwd).
+        #[arg(long, short = 'd')]
+        dir: Option<PathBuf>,
     },
     /// Brownfield reverse engineering → IDEIA.md + REVERSE specs.
     Reverse {
@@ -1060,6 +1109,40 @@ fn run(cli: Cli) -> Result<(String, serde_json::Value), CoreError> {
             dry_run,
             strict_conflicts,
         }) => run_discover(dir, check, force, dry_run, strict_conflicts),
+        Some(Commands::Init {
+            name,
+            stack,
+            mcp,
+            fullstack,
+            transport,
+            toolchain,
+            non_interactive,
+            force,
+            check,
+            dir,
+        }) => run_init_cmd(InitCliOpts {
+            name,
+            dir,
+            stack,
+            mcp,
+            fullstack,
+            transport,
+            toolchain,
+            non_interactive,
+            force,
+            check,
+        }),
+        Some(Commands::Bootstrap {
+            force,
+            toolchain,
+            check,
+            dir,
+        }) => run_bootstrap_cmd(BootstrapCliOpts {
+            dir,
+            toolchain,
+            force,
+            check,
+        }),
         Some(Commands::Reverse {
             dir,
             check,

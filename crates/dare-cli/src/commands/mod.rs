@@ -1,5 +1,6 @@
 //! Top-level CLI command modules.
 
+pub mod bootstrap;
 pub mod blueprint;
 pub mod dag;
 pub mod design;
@@ -10,6 +11,7 @@ pub mod execute_agent;
 pub mod graph;
 pub mod guard;
 pub mod info;
+pub mod init;
 pub mod migrate;
 pub mod path_resolve;
 pub mod patterns;
