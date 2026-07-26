@@ -677,6 +677,7 @@ dependencies = [
  "dare-review",
  "dare-scaffold",
  "dare-skills",
+ "dare-steering",
  "dare-update",
  "dare-verify",
  "dialoguer",

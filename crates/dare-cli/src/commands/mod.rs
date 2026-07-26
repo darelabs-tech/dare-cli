@@ -20,6 +20,7 @@ pub mod refine;
 pub mod reverse;
 pub mod review;
 pub mod skill;
+pub mod steering;
 pub mod update;
 pub mod validate;
 pub mod welcome;

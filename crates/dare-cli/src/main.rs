@@ -24,6 +24,7 @@ use commands::refine::{run_refine_cmd, RefineCliArgs};
 use commands::reverse::{run_reverse, ReverseCliOpts};
 use commands::review::{run_review_cmd, ReviewCliArgs};
 use commands::skill::{run_skill, SkillAction};
+use commands::steering::{run_steering_list, run_steering_show};
 use commands::update::run_update;
 use commands::validate::run_validate;
 use commands::welcome::{render_welcome, WelcomeOptions};
@@ -442,6 +443,29 @@ enum Commands {
     Graph {
         #[command(subcommand)]
         action: GraphCmd,
+    },
+    /// Steering file discovery and resolution (microplano 048).
+    Steering {
+        #[command(subcommand)]
+        action: SteeringCmd,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+enum SteeringCmd {
+    /// List PROJECT-DNA, PATTERNS, and `.dare/steering/*.md` in precedence order.
+    List {
+        /// Project directory (default: cwd).
+        #[arg(long, short = 'd')]
+        dir: Option<PathBuf>,
+    },
+    /// Show steering blocks applicable to a project-relative file path.
+    Show {
+        /// Target file (project-relative).
+        file: String,
+        /// Project directory (default: cwd).
+        #[arg(long, short = 'd')]
+        dir: Option<PathBuf>,
     },
 }
 
@@ -1172,6 +1196,10 @@ fn run(cli: Cli) -> Result<(String, serde_json::Value), CoreError> {
             inject,
             ast,
         }) => run_patterns_cmd(dir, check, inject, ast, modules),
+        Some(Commands::Steering { action }) => match action {
+            SteeringCmd::List { dir } => run_steering_list(dir),
+            SteeringCmd::Show { file, dir } => run_steering_show(file, dir),
+        },
         Some(Commands::Migrate {
             to,
             dir,
