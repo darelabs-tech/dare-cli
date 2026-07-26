@@ -1,5 +1,4 @@
-//! CLI integration: `dare steering list|show` (mp048-006).
-//! Hooks CLI smokes land in mp048-005 — leave room; do not stub hooks here.
+//! CLI integration: `dare hooks` (mp048-005) + `dare steering` (mp048-006).
 
 use assert_cmd::cargo::cargo_bin;
 use assert_cmd::Command;
@@ -30,6 +29,70 @@ fn help_mentions_steering() {
         .assert()
         .success()
         .stdout(predicate::str::contains("steering"));
+}
+
+#[test]
+fn help_mentions_hooks() {
+    Command::new(cargo_bin("dare"))
+        .arg("--help")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("hooks"));
+}
+
+#[test]
+fn unknown_event_exit_2() {
+    Command::new(cargo_bin("dare"))
+        .args(["hooks", "run", "nosuch", "--no-color"])
+        .assert()
+        .code(2)
+        .stderr(predicate::str::contains("unknown hook event"));
+}
+
+#[test]
+fn untrusted_exit_2() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    write_file(dir.path(), "src/x.rs", "fn main() {}\n");
+    let dir_str = dir.path().to_str().expect("utf8 path");
+
+    Command::new(cargo_bin("dare"))
+        .args([
+            "hooks",
+            "run",
+            "on-save",
+            "--file",
+            "x.rs",
+            "-d",
+            dir_str,
+            "--no-color",
+        ])
+        .assert()
+        .code(2)
+        .stderr(predicate::str::contains("HOOKS_TRUST"));
+}
+
+#[test]
+fn validate_ok_json() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let dir_str = dir.path().to_str().expect("utf8 path");
+
+    let assert = Command::new(cargo_bin("dare"))
+        .args([
+            "hooks",
+            "validate",
+            "--json",
+            "-d",
+            dir_str,
+            "--no-color",
+        ])
+        .assert()
+        .success();
+
+    let v = parse_json_envelope(&assert.get_output().stdout);
+    assert_eq!(v["ok"], true);
+    let data = &v["data"];
+    assert_eq!(data["schemaVersion"], 1);
+    assert_eq!(data["ok"], true);
 }
 
 #[test]

@@ -673,6 +673,7 @@ dependencies = [
  "dare-graph",
  "dare-guard",
  "dare-harness",
+ "dare-hooks",
  "dare-project",
  "dare-review",
  "dare-scaffold",

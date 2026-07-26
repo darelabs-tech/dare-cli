@@ -24,6 +24,7 @@ use commands::refine::{run_refine_cmd, RefineCliArgs};
 use commands::reverse::{run_reverse, ReverseCliOpts};
 use commands::review::{run_review_cmd, ReviewCliArgs};
 use commands::skill::{run_skill, SkillAction};
+use commands::hooks::{run_hooks_cmd, run_hooks_list, run_hooks_validate};
 use commands::steering::{run_steering_list, run_steering_show};
 use commands::update::run_update;
 use commands::validate::run_validate;
@@ -444,10 +445,48 @@ enum Commands {
         #[command(subcommand)]
         action: GraphCmd,
     },
+    /// Deterministic hooks list / run / validate (microplano 048).
+    Hooks {
+        #[command(subcommand)]
+        action: HooksCmd,
+    },
     /// Steering file discovery and resolution (microplano 048).
     Steering {
         #[command(subcommand)]
         action: SteeringCmd,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+enum HooksCmd {
+    /// List hooks defs (embedded default or `.dare/hooks.yml` overlay).
+    List {
+        /// Project directory (default: cwd).
+        #[arg(long, short = 'd')]
+        dir: Option<PathBuf>,
+    },
+    /// Run hooks for a lifecycle event (trust gate + idempotent spawn).
+    Run {
+        /// Event id (`on-save`, `on-file-create`, `on-task-complete`, `pre-commit`).
+        event: String,
+        /// Optional project-relative file path for the event.
+        #[arg(long)]
+        file: Option<String>,
+        /// Optional task id for the event.
+        #[arg(long)]
+        task: Option<String>,
+        /// Bypass hooks.trusted=false for this invocation.
+        #[arg(long)]
+        trust: bool,
+        /// Project directory (default: cwd).
+        #[arg(long, short = 'd')]
+        dir: Option<PathBuf>,
+    },
+    /// Validate hooks defs without executing actions.
+    Validate {
+        /// Project directory (default: cwd).
+        #[arg(long, short = 'd')]
+        dir: Option<PathBuf>,
     },
 }
 
@@ -1196,6 +1235,17 @@ fn run(cli: Cli) -> Result<(String, serde_json::Value), CoreError> {
             inject,
             ast,
         }) => run_patterns_cmd(dir, check, inject, ast, modules),
+        Some(Commands::Hooks { action }) => match action {
+            HooksCmd::List { dir } => run_hooks_list(dir),
+            HooksCmd::Run {
+                event,
+                file,
+                task,
+                trust,
+                dir,
+            } => run_hooks_cmd(event, file, task, trust, dir),
+            HooksCmd::Validate { dir } => run_hooks_validate(dir),
+        },
         Some(Commands::Steering { action }) => match action {
             SteeringCmd::List { dir } => run_steering_list(dir),
             SteeringCmd::Show { file, dir } => run_steering_show(file, dir),

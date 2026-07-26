@@ -10,6 +10,7 @@ pub mod execute;
 pub mod execute_agent;
 pub mod graph;
 pub mod guard;
+pub mod hooks;
 pub mod info;
 pub mod init;
 mod init_prompts;
