@@ -811,6 +811,9 @@ mod tests {
         let input = sample_input_from_fixture();
         let rendered = render_canonical(&input);
         let golden = load_fixture("golden-basic.md");
-        assert_eq!(rendered, golden);
+        assert_eq!(
+            rendered.replace("\r\n", "\n"),
+            golden.replace("\r\n", "\n")
+        );
     }
 }

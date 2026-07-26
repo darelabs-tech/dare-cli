@@ -60,7 +60,7 @@ capabilities:
     description: "Capability IDE for dare-bootstrap"
     instructions: |
       Use the /dare-bootstrap slash command when appropriate.
-    cli_commands: []
+    cli_commands: ["bootstrap"]
     outputs:
       claude: .claude/commands/dare-bootstrap.md
       cursor: .cursor/commands/dare-bootstrap.md
@@ -296,7 +296,7 @@ capabilities:
     description: "Capability IDE for dare-init"
     instructions: |
       Use the /dare-init slash command when appropriate.
-    cli_commands: []
+    cli_commands: ["init"]
     outputs:
       claude: .claude/commands/dare-init.md
       cursor: .cursor/commands/dare-init.md

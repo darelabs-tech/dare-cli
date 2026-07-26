@@ -2,7 +2,7 @@
 
 Greenfield scaffolding contracts: stack registry, embedded templates, seven Agent Experience (AX) artifacts, plan/apply/rollback, and post-scaffold validation. Decision: [DEC-047](../DECISION-LOG.md).
 
-**Out of scope in 046:** CLI `dare init` and `dare bootstrap` — reserved for microplano **047**. Consumers call the **`dare-scaffold`** crate API only.
+**CLI init/bootstrap (047):** [`dare init` / `dare bootstrap`](cli-init-bootstrap.md) — microplano **047**, [DEC-048](../DECISION-LOG.md). This doc covers the **`dare-scaffold`** library; the CLI orchestrates scaffold + config + harnesses on top.
 
 ## Crate
 
@@ -11,7 +11,7 @@ Greenfield scaffolding contracts: stack registry, embedded templates, seven Agen
 | Package | `dare-scaffold` (`crates/dare-scaffold`) |
 | Templates | Embedded via `dare-assets` under `assets/stacks/{stack_id}/` |
 | Schema | Plan / apply report `schemaVersion` **1** (camelCase JSON) |
-| CLI | **None** in 046 — init/bootstrap wiring is **047** |
+| CLI | **`dare init` / `dare bootstrap`** — see [`cli-init-bootstrap.md`](cli-init-bootstrap.md) (047 / DEC-048) |
 
 ## Stack registry (11 ids, ASC)
 
@@ -77,7 +77,7 @@ Trait surface: `StackScaffolder` / `GenericScaffolder` (`trait_api.rs`).
 | `stack_id` | One of 11 registry ids |
 | `toolchain` | `none` \| `docker` (default `none`) |
 | `transport` | Optional; MCP defaults applied in metadata |
-| `frontend` | **Reserved 047** — any `Some(_)` → `InvalidInput` `frontend composition reserved for 047` |
+| `frontend` | `None` or `React` / `Vue` — CLI via `--fullstack`; embeds `frontend/**` (047) |
 | `force` | `false`: fail-fast if any planned path exists; `true`: existing paths → `PlanAction::Replace` |
 | `check` | Dry-run: plan only, **zero filesystem writes** (no journal under `.dare/`) |
 
@@ -135,11 +135,11 @@ cargo audit
 
 - **[DEC-047](../DECISION-LOG.md)** — scaffold library contracts (this doc)
 - **DEC-044** / [`cli-migrate.md`](cli-migrate.md) — brownfield migrate allowlist (`rails` ≠ scaffold id)
-- **047** — `dare init` / `dare bootstrap` CLI on top of this crate
+- **[DEC-048](../DECISION-LOG.md)** / [`cli-init-bootstrap.md`](cli-init-bootstrap.md) — `dare init` / `dare bootstrap` CLI
 
-## Out of scope (046)
+## Out of scope (library doc)
 
-- CLI `dare init` / `dare bootstrap`
-- Frontend composition (`react` / `vue` on `ScaffoldRequest::frontend`)
+- Harness install (init CLI only)
+- Interactive dialoguer prompts
 - Full OpenAPI from domain model (stub only)
 - Stack template business logic beyond starters + AX
