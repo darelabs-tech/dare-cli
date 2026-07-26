@@ -1,0 +1,10 @@
+schemaVersion: 1
+hooks:
+  - event: on-save
+    actions: [dare-validate]
+  - event: on-file-create
+    actions: [dare-validate]
+  - event: on-task-complete
+    actions: [dare-review, graph-register]
+  - event: pre-commit
+    actions: [dare-validate, lint]

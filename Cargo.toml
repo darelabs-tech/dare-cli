@@ -19,6 +19,7 @@ members = [
     "crates/dare-guard",
     "crates/dare-graph",
     "crates/dare-scaffold",
+    "crates/dare-hooks",
 ]
 
 [workspace.package]
@@ -75,6 +76,7 @@ dare-review = { path = "crates/dare-review" }
 dare-guard = { path = "crates/dare-guard" }
 dare-graph = { path = "crates/dare-graph" }
 dare-scaffold = { path = "crates/dare-scaffold" }
+dare-hooks = { path = "crates/dare-hooks" }
 ureq = { version = "=2.12.1", default-features = false, features = ["native-tls"] }
 rusqlite = { version = "=0.32.1", features = ["bundled"] }
 fastembed = { version = "=4.9.1", default-features = false }

@@ -783,6 +783,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "dare-hooks"
+version = "0.1.0-alpha.0"
+dependencies = [
+ "dare-contracts",
+ "dare-core",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tempfile",
+ "yaml_serde",
+]
+
+[[package]]
 name = "dare-project"
 version = "0.1.0-alpha.0"
 dependencies = [
