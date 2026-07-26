@@ -15,6 +15,8 @@ use dare_scaffold::{
     run_scaffold, validate_project_name, validate_stack_output, ConflictPolicy, FrontendKind,
     ScaffoldApplyReport, ScaffoldRequest, Toolchain, Transport,
 };
+
+use crate::commands::init_prompts::prepare_init_flags;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
@@ -214,7 +216,7 @@ fn parse_transport(input: &str) -> CoreResult<Transport> {
     }
 }
 
-fn is_mcp_stack_id(stack_id: &str) -> bool {
+pub(crate) fn is_mcp_stack_id(stack_id: &str) -> bool {
     matches!(
         stack_id,
         "mcp-go" | "mcp-node-ts" | "mcp-python" | "mcp-rust"
@@ -402,6 +404,7 @@ pub fn run_init_cmd(opts: InitCliOpts) -> CoreResult<(String, Value)> {
         check: opts.check,
     };
 
+    let flags = prepare_init_flags(flags)?;
     let req = resolve_init_flags(&flags)?;
     let report = run_init(&parent, &req)?;
     let json_str = init_report_to_json(&report)?;

@@ -12,6 +12,7 @@ pub mod graph;
 pub mod guard;
 pub mod info;
 pub mod init;
+mod init_prompts;
 pub mod migrate;
 pub mod path_resolve;
 pub mod patterns;
