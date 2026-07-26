@@ -19,6 +19,7 @@ members = [
     "crates/dare-guard",
     "crates/dare-graph",
     "crates/dare-scaffold",
+    "crates/dare-steering",
 ]
 
 [workspace.package]
@@ -57,6 +58,7 @@ ed25519-dalek = { version = "=2.1.1", features = ["rand_core"] }
 base64 = "=0.22.1"
 kill_tree = "=0.2.4"
 serde_yaml = { package = "yaml_serde", version = "=0.10.4" }
+globset = "=0.4.16"
 rust-embed = "=8.7.2"
 dare-core = { path = "crates/dare-core" }
 dare-contracts = { path = "crates/dare-contracts" }
@@ -75,6 +77,7 @@ dare-review = { path = "crates/dare-review" }
 dare-guard = { path = "crates/dare-guard" }
 dare-graph = { path = "crates/dare-graph" }
 dare-scaffold = { path = "crates/dare-scaffold" }
+dare-steering = { path = "crates/dare-steering" }
 ureq = { version = "=2.12.1", default-features = false, features = ["native-tls"] }
 rusqlite = { version = "=0.32.1", features = ["bundled"] }
 fastembed = { version = "=4.9.1", default-features = false }
