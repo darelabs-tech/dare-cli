@@ -29,6 +29,7 @@ dare-skills = { workspace = true }
 dare-review = { workspace = true }
 dare-guard = { workspace = true }
 dare-graph = { workspace = true }
+dare-steering = { workspace = true }
 dare-update = { workspace = true }
 dare-ai = { workspace = true }
 dare-scaffold = { workspace = true }
