@@ -1,11 +1,22 @@
 //! `dare init` — greenfield project bootstrap (microplano 047).
 
+use std::fs;
 use std::path::{Path, PathBuf};
 
-use dare_core::{CoreError, CoreResult};
-use dare_scaffold::{FrontendKind, Toolchain, Transport};
+use dare_config::DEFAULT_CONFIG_REL;
+use dare_core::fs::atomic_write;
+use dare_core::{CoreError, CoreResult, ProjectRoot, SafeRelativePath};
+use dare_harness::{
+    ensure_workflows_dir, generate_agents_md, generate_antigravityrules, generate_claude_md,
+    generate_cursorrules, install_antigravity, install_codex_skills, install_commands,
+    install_cursor_commands, write_settings_json,
+};
+use dare_scaffold::{
+    run_scaffold, validate_project_name, validate_stack_output, ConflictPolicy, FrontendKind,
+    ScaffoldApplyReport, ScaffoldRequest, Toolchain, Transport,
+};
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{json, Value};
 
 pub const INIT_REPORT_SCHEMA: u32 = 1;
 
@@ -14,6 +25,7 @@ pub const MSG_NEED_STACK_OR_MCP: &str = "--non-interactive requires --stack or -
 pub const MSG_FULLSTACK_NEEDS_STACK: &str = "--fullstack requires --stack";
 pub const MSG_TRANSPORT_BACKEND: &str = "transport is only valid for mcp stacks";
 pub const MSG_FULLSTACK_BACKEND_ONLY: &str = "fullstack is only valid with backend stacks";
+pub const MSG_TARGET_EXISTS: &str = "target directory already exists: {name}";
 
 pub const HARNESS_IDS: &[&str] = &["antigravity", "claude", "codex", "cursor"];
 
@@ -209,14 +221,24 @@ fn is_mcp_stack_id(stack_id: &str) -> bool {
     )
 }
 
-/// Stub init runner — full FS pipeline deferred to mp047-003/005.
-pub fn run_init(parent: &Path, req: &InitRequest) -> CoreResult<InitReport> {
-    let target = if req.project_name.is_empty() {
+fn init_target(parent: &Path, req: &InitRequest) -> PathBuf {
+    if req.project_name.is_empty() {
         parent.to_path_buf()
     } else {
         parent.join(&req.project_name)
-    };
-    Ok(InitReport {
+    }
+}
+
+fn target_exists_message(name: &str) -> String {
+    MSG_TARGET_EXISTS.replace("{name}", name)
+}
+
+fn harness_ids_sorted() -> Vec<String> {
+    HARNESS_IDS.iter().map(|s| (*s).to_string()).collect()
+}
+
+fn check_init_report(target: &Path, req: &InitRequest) -> InitReport {
+    InitReport {
         schema_version: INIT_REPORT_SCHEMA,
         mode: "init".to_string(),
         project_root: target.to_string_lossy().into_owned(),
@@ -228,14 +250,134 @@ pub fn run_init(parent: &Path, req: &InitRequest) -> CoreResult<InitReport> {
         created: Vec::new(),
         replaced: Vec::new(),
         skipped: Vec::new(),
-        harnesses_installed: if req.check {
-            Vec::new()
-        } else {
-            HARNESS_IDS.iter().map(|s| (*s).to_string()).collect()
-        },
+        harnesses_installed: Vec::new(),
         rolled_back: false,
-        check: req.check,
-    })
+        check: true,
+    }
+}
+
+fn write_init_config(root: &ProjectRoot, req: &InitRequest) -> CoreResult<()> {
+    let mut cfg = json!({
+        "schemaVersion": 1,
+        "projectName": req.project_name,
+        "stack": req.stack_id,
+        "toolchain": req.toolchain,
+    });
+    if let Some(frontend) = req.frontend {
+        cfg["frontend"] = serde_json::to_value(frontend)
+            .map_err(|e| CoreError::io(format!("serialize frontend: {e}")))?;
+    }
+    if let Some(transport) = req.transport {
+        cfg["transport"] = serde_json::to_value(transport)
+            .map_err(|e| CoreError::io(format!("serialize transport: {e}")))?;
+    }
+    let body = serde_json::to_vec_pretty(&cfg)
+        .map_err(|e| CoreError::io(format!("serialize dare.config.json: {e}")))?;
+    let rel = SafeRelativePath::new(DEFAULT_CONFIG_REL)?;
+    atomic_write(root, &rel, &body)
+}
+
+fn install_all_harnesses(root: &ProjectRoot, force: bool) -> CoreResult<()> {
+    let _ = generate_claude_md(root, force);
+    install_commands(root, force)?;
+    let _ = write_settings_json(root, force);
+
+    let _ = generate_cursorrules(root, force);
+    install_cursor_commands(root, force)?;
+
+    generate_agents_md(root, force)?;
+    install_codex_skills(root, force)?;
+
+    generate_antigravityrules(root, force)?;
+    ensure_workflows_dir(root, force)?;
+    install_antigravity(root, force)?;
+    Ok(())
+}
+
+fn init_report_from_scaffold(
+    root: &ProjectRoot,
+    req: &InitRequest,
+    scaffold: ScaffoldApplyReport,
+) -> InitReport {
+    InitReport {
+        schema_version: INIT_REPORT_SCHEMA,
+        mode: "init".to_string(),
+        project_root: root.to_posix(),
+        project_name: req.project_name.clone(),
+        stack_id: req.stack_id.clone(),
+        frontend: req.frontend,
+        toolchain: req.toolchain,
+        transport: req.transport,
+        created: scaffold.created,
+        replaced: scaffold.replaced,
+        skipped: scaffold.skipped,
+        harnesses_installed: harness_ids_sorted(),
+        rolled_back: false,
+        check: false,
+    }
+}
+
+fn run_init_pipeline(root: &ProjectRoot, req: &InitRequest) -> CoreResult<InitReport> {
+    if !req.project_name.is_empty() {
+        validate_project_name(&req.project_name)?;
+    }
+
+    let scaffold_req = ScaffoldRequest {
+        project_name: req.project_name.clone(),
+        stack_id: req.stack_id.clone(),
+        toolchain: req.toolchain,
+        transport: req.transport,
+        frontend: req.frontend,
+        conflict_policy: ConflictPolicy::FailFast,
+        force: req.force,
+        check: false,
+    };
+
+    let scaffold_report = run_scaffold(root, &scaffold_req)?;
+    write_init_config(root, req)?;
+    install_all_harnesses(root, req.force)?;
+
+    let validation = validate_stack_output(root, &req.stack_id)?;
+    if !validation.ok {
+        return Err(CoreError::invalid_input(format!(
+            "stack validation failed: missing={:?} secret_hits={:?}",
+            validation.missing, validation.secret_hits
+        )));
+    }
+
+    Ok(init_report_from_scaffold(root, req, scaffold_report))
+}
+
+/// Greenfield init: scaffold + config + harnesses ×4 (BLUEPRINT-047 §5.1).
+pub fn run_init(parent: &Path, req: &InitRequest) -> CoreResult<InitReport> {
+    let target = init_target(parent, req);
+    let exists_label = if req.project_name.is_empty() {
+        target
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("target")
+            .to_string()
+    } else {
+        req.project_name.clone()
+    };
+
+    if target.exists() && !req.force {
+        return Err(CoreError::invalid_input(target_exists_message(&exists_label)));
+    }
+
+    if req.check {
+        return Ok(check_init_report(&target, req));
+    }
+
+    fs::create_dir_all(&target).map_err(|e| CoreError::io(e.to_string()))?;
+
+    match ProjectRoot::new(&target).and_then(|root| run_init_pipeline(&root, req)) {
+        Ok(report) => Ok(report),
+        Err(err) => {
+            let _ = fs::remove_dir_all(&target);
+            Err(err)
+        }
+    }
 }
 
 pub fn init_report_to_json(report: &InitReport) -> CoreResult<String> {
@@ -276,6 +418,7 @@ pub fn run_init_cmd(opts: InitCliOpts) -> CoreResult<(String, Value)> {
 mod tests {
     use super::*;
     use dare_core::ErrorKind;
+    use std::fs;
 
     fn base_flags() -> InitFlags {
         InitFlags {
@@ -284,6 +427,99 @@ mod tests {
             non_interactive: true,
             ..InitFlags::default()
         }
+    }
+
+    fn base_init_request() -> InitRequest {
+        InitRequest {
+            project_name: "demo-app".into(),
+            stack_id: "rust-axum".into(),
+            toolchain: Toolchain::None,
+            transport: None,
+            frontend: None,
+            force: false,
+            check: false,
+            non_interactive: true,
+        }
+    }
+
+    #[test]
+    fn init_noninteractive_rust_axum() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let report = run_init(dir.path(), &base_init_request()).expect("init");
+        assert!(!report.check);
+        assert!(!report.rolled_back);
+        assert_eq!(
+            report.harnesses_installed,
+            vec![
+                "antigravity".to_string(),
+                "claude".to_string(),
+                "codex".to_string(),
+                "cursor".to_string(),
+            ]
+        );
+        assert!(!report.created.is_empty());
+
+        let target = dir.path().join("demo-app");
+        let root = ProjectRoot::new(&target).expect("project root");
+        let validation = validate_stack_output(&root, "rust-axum").expect("validate");
+        assert!(validation.ok, "missing={:?}", validation.missing);
+
+        assert!(target.join("CLAUDE.md").exists());
+        assert!(target.join(".cursor").exists());
+        assert!(target.join("AGENTS.md").exists());
+        assert!(target.join(".antigravityrules").exists());
+
+        let cfg: Value =
+            serde_json::from_slice(&fs::read(target.join("dare.config.json")).expect("read cfg"))
+                .expect("parse cfg");
+        assert_eq!(cfg["schemaVersion"], 1);
+        assert_eq!(cfg["projectName"], "demo-app");
+        assert_eq!(cfg["stack"], "rust-axum");
+        assert_eq!(cfg["toolchain"], "none");
+        assert!(cfg.get("frontend").is_none());
+        assert!(cfg.get("transport").is_none());
+    }
+
+    #[test]
+    fn init_check_zero_write() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let mut req = base_init_request();
+        req.check = true;
+
+        let report = run_init(dir.path(), &req).expect("check init");
+        assert!(report.check);
+        assert!(report.created.is_empty());
+        assert!(report.replaced.is_empty());
+        assert!(report.skipped.is_empty());
+        assert!(report.harnesses_installed.is_empty());
+        assert!(!dir.path().join("demo-app").exists());
+    }
+
+    #[test]
+    fn init_target_exists_rejects() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        fs::create_dir_all(dir.path().join("demo-app")).expect("seed target");
+
+        let err = run_init(dir.path(), &base_init_request()).unwrap_err();
+        assert_eq!(err.kind(), ErrorKind::InvalidInput);
+        assert_eq!(
+            err.message(),
+            target_exists_message("demo-app")
+        );
+    }
+
+    #[test]
+    fn init_rollback_removes_target() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let mut req = base_init_request();
+        req.stack_id = "not-a-real-stack".into();
+
+        let err = run_init(dir.path(), &req).unwrap_err();
+        assert_eq!(err.kind(), ErrorKind::InvalidInput);
+        assert!(
+            !dir.path().join("demo-app").exists(),
+            "rollback must remove target after failure: {err}"
+        );
     }
 
     #[test]
