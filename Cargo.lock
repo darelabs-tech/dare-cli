@@ -886,6 +886,7 @@ name = "dare-verify"
 version = "0.1.0-alpha.0"
 dependencies = [
  "dare-core",
+ "globset",
  "serde",
  "serde_json",
  "tempfile",

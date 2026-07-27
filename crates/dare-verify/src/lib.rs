@@ -12,10 +12,10 @@ pub use aspects::{
     check, check_anti_tamper, check_fail_to_pass, run_formal, FormalBackend, MSG_FORMAL_MISSING,
 };
 pub use bench::{
-    compute_drop_pp, compute_fixture_fix_rate, compute_solve_rate, compute_suite_fix_rate,
-    load_baseline, load_suite, round_4dp, BaselineComparison, BaselineFile, BenchReport,
-    FixtureResult, LoadedCase, SuiteCase, SuiteFile, DEFAULT_SUITE_REL, MSG_BASELINE_INVALID,
-    MSG_SUITE_INVALID,
+    compare_baseline, compute_drop_pp, compute_fixture_fix_rate, compute_solve_rate,
+    compute_suite_fix_rate, load_baseline, load_suite, round_4dp, run_bench, BaselineComparison,
+    BaselineFile, BenchOptions, BenchReport, FixtureResult, LoadedCase, LoadedSuite, SuiteCase,
+    SuiteFile, BENCH_REPORT_SCHEMA, DEFAULT_SUITE_REL, MSG_BASELINE_INVALID, MSG_SUITE_INVALID,
 };
 pub use ralph::{run_ralph, GateAspect, GateStep, RalphReport, RALPH_TIMEOUT_SECS};
 pub use repair::{can_repair, run_repair, RepairOutcome, REPAIR_MAX};

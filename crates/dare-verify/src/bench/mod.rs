@@ -1,14 +1,17 @@
 //! Bench Fix·Rate, suite means, and report schema (schemaVersion 1).
 
 pub mod baseline;
+pub mod run;
 pub mod suite;
 
 use serde::{Deserialize, Serialize};
 
 pub use baseline::{
-    compute_drop_pp, load_baseline, BaselineComparison, BaselineFile, MSG_BASELINE_INVALID,
+    compare_baseline, compute_drop_pp, load_baseline, BaselineComparison, BaselineFile,
+    MSG_BASELINE_INVALID,
 };
-pub use suite::{load_suite, LoadedCase, SuiteCase, SuiteFile, MSG_SUITE_INVALID};
+pub use run::{run_bench, BenchOptions, BENCH_REPORT_SCHEMA};
+pub use suite::{load_suite, LoadedCase, LoadedSuite, SuiteCase, SuiteFile, MSG_SUITE_INVALID};
 
 /// Default relative suite directory (`fixtures/bench`).
 pub const DEFAULT_SUITE_REL: &str = "fixtures/bench";

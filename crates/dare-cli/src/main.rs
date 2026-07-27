@@ -7,6 +7,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
+use commands::bench::{run_bench_cmd, BenchCliOpts};
 use commands::blueprint::{run_blueprint, BlueprintInput};
 use commands::bootstrap::{run_bootstrap_cmd, BootstrapCliOpts};
 use commands::dag::{run_dag_viz, CliVizFormat};
@@ -454,6 +455,24 @@ enum Commands {
     Steering {
         #[command(subcommand)]
         action: SteeringCmd,
+    },
+    /// Deterministic Fix·Rate bench harness (microplano 049).
+    Bench {
+        /// Suite directory (default: fixtures/bench, relative to -d/cwd).
+        #[arg(long)]
+        suite: Option<PathBuf>,
+        /// Baseline JSON for regression comparison.
+        #[arg(long)]
+        baseline: Option<PathBuf>,
+        /// Fail when solve-rate drop exceeds N percentage points (0..=100).
+        #[arg(long = "fail-on-regression", value_name = "N")]
+        fail_on_regression: Option<u32>,
+        /// Glob filter on case id.
+        #[arg(long)]
+        filter: Option<String>,
+        /// Project directory (default: cwd).
+        #[arg(short = 'd', long = "dir")]
+        dir: Option<PathBuf>,
     },
 }
 
@@ -1090,6 +1109,22 @@ fn main() -> ExitCode {
                 };
                 run_graph(graph_action, &renderer)
             }
+            Some(Commands::Bench {
+                suite,
+                baseline,
+                fail_on_regression,
+                filter,
+                dir,
+            }) => run_bench_cmd(
+                BenchCliOpts {
+                    suite,
+                    baseline,
+                    fail_on_regression,
+                    filter,
+                    dir,
+                },
+                &renderer,
+            ),
             other => {
                 let cli = Cli {
                     json: cli.json,
@@ -1415,6 +1450,7 @@ fn run(cli: Cli) -> Result<(String, serde_json::Value), CoreError> {
         Some(Commands::Execute { .. }) => unreachable!("execute handled in main"),
         Some(Commands::Skill { .. }) => unreachable!("skill handled in main"),
         Some(Commands::Graph { .. }) => unreachable!("graph handled in main"),
+        Some(Commands::Bench { .. }) => unreachable!("bench handled in main"),
     }
 }
 
