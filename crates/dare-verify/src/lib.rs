@@ -9,7 +9,8 @@ pub mod stacks;
 pub mod verification;
 
 pub use aspects::{
-    check, check_anti_tamper, check_fail_to_pass, run_formal, FormalBackend, MSG_FORMAL_MISSING,
+    check, check_anti_tamper, check_fail_to_pass, run_formal, run_mutation, run_mutation_with,
+    FormalBackend, MSG_FORMAL_MISSING, MSG_MUTATION_MISSING, MUTATION_THRESHOLD,
 };
 pub use bench::{
     compare_baseline, compute_drop_pp, compute_fixture_fix_rate, compute_solve_rate,
