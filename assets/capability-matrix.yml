@@ -36,7 +36,7 @@ capabilities:
     description: "Capability IDE for dare-bench"
     instructions: |
       Use the /dare-bench slash command when appropriate.
-    cli_commands: []
+    cli_commands: ["bench"]
     outputs:
       claude: .claude/commands/dare-bench.md
       cursor: .cursor/commands/dare-bench.md
