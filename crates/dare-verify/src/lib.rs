@@ -3,6 +3,8 @@
 pub mod advanced;
 pub mod aspects;
 pub mod bench;
+pub mod best_of;
+pub mod decay;
 pub mod ralph;
 pub mod repair;
 pub mod report;
@@ -22,6 +24,14 @@ pub use bench::{
     compute_suite_fix_rate, load_baseline, load_suite, round_4dp, run_bench, BaselineComparison,
     BaselineFile, BenchOptions, BenchReport, FixtureResult, LoadedCase, LoadedSuite, SuiteCase,
     SuiteFile, BENCH_REPORT_SCHEMA, DEFAULT_SUITE_REL, MSG_BASELINE_INVALID, MSG_SUITE_INVALID,
+};
+pub use best_of::{
+    attach_best_of, dominates, fill_best_of_with_worktrees, metrics_from_verdict, pareto_front_ids,
+    pareto_select, validate_best_of, BestOfWorktreeManager, BestOfWorktreeSpec, CandidateMetrics,
+    BEST_OF_MAX, BEST_OF_MIN, MSG_BEST_OF_RANGE, WORKTREES_REL,
+};
+pub use decay::{
+    apply_decay, msg_policy_unknown, signature_for, DecayAction, DECAY_MAX_ATTEMPTS, DECAY_WINDOW,
 };
 pub use ralph::{run_ralph, GateAspect, GateStep, RalphReport, RALPH_TIMEOUT_SECS};
 pub use repair::{can_repair, run_repair, RepairOutcome, REPAIR_MAX};
