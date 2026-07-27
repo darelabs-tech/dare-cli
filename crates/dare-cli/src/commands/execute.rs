@@ -20,7 +20,8 @@ use dare_dag::{
 };
 use dare_project::find_project_root;
 use dare_verify::{
-    formal_enabled_from_cfg, resolve_stack, run_advanced_verify, run_ralph, task_id_is_path_safe,
+    attach_best_of, formal_enabled_from_cfg, metrics_from_verdict, resolve_stack,
+    run_advanced_verify, run_ralph, task_id_is_path_safe, validate_best_of,
     verification_from_ralph, verify_enabled_from_cfg, write_advanced_verdict, write_verification,
     AdvancedVerifyRequest, FormalBackend, LoopVerdict, RalphReport, VERIFICATION_DIR_REL,
 };
@@ -50,6 +51,10 @@ pub struct CompleteVerifyOpts {
     pub formal: Option<bool>,
     pub formal_backend: FormalBackend,
     pub verdict_json: bool,
+    /// `--best-of N` (1..=8); None = single path.
+    pub best_of: Option<u32>,
+    /// Soft prerank (no-op without best-of).
+    pub prerank: bool,
 }
 
 impl Default for CompleteVerifyOpts {
@@ -60,6 +65,8 @@ impl Default for CompleteVerifyOpts {
             formal: None,
             formal_backend: FormalBackend::Dafny,
             verdict_json: false,
+            best_of: None,
+            prerank: false,
         }
     }
 }
@@ -89,6 +96,8 @@ pub enum ExecuteAction {
         task: Option<String>,
         budget_tokens: u64,
         policy: String,
+        best_of: Option<u32>,
+        prerank: bool,
     },
     CleanupWorktrees,
 }
@@ -111,6 +120,8 @@ pub fn run_execute(
             task,
             budget_tokens,
             policy,
+            best_of,
+            prerank,
         } => crate::commands::execute_agent::run_agent(
             dag,
             crate::commands::execute_agent::AgentOpts {
@@ -118,6 +129,8 @@ pub fn run_execute(
                 task,
                 budget_tokens,
                 policy,
+                best_of,
+                prerank,
             },
             renderer,
         ),
@@ -297,8 +310,16 @@ fn run_complete_inner(
     let cfg = load_config_soft(&root);
     let adv_req = build_advanced_request(task_id, verify_opts, &cfg);
     let adv_runner = SystemProcessRunner;
-    let verdict = run_advanced_verify(&root, &cfg, &adv_req, &adv_runner)
+    let mut verdict = run_advanced_verify(&root, &cfg, &adv_req, &adv_runner)
         .map_err(CompleteOutcome::Other)?;
+    if let Some(n) = verify_opts.best_of {
+        validate_best_of(n).map_err(CompleteOutcome::Other)?;
+        let _ = verify_opts.prerank; // soft: order only; DONE still gated by verdict.ok
+        let cands: Vec<_> = (1..=n)
+            .map(|id| metrics_from_verdict(id, &verdict))
+            .collect();
+        attach_best_of(&mut verdict, n, &cands);
+    }
     if adv_req.verify {
         write_advanced_verdict(&root, &verdict).map_err(CompleteOutcome::Other)?;
     }

@@ -9,6 +9,9 @@ use dare_agent::{
     apply_fixed, failure_signature, resolve_driver, AgentRequest, AgentRunStatus, BudgetTracker,
     FixedDecision, WorktreeManager, MAX_AGENT_ATTEMPTS,
 };
+use dare_verify::{
+    apply_decay, msg_policy_unknown, validate_best_of, BestOfWorktreeManager, DecayAction,
+};
 use dare_contracts::{load_dag, load_runtime_state, save_runtime_state, DagDocument};
 use dare_core::{
     CancelFlag, CoreError, CoreResult, ProjectRoot, SafeRelativePath, SystemProcessRunner,
@@ -38,6 +41,8 @@ pub struct AgentOpts {
     pub task: Option<String>,
     pub budget_tokens: u64,
     pub policy: String,
+    pub best_of: Option<u32>,
+    pub prerank: bool,
 }
 
 /// `dare execute --cleanup-worktrees`
@@ -148,12 +153,16 @@ enum AgentOutcome {
 }
 
 fn run_agent_inner(dag: Option<PathBuf>, opts: AgentOpts) -> CoreResult<AgentOutcome> {
-    if opts.policy != "fixed" {
-        return Err(CoreError::invalid_input(format!(
-            "policy not implemented: {}",
-            opts.policy
-        )));
+    let use_decay = match opts.policy.as_str() {
+        "fixed" => false,
+        "decay" => true,
+        other => return Err(CoreError::usage(msg_policy_unknown(other))),
+    };
+
+    if let Some(n) = opts.best_of {
+        validate_best_of(n)?;
     }
+    let _ = opts.prerank;
 
     let cwd = std::env::current_dir().map_err(|e| CoreError::io(e.to_string()))?;
     let Some(root_path) = find_project_root(&cwd) else {
@@ -200,6 +209,15 @@ fn run_agent_inner(dag: Option<PathBuf>, opts: AgentOpts) -> CoreResult<AgentOut
         }
     };
 
+    // Best-of-N: materialize cand worktrees under `.dare/worktrees/cand-{n}/`, then clean up.
+    let mut best_of_specs = Vec::new();
+    if let Some(n) = opts.best_of {
+        let bo_mgr = BestOfWorktreeManager::new(root.clone(), Arc::new(SystemProcessRunner));
+        for id in 1..=n {
+            best_of_specs.push(bo_mgr.create(id)?);
+        }
+    }
+
     let mut budget = BudgetTracker::new(opts.budget_tokens);
     let cancel: CancelFlag = Arc::new(AtomicBool::new(false));
     let wt_mgr = WorktreeManager::new(root.clone(), Arc::new(SystemProcessRunner));
@@ -209,120 +227,200 @@ fn run_agent_inner(dag: Option<PathBuf>, opts: AgentOpts) -> CoreResult<AgentOut
     let mut last_status = AgentRunStatus::Failure;
     let mut last_worktree = String::new();
     let mut attempts_done = 0u32;
+    let mut recent_signatures: Vec<String> = Vec::new();
 
-    for attempt in 1..=MAX_AGENT_ATTEMPTS {
-        if !budget.can_continue() {
-            return Ok(AgentOutcome::Budget {
-                human: MSG_AGENT_BUDGET.to_string(),
-                data: agent_json(
-                    &task_id,
-                    driver.id(),
-                    &opts.policy,
-                    "budget_exhausted",
-                    attempt.saturating_sub(1),
-                    &budget,
-                    &last_worktree,
-                    None,
-                    false,
-                ),
-            });
-        }
-        if cancel.load(Ordering::SeqCst) {
-            last_status = AgentRunStatus::Cancelled;
-            break;
-        }
-
-        let spec = wt_mgr.create(&task_id, attempt)?;
-        last_worktree = spec.rel_path.clone();
-        let wt_abs = root.as_path().join(&spec.rel_path);
-
-        let prompt = compose_task_prompt(&doc, &state, &task_id)?;
-        let req = AgentRequest {
-            task_id: task_id.clone(),
-            prompt,
-            cwd: PathBuf::from(wt_abs.as_str()),
-            model: None,
-            stdout_cap_chars: task_output_limit(&doc),
-        };
-
-        let result = driver.run(&req, &cancel)?;
-        let _ = wt_mgr.remove(&spec);
-
-        attempts_done = attempt;
-        last_summary = result.summary.clone();
-        last_stderr = result.stderr.clone();
-        last_status = result.status;
-
-        if result.status == AgentRunStatus::Timeout {
-            return Ok(AgentOutcome::Timeout {
-                human: format!("Agent timed out on task {task_id}"),
-            });
-        }
-
-        let _ = budget.consume(result.tokens.unwrap_or(0));
-        let decision = apply_fixed(result.status, attempt, MAX_AGENT_ATTEMPTS);
-
-        match decision {
-            FixedDecision::Continue => continue,
-            FixedDecision::Done => {
-                let ralph_skipped = std::env::var("DARE_AGENT_SKIP_RALPH")
-                    .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
-                    .unwrap_or(false);
-                let human = MSG_AGENT_DONE.replace("{id}", &task_id);
-                let data = agent_json(
-                    &task_id,
-                    driver.id(),
-                    &opts.policy,
-                    "done",
-                    attempt,
-                    &budget,
-                    &last_worktree,
-                    Some(json!({
-                        "status": "success",
-                        "summary": &result.summary,
-                        "tokens": result.tokens,
-                    })),
-                    ralph_skipped,
-                );
-                if ralph_skipped {
-                    return Ok(AgentOutcome::DoneSkipRalph { human, data });
-                }
-                return Ok(AgentOutcome::DoneRalph {
-                    human,
-                    data,
-                    task_id,
-                    summary: last_summary,
+    let loop_result = (|| -> CoreResult<AgentOutcome> {
+        for attempt in 1..=MAX_AGENT_ATTEMPTS {
+            if !budget.can_continue() {
+                return Ok(AgentOutcome::Budget {
+                    human: MSG_AGENT_BUDGET.to_string(),
+                    data: agent_json(
+                        &task_id,
+                        driver.id(),
+                        &opts.policy,
+                        "budget_exhausted",
+                        attempt.saturating_sub(1),
+                        &budget,
+                        &last_worktree,
+                        None,
+                        false,
+                    ),
                 });
             }
-            FixedDecision::Stop => {
-                return stop_outcome(
-                    &root,
-                    &task_id,
-                    driver.id(),
-                    &opts.policy,
-                    attempt,
-                    &budget,
-                    &last_worktree,
-                    &last_summary,
-                    &last_stderr,
-                    last_status,
-                );
+            if cancel.load(Ordering::SeqCst) {
+                last_status = AgentRunStatus::Cancelled;
+                break;
             }
+
+            let spec = wt_mgr.create(&task_id, attempt)?;
+            last_worktree = spec.rel_path.clone();
+            let wt_abs = root.as_path().join(&spec.rel_path);
+
+            let prompt = compose_task_prompt(&doc, &state, &task_id)?;
+            let req = AgentRequest {
+                task_id: task_id.clone(),
+                prompt,
+                cwd: PathBuf::from(wt_abs.as_str()),
+                model: None,
+                stdout_cap_chars: task_output_limit(&doc),
+            };
+
+            let result = driver.run(&req, &cancel)?;
+            let _ = wt_mgr.remove(&spec);
+
+            attempts_done = attempt;
+            last_summary = result.summary.clone();
+            last_stderr = result.stderr.clone();
+            last_status = result.status;
+
+            if result.status == AgentRunStatus::Timeout {
+                return Ok(AgentOutcome::Timeout {
+                    human: format!("Agent timed out on task {task_id}"),
+                });
+            }
+
+            let _ = budget.consume(result.tokens.unwrap_or(0));
+
+            if use_decay {
+                let sig = failure_signature("agent", &result.stderr);
+                let action = apply_decay(
+                    result.status,
+                    attempt,
+                    &recent_signatures,
+                    &sig,
+                );
+                if result.status == AgentRunStatus::Failure {
+                    recent_signatures.push(sig);
+                }
+                match action {
+                    DecayAction::Continue
+                    | DecayAction::FreshStart
+                    | DecayAction::Replan
+                    | DecayAction::Escalate => continue,
+                    DecayAction::Done => {
+                        return agent_done_outcome(
+                            &task_id,
+                            driver.id(),
+                            &opts.policy,
+                            attempt,
+                            &budget,
+                            &last_worktree,
+                            &result.summary,
+                            result.tokens,
+                        );
+                    }
+                    DecayAction::Stop => {
+                        return stop_outcome(
+                            &root,
+                            &task_id,
+                            driver.id(),
+                            &opts.policy,
+                            attempt,
+                            &budget,
+                            &last_worktree,
+                            &last_summary,
+                            &last_stderr,
+                            last_status,
+                        );
+                    }
+                }
+            }
+
+            let decision = apply_fixed(result.status, attempt, MAX_AGENT_ATTEMPTS);
+            match decision {
+                FixedDecision::Continue => continue,
+                FixedDecision::Done => {
+                    return agent_done_outcome(
+                        &task_id,
+                        driver.id(),
+                        &opts.policy,
+                        attempt,
+                        &budget,
+                        &last_worktree,
+                        &result.summary,
+                        result.tokens,
+                    );
+                }
+                FixedDecision::Stop => {
+                    return stop_outcome(
+                        &root,
+                        &task_id,
+                        driver.id(),
+                        &opts.policy,
+                        attempt,
+                        &budget,
+                        &last_worktree,
+                        &last_summary,
+                        &last_stderr,
+                        last_status,
+                    );
+                }
+            }
+        }
+
+        stop_outcome(
+            &root,
+            &task_id,
+            driver.id(),
+            &opts.policy,
+            attempts_done,
+            &budget,
+            &last_worktree,
+            &last_summary,
+            &last_stderr,
+            last_status,
+        )
+    })();
+
+    if !best_of_specs.is_empty() {
+        let bo_mgr = BestOfWorktreeManager::new(root.clone(), Arc::new(SystemProcessRunner));
+        for spec in &best_of_specs {
+            let _ = bo_mgr.remove(spec);
         }
     }
 
-    stop_outcome(
-        &root,
-        &task_id,
-        driver.id(),
-        &opts.policy,
-        attempts_done,
-        &budget,
-        &last_worktree,
-        &last_summary,
-        &last_stderr,
-        last_status,
-    )
+    loop_result
+}
+
+#[allow(clippy::too_many_arguments)]
+fn agent_done_outcome(
+    task_id: &str,
+    driver_id: &str,
+    policy: &str,
+    attempt: u32,
+    budget: &BudgetTracker,
+    worktree: &str,
+    summary: &str,
+    tokens: Option<u64>,
+) -> CoreResult<AgentOutcome> {
+    let ralph_skipped = std::env::var("DARE_AGENT_SKIP_RALPH")
+        .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+        .unwrap_or(false);
+    let human = MSG_AGENT_DONE.replace("{id}", task_id);
+    let data = agent_json(
+        task_id,
+        driver_id,
+        policy,
+        "done",
+        attempt,
+        budget,
+        worktree,
+        Some(json!({
+            "status": "success",
+            "summary": summary,
+            "tokens": tokens,
+        })),
+        ralph_skipped,
+    );
+    if ralph_skipped {
+        return Ok(AgentOutcome::DoneSkipRalph { human, data });
+    }
+    Ok(AgentOutcome::DoneRalph {
+        human,
+        data,
+        task_id: task_id.to_string(),
+        summary: summary.to_string(),
+    })
 }
 
 #[allow(clippy::too_many_arguments)]

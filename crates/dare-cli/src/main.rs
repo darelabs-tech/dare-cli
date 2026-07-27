@@ -302,9 +302,16 @@ enum Commands {
         /// Token budget for `--agent` (`0` = unlimited).
         #[arg(long, requires = "agent", default_value_t = 0)]
         budget_tokens: u64,
-        /// Agent policy (only `fixed` in 030).
+        /// Agent policy (`fixed` | `decay`; default: fixed). Requires `--agent`.
         #[arg(long, requires = "agent", default_value = "fixed")]
         policy: String,
+        /// Best-of-N candidates (1..=8). With `--complete` fills LoopVerdict.bestOf;
+        /// with `--agent` creates `.dare/worktrees/cand-{n}/`.
+        #[arg(long = "best-of", value_name = "N")]
+        best_of: Option<u32>,
+        /// Soft prerank of best-of candidates (no-op without `--best-of`).
+        #[arg(long, default_value_t = false)]
+        prerank: bool,
         /// Completion summary (requires `--complete`; default: Task completed.).
         #[arg(long, requires = "complete")]
         output: Option<String>,
@@ -993,6 +1000,8 @@ fn main() -> ExitCode {
                 task,
                 budget_tokens,
                 policy,
+                best_of,
+                prerank,
                 output,
                 verify,
                 no_verify,
@@ -1006,6 +1015,11 @@ fn main() -> ExitCode {
                 interval,
                 max_ticks,
             }) => {
+                if let Some(n) = best_of {
+                    if let Err(e) = dare_verify::validate_best_of(n) {
+                        return ExitCode::from(renderer.write_error(&e) as u8);
+                    }
+                }
                 let action = if cleanup_worktrees {
                     ExecuteAction::CleanupWorktrees
                 } else if agent {
@@ -1014,6 +1028,8 @@ fn main() -> ExitCode {
                         task,
                         budget_tokens,
                         policy,
+                        best_of,
+                        prerank,
                     }
                 } else if let Some(id) = complete {
                     let verify_opts = CompleteVerifyOpts {
@@ -1034,6 +1050,8 @@ fn main() -> ExitCode {
                         },
                         formal_backend,
                         verdict_json,
+                        best_of,
+                        prerank,
                     };
                     ExecuteAction::Complete {
                         id,

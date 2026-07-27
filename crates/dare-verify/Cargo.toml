@@ -9,6 +9,7 @@ publish = false
 [dependencies]
 dare-core = { workspace = true }
 dare-contracts = { workspace = true }
+dare-agent = { workspace = true }
 globset = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
