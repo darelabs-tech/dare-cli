@@ -1522,6 +1522,24 @@ fn execute_complete_fail_exclusive_exit_2() {
 }
 
 #[test]
+fn execute_unknown_formal_backend_exit_2() {
+    let dir = execute_complete_project();
+    Command::new(cargo_bin("dare"))
+        .current_dir(dir.path())
+        .args([
+            "execute",
+            "--complete",
+            "task-001",
+            "--formal-backend",
+            "coq",
+            "--no-color",
+        ])
+        .assert()
+        .code(2)
+        .stderr(predicate::str::contains("unknown formal backend"));
+}
+
+#[test]
 fn execute_status_complete_exclusive_exit_2() {
     let dir = execute_complete_project();
     Command::new(cargo_bin("dare"))

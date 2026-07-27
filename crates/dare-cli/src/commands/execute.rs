@@ -5,10 +5,12 @@ use std::process::ExitCode;
 use std::thread;
 use std::time::Duration;
 
-use dare_contracts::{load_dag, load_runtime_state, DagDocument, RuntimeStateV1};
+use dare_contracts::{
+    load_dag, load_dare_config, load_runtime_state, DagDocument, DareConfig, RuntimeStateV1,
+};
 use dare_core::{
     truncate_chars, CoreError, CoreResult, MockProcessRunner, ProcessOutput, ProcessRunner,
-    ProjectRoot, SystemProcessRunner,
+    ProjectRoot, SafeRelativePath, SystemProcessRunner,
 };
 use dare_dag::{
     build_next_report, build_status_snapshot, compute_ranks, ensure_state, iter_task_views,
@@ -18,8 +20,9 @@ use dare_dag::{
 };
 use dare_project::find_project_root;
 use dare_verify::{
-    resolve_stack, run_ralph, task_id_is_path_safe, verification_from_ralph, write_verification,
-    RalphReport, VERIFICATION_DIR_REL,
+    formal_enabled_from_cfg, resolve_stack, run_advanced_verify, run_ralph, task_id_is_path_safe,
+    verification_from_ralph, verify_enabled_from_cfg, write_advanced_verdict, write_verification,
+    AdvancedVerifyRequest, FormalBackend, LoopVerdict, RalphReport, VERIFICATION_DIR_REL,
 };
 use serde_json::{json, Map, Value};
 
@@ -31,8 +34,35 @@ const MSG_OUTPUT_DEFAULT: &str = "Task completed.";
 const MSG_REASON_DEFAULT: &str = "Task failed.";
 const MSG_COMPLETE_OK_TMPL: &str = "✅ Task {id} marked DONE (Ralph passed).";
 const MSG_COMPLETE_GATE_FAIL_TMPL: &str = "Ralph failed — task {id} left RUNNING (not DONE).";
+const MSG_ADVANCED_GATE_FAIL_TMPL: &str =
+    "Advanced verify failed — task {id} left RUNNING (not DONE).";
 const MSG_FAIL_OK_TMPL: &str = "❌ Task {id} marked FAILED.";
 const MSG_RESET_OK_TMPL: &str = "🔄 Task {id} reset to PENDING.";
+const CONFIG_REL: &str = "dare.config.json";
+
+/// Flags for advanced verify on `--complete` (Blueprint-049 §5.2).
+#[derive(Debug, Clone)]
+pub struct CompleteVerifyOpts {
+    /// Explicit `--verify` (None = use config / default true).
+    pub verify: Option<bool>,
+    pub full_mutation: bool,
+    /// Explicit `--formal` / `--no-formal` (None = use config / default false).
+    pub formal: Option<bool>,
+    pub formal_backend: FormalBackend,
+    pub verdict_json: bool,
+}
+
+impl Default for CompleteVerifyOpts {
+    fn default() -> Self {
+        Self {
+            verify: None,
+            full_mutation: false,
+            formal: None,
+            formal_backend: FormalBackend::Dafny,
+            verdict_json: false,
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 pub enum ExecuteAction {
@@ -45,6 +75,7 @@ pub enum ExecuteAction {
     Complete {
         id: String,
         output: Option<String>,
+        verify_opts: CompleteVerifyOpts,
     },
     Fail {
         id: String,
@@ -68,7 +99,11 @@ pub fn run_execute(
     renderer: &OutputRenderer<'_>,
 ) -> ExitCode {
     match action {
-        ExecuteAction::Complete { id, output } => run_complete(dag, id, output, renderer),
+        ExecuteAction::Complete {
+            id,
+            output,
+            verify_opts,
+        } => run_complete(dag, id, output, verify_opts, renderer),
         ExecuteAction::Fail { id, reason } => run_fail(dag, id, reason, renderer),
         ExecuteAction::Reset { id } => run_reset(dag, id, renderer),
         ExecuteAction::Agent {
@@ -163,15 +198,21 @@ fn run_execute_inner(
     }
 }
 
-/// Apêndice C — `--complete` with Ralph gates.
+/// Apêndice C — `--complete` with Ralph gates + advanced verify (§5.3).
 fn run_complete(
     dag: Option<PathBuf>,
     task_id: String,
     output: Option<String>,
+    verify_opts: CompleteVerifyOpts,
     renderer: &OutputRenderer<'_>,
 ) -> ExitCode {
-    match run_complete_inner(dag, &task_id, output.as_deref()) {
-        Ok((human, data)) => {
+    match run_complete_inner(dag, &task_id, output.as_deref(), &verify_opts) {
+        Ok((human, data, verdict_json_line)) => {
+            if let Some(line) = verdict_json_line {
+                if let Err(e) = writeln_stdout(&line) {
+                    return ExitCode::from(renderer.write_error(&e) as u8);
+                }
+            }
             if let Err(e) = renderer.write_success(&human, data) {
                 return ExitCode::from(renderer.write_error(&e) as u8);
             }
@@ -185,6 +226,11 @@ fn run_complete(
     }
 }
 
+fn writeln_stdout(line: &str) -> CoreResult<()> {
+    use std::io::Write;
+    writeln!(std::io::stdout(), "{line}").map_err(|e| CoreError::io(e.to_string()))
+}
+
 enum CompleteOutcome {
     TimedOut(CoreError),
     Other(CoreError),
@@ -194,7 +240,8 @@ fn run_complete_inner(
     dag: Option<PathBuf>,
     task_id: &str,
     output: Option<&str>,
-) -> Result<(String, Value), CompleteOutcome> {
+    verify_opts: &CompleteVerifyOpts,
+) -> Result<(String, Value, Option<String>), CompleteOutcome> {
     let ctx = prepare_mutation_ctx(dag).map_err(CompleteOutcome::Other)?;
     let PrepareCtx {
         root,
@@ -246,6 +293,20 @@ fn run_complete_inner(
         return Err(CompleteOutcome::Other(CoreError::internal(msg)));
     }
 
+    // Advanced verify after Ralph ok (separate runner so DARE_RALPH_MOCK queue stays Ralph-only).
+    let cfg = load_config_soft(&root);
+    let adv_req = build_advanced_request(task_id, verify_opts, &cfg);
+    let adv_runner = SystemProcessRunner;
+    let verdict = run_advanced_verify(&root, &cfg, &adv_req, &adv_runner)
+        .map_err(CompleteOutcome::Other)?;
+    if adv_req.verify {
+        write_advanced_verdict(&root, &verdict).map_err(CompleteOutcome::Other)?;
+    }
+    if !verdict.ok {
+        let msg = format_advanced_gate_fail(task_id, &verdict);
+        return Err(CompleteOutcome::Other(CoreError::internal(msg)));
+    }
+
     let raw_output = output.unwrap_or(MSG_OUTPUT_DEFAULT);
     let (truncated, _) = truncate_chars(raw_output.to_string(), cap);
     transition(
@@ -263,8 +324,39 @@ fn run_complete_inner(
     write_verification(&root, &final_verif).map_err(CompleteOutcome::Other)?;
 
     let human = MSG_COMPLETE_OK_TMPL.replace("{id}", task_id);
-    let data = complete_json(task_id, &ralph);
-    Ok((human, data))
+    let data = complete_json(task_id, &ralph, &verdict);
+    let verdict_line = if verify_opts.verdict_json {
+        Some(
+            serde_json::to_string(&verdict)
+                .map_err(|e| CompleteOutcome::Other(CoreError::internal(e.to_string())))?,
+        )
+    } else {
+        None
+    };
+    Ok((human, data, verdict_line))
+}
+
+fn load_config_soft(root: &ProjectRoot) -> DareConfig {
+    let Ok(rel) = SafeRelativePath::new(CONFIG_REL) else {
+        return DareConfig::default();
+    };
+    load_dare_config(root, &rel).unwrap_or_default()
+}
+
+fn build_advanced_request(
+    task_id: &str,
+    opts: &CompleteVerifyOpts,
+    cfg: &DareConfig,
+) -> AdvancedVerifyRequest {
+    let verify = opts.verify.unwrap_or_else(|| verify_enabled_from_cfg(cfg));
+    let formal = opts.formal.unwrap_or_else(|| formal_enabled_from_cfg(cfg));
+    AdvancedVerifyRequest {
+        task_id: task_id.to_string(),
+        full_mutation: opts.full_mutation,
+        formal,
+        formal_backend: opts.formal_backend,
+        verify,
+    }
 }
 
 fn run_fail(
@@ -523,7 +615,7 @@ pub(crate) fn complete_task_after_agent_silent(
     task_id: &str,
     output: &str,
 ) -> Result<(), CompleteExit> {
-    match run_complete_inner(dag, task_id, Some(output)) {
+    match run_complete_inner(dag, task_id, Some(output), &CompleteVerifyOpts::default()) {
         Ok(_) => Ok(()),
         Err(CompleteOutcome::TimedOut(_)) => Err(CompleteExit::Timeout),
         Err(CompleteOutcome::Other(e)) => Err(CompleteExit::Err(e)),
@@ -557,15 +649,32 @@ fn format_complete_gate_fail(id: &str, ralph: &RalphReport) -> String {
     msg
 }
 
-fn complete_json(task_id: &str, ralph: &RalphReport) -> Value {
+fn format_advanced_gate_fail(id: &str, verdict: &LoopVerdict) -> String {
+    let mut msg = MSG_ADVANCED_GATE_FAIL_TMPL.replace("{id}", id);
+    if let Some(step) = verdict
+        .aspects
+        .iter()
+        .find(|a| a.status == dare_verify::AspectStatus::Fail)
+    {
+        let reason = step.reason.as_deref().unwrap_or("fail");
+        msg.push_str(&format!(" ({}: {reason})", step.aspect.as_str()));
+    }
+    msg
+}
+
+fn complete_json(task_id: &str, ralph: &RalphReport, verdict: &LoopVerdict) -> Value {
     let verification_path = format!("{VERIFICATION_DIR_REL}/{task_id}.json");
+    let advanced_path = format!("{VERIFICATION_DIR_REL}/{task_id}.advanced.json");
     let ralph_val = serde_json::to_value(ralph).unwrap_or_else(|_| json!({}));
+    let verdict_val = serde_json::to_value(verdict).unwrap_or_else(|_| json!({}));
     json!({
         "action": "complete",
         "taskId": task_id,
         "status": "DONE",
         "verificationPath": verification_path,
+        "advancedVerificationPath": advanced_path,
         "ralph": ralph_val,
+        "verdict": verdict_val,
     })
 }
 
