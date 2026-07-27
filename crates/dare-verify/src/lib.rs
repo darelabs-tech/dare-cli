@@ -1,5 +1,6 @@
 //! Ralph Loop verification: stack adapters + gated build → test → lint.
 
+pub mod advanced;
 pub mod aspects;
 pub mod bench;
 pub mod ralph;
@@ -8,6 +9,10 @@ pub mod report;
 pub mod stacks;
 pub mod verification;
 
+pub use advanced::{
+    advanced_verdict_rel, formal_enabled_from_cfg, run_advanced_verify, verify_enabled_from_cfg,
+    write_advanced_verdict, AdvancedVerifyRequest,
+};
 pub use aspects::{
     check, check_anti_tamper, check_fail_to_pass, run_formal, run_mutation, run_mutation_with,
     FormalBackend, MSG_FORMAL_MISSING, MSG_MUTATION_MISSING, MUTATION_THRESHOLD,

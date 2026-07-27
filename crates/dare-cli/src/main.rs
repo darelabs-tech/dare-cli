@@ -14,7 +14,7 @@ use commands::dag::{run_dag_viz, CliVizFormat};
 use commands::design::run_design;
 use commands::discover::run_discover;
 use commands::dna::run_dna_cmd;
-use commands::execute::{run_execute, ExecuteAction};
+use commands::execute::{run_execute, CompleteVerifyOpts, ExecuteAction};
 use commands::graph::{run_graph, GraphAction};
 use commands::guard::{run_guard_cmd, GuardCliOpts};
 use commands::info::{collect_info, format_human, report_to_json};
@@ -308,6 +308,27 @@ enum Commands {
         /// Completion summary (requires `--complete`; default: Task completed.).
         #[arg(long, requires = "complete")]
         output: Option<String>,
+        /// Run advanced verify after Ralph (default: on / config `verify.enabled`).
+        #[arg(long, action = clap::ArgAction::SetTrue, overrides_with = "no_verify")]
+        verify: bool,
+        /// Skip advanced verify (and treat verify as off).
+        #[arg(long = "no-verify", action = clap::ArgAction::SetTrue, overrides_with = "verify")]
+        no_verify: bool,
+        /// Always run full mutation; tool missing → fail.
+        #[arg(long = "full-mutation", default_value_t = false)]
+        full_mutation: bool,
+        /// Opt-in formal verification aspect.
+        #[arg(long, action = clap::ArgAction::SetTrue, overrides_with = "no_formal")]
+        formal: bool,
+        /// Force formal off (overrides config `verify.formal.enabled`).
+        #[arg(long = "no-formal", action = clap::ArgAction::SetTrue, overrides_with = "formal")]
+        no_formal: bool,
+        /// Formal backend (`dafny` | `verus` | `lean`; default: dafny).
+        #[arg(long = "formal-backend", default_value = "dafny", value_parser = parse_formal_backend)]
+        formal_backend: dare_verify::FormalBackend,
+        /// Print LoopVerdict JSON to stdout after successful complete.
+        #[arg(long = "verdict-json", default_value_t = false)]
+        verdict_json: bool,
         /// Failure reason (requires `--fail`; default: Task failed.).
         #[arg(long, requires = "fail")]
         reason: Option<String>,
@@ -973,6 +994,13 @@ fn main() -> ExitCode {
                 budget_tokens,
                 policy,
                 output,
+                verify,
+                no_verify,
+                full_mutation,
+                formal,
+                no_formal,
+                formal_backend,
+                verdict_json,
                 reason,
                 dag,
                 interval,
@@ -988,7 +1016,30 @@ fn main() -> ExitCode {
                         policy,
                     }
                 } else if let Some(id) = complete {
-                    ExecuteAction::Complete { id, output }
+                    let verify_opts = CompleteVerifyOpts {
+                        verify: if no_verify {
+                            Some(false)
+                        } else if verify {
+                            Some(true)
+                        } else {
+                            None
+                        },
+                        full_mutation,
+                        formal: if no_formal {
+                            Some(false)
+                        } else if formal {
+                            Some(true)
+                        } else {
+                            None
+                        },
+                        formal_backend,
+                        verdict_json,
+                    };
+                    ExecuteAction::Complete {
+                        id,
+                        output,
+                        verify_opts,
+                    }
                 } else if let Some(id) = fail {
                     ExecuteAction::Fail { id, reason }
                 } else if let Some(id) = reset {
@@ -1452,6 +1503,10 @@ fn run(cli: Cli) -> Result<(String, serde_json::Value), CoreError> {
         Some(Commands::Graph { .. }) => unreachable!("graph handled in main"),
         Some(Commands::Bench { .. }) => unreachable!("bench handled in main"),
     }
+}
+
+fn parse_formal_backend(s: &str) -> Result<dare_verify::FormalBackend, String> {
+    s.parse()
 }
 
 fn ok_msg(msg: String) -> Result<(String, serde_json::Value), CoreError> {
