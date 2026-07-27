@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "name": "dare-bench-default",
+  "cases": [
+    { "id": "sample-ok", "path": "cases/sample-ok" }
+  ]
+}
