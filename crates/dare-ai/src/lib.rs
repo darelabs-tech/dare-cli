@@ -9,6 +9,7 @@ mod mock;
 mod provider;
 mod redact_log;
 mod request;
+pub mod run;
 mod schema;
 
 use std::time::Duration;
@@ -29,6 +30,10 @@ pub use mock::MockProvider;
 pub use provider::{resolve_provider, AiProvider, ProviderId};
 pub use redact_log::{redact_prompt_for_log, redact_stderr_for_error};
 pub use request::{EnrichRaw, EnrichRequest};
+pub use run::{
+    run_enrich, RunEnrichRequest, RunReport, AI_REPORT_SCHEMA, MSG_PROVIDER_NOT_IMPL,
+    MSG_WRITE_NEEDS_MARKDOWN,
+};
 pub use schema::{parse_and_validate_sections, parse_and_validate_sections_with};
 
 pub const ENRICH_TIMEOUT: Duration = Duration::from_secs(20 * 60);
