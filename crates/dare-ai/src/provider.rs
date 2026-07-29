@@ -3,6 +3,7 @@ use dare_core::{CoreError, CoreResult};
 use crate::codex::CodexCliProvider;
 use crate::mock::MockProvider;
 use crate::request::{EnrichRaw, EnrichRequest};
+use crate::text_cli::{TextCliProvider, ANTIGRAVITY_CFG, CLAUDE_CFG, CURSOR_CFG};
 
 pub trait AiProvider: Send + Sync {
     fn id(&self) -> ProviderId;
@@ -13,9 +14,9 @@ pub fn resolve_provider(id: ProviderId) -> CoreResult<Box<dyn AiProvider>> {
     match id {
         ProviderId::Mock => Ok(Box::new(MockProvider)),
         ProviderId::Codex => Ok(Box::new(CodexCliProvider::from_env()?)),
-        ProviderId::ClaudeCode | ProviderId::CursorCli | ProviderId::AntigravityCli => Err(
-            CoreError::invalid_input(format!("provider not implemented: {}", id.as_str())),
-        ),
+        ProviderId::ClaudeCode => Ok(Box::new(TextCliProvider::from_env(&CLAUDE_CFG)?)),
+        ProviderId::CursorCli => Ok(Box::new(TextCliProvider::from_env(&CURSOR_CFG)?)),
+        ProviderId::AntigravityCli => Ok(Box::new(TextCliProvider::from_env(&ANTIGRAVITY_CFG)?)),
     }
 }
 
@@ -54,6 +55,7 @@ impl ProviderId {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{ENV_ANTIGRAVITY, ENV_CLAUDE, ENV_CURSOR};
     use dare_core::ErrorKind;
 
     #[test]
@@ -82,24 +84,50 @@ mod tests {
     }
 
     #[test]
-    fn resolve_unimplemented_provider_errors() {
-        for id in [
-            ProviderId::ClaudeCode,
-            ProviderId::CursorCli,
-            ProviderId::AntigravityCli,
-        ] {
-            let err = resolve_provider(id).err().expect("expected resolve error");
-            assert_eq!(err.kind(), ErrorKind::InvalidInput);
-            assert!(err
-                .to_string()
-                .contains(&format!("provider not implemented: {}", id.as_str())));
-        }
+    fn resolve_claude_ok() {
+        crate::with_env_lock(|| {
+            std::env::remove_var(ENV_CLAUDE);
+            let provider = resolve_provider(ProviderId::ClaudeCode).unwrap();
+            assert_eq!(provider.id(), ProviderId::ClaudeCode);
+        });
+    }
+
+    #[test]
+    fn resolve_cursor_ok() {
+        crate::with_env_lock(|| {
+            std::env::remove_var(ENV_CURSOR);
+            let provider = resolve_provider(ProviderId::CursorCli).unwrap();
+            assert_eq!(provider.id(), ProviderId::CursorCli);
+        });
+    }
+
+    #[test]
+    fn resolve_antigravity_ok() {
+        crate::with_env_lock(|| {
+            std::env::remove_var(ENV_ANTIGRAVITY);
+            let provider = resolve_provider(ProviderId::AntigravityCli).unwrap();
+            assert_eq!(provider.id(), ProviderId::AntigravityCli);
+        });
+    }
+
+    #[test]
+    fn resolve_claude_from_env_override() {
+        crate::with_env_lock(|| {
+            std::env::set_var(ENV_CLAUDE, "/custom/claude -p");
+            let result = resolve_provider(ProviderId::ClaudeCode);
+            std::env::remove_var(ENV_CLAUDE);
+            let provider = result.expect("resolve with override");
+            assert_eq!(provider.id(), ProviderId::ClaudeCode);
+        });
     }
 
     #[test]
     fn resolve_codex_provider_ok() {
-        let provider = resolve_provider(ProviderId::Codex).unwrap();
-        assert_eq!(provider.id(), ProviderId::Codex);
+        crate::with_env_lock(|| {
+            std::env::remove_var(crate::ENV_CODEX);
+            let provider = resolve_provider(ProviderId::Codex).unwrap();
+            assert_eq!(provider.id(), ProviderId::Codex);
+        });
     }
 
     #[test]

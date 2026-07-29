@@ -94,7 +94,7 @@ fn diagnose_provider_inner(id: ProviderId) -> ProviderDoctorEntry {
         };
     }
 
-    // Implemented CLI (codex): parse override / default, then PATH probe only.
+    // Implemented CLI (codex / claude / cursor / antigravity): parse override / default, then PATH probe only.
     let (program, status, reason) = match env_name.and_then(|n| std::env::var(n).ok()) {
         Some(val) => match parse_argv_override(&val) {
             Ok((program, _)) => probe_program(program),
@@ -187,7 +187,7 @@ fn program_resolves(program: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ENV_CODEX;
+    use crate::{ENV_CLAUDE, ENV_CODEX, ENV_CURSOR};
 
     #[test]
     fn mock_ready() {
@@ -200,50 +200,82 @@ mod tests {
     }
 
     #[test]
-    fn not_implemented_claude() {
-        let entry = diagnose_provider(ProviderId::ClaudeCode).expect("diagnose");
-        assert_eq!(entry.status, DoctorStatus::NotImplemented);
-        assert!(!entry.implemented);
-        assert_eq!(entry.program, "claude");
-        assert_eq!(
-            entry.reason.as_deref(),
-            Some("provider not implemented: claude-code")
-        );
+    fn claude_missing_when_override_points_nowhere() {
+        crate::with_env_lock(|| {
+            std::env::set_var(
+                ENV_CLAUDE,
+                "dare-ai-doctor-missing-claude-xyzzy-9f3a2c1b",
+            );
+            let entry = diagnose_provider(ProviderId::ClaudeCode).expect("diagnose");
+            std::env::remove_var(ENV_CLAUDE);
+            assert!(entry.implemented);
+            assert_eq!(entry.status, DoctorStatus::Missing);
+            assert_ne!(entry.status, DoctorStatus::NotImplemented);
+            assert!(entry
+                .reason
+                .as_deref()
+                .unwrap_or("")
+                .contains("provider executable not found:"));
+        });
+    }
+
+    #[test]
+    fn cursor_invalid_override() {
+        crate::with_env_lock(|| {
+            std::env::set_var(ENV_CURSOR, "   ");
+            let entry = diagnose_provider(ProviderId::CursorCli).expect("diagnose");
+            std::env::remove_var(ENV_CURSOR);
+            assert_eq!(entry.status, DoctorStatus::Invalid);
+            assert!(entry.implemented);
+            assert_eq!(
+                entry.reason.as_deref(),
+                Some("command override must not be empty")
+            );
+        });
     }
 
     #[test]
     fn invalid_override() {
-        std::env::set_var(ENV_CODEX, "   ");
-        let entry = diagnose_provider(ProviderId::Codex).expect("diagnose");
-        std::env::remove_var(ENV_CODEX);
-        assert_eq!(entry.status, DoctorStatus::Invalid);
-        assert!(entry.implemented);
-        assert_eq!(
-            entry.reason.as_deref(),
-            Some("command override must not be empty")
-        );
+        crate::with_env_lock(|| {
+            std::env::set_var(ENV_CODEX, "   ");
+            let entry = diagnose_provider(ProviderId::Codex).expect("diagnose");
+            std::env::remove_var(ENV_CODEX);
+            assert_eq!(entry.status, DoctorStatus::Invalid);
+            assert!(entry.implemented);
+            assert_eq!(
+                entry.reason.as_deref(),
+                Some("command override must not be empty")
+            );
+        });
     }
 
     #[test]
     fn diagnose_all_order_stable() {
-        let report = diagnose_all().expect("diagnose_all");
-        assert_eq!(report.schema_version, 1);
-        assert!(report.ok);
-        let ids: Vec<&str> = report.providers.iter().map(|p| p.id.as_str()).collect();
-        assert_eq!(
-            ids,
-            vec![
-                "mock",
-                "codex",
-                "claude-code",
-                "cursor-cli",
-                "antigravity-cli"
-            ]
-        );
-        assert_eq!(report.providers[0].status, DoctorStatus::Ready);
-        assert_eq!(report.providers[2].status, DoctorStatus::NotImplemented);
-        assert_eq!(report.providers[3].status, DoctorStatus::NotImplemented);
-        assert_eq!(report.providers[4].status, DoctorStatus::NotImplemented);
+        crate::with_env_lock(|| {
+            let report = diagnose_all().expect("diagnose_all");
+            assert_eq!(report.schema_version, 1);
+            assert!(report.ok);
+            let ids: Vec<&str> = report.providers.iter().map(|p| p.id.as_str()).collect();
+            assert_eq!(
+                ids,
+                vec![
+                    "mock",
+                    "codex",
+                    "claude-code",
+                    "cursor-cli",
+                    "antigravity-cli"
+                ]
+            );
+            assert_eq!(report.providers[0].status, DoctorStatus::Ready);
+            for entry in &report.providers[2..] {
+                assert!(entry.implemented);
+                assert_ne!(entry.status, DoctorStatus::NotImplemented);
+                assert!(matches!(
+                    entry.status,
+                    DoctorStatus::Ready | DoctorStatus::Missing | DoctorStatus::Invalid
+                ));
+            }
+        });
     }
 
     #[test]
@@ -260,17 +292,19 @@ mod tests {
 
     #[test]
     fn codex_missing_when_override_points_nowhere() {
-        std::env::set_var(
-            ENV_CODEX,
-            "dare-ai-doctor-missing-bin-xyzzy-9f3a2c1b",
-        );
-        let entry = diagnose_provider(ProviderId::Codex).expect("diagnose");
-        std::env::remove_var(ENV_CODEX);
-        assert_eq!(entry.status, DoctorStatus::Missing);
-        assert!(entry
-            .reason
-            .as_deref()
-            .unwrap_or("")
-            .contains("provider executable not found:"));
+        crate::with_env_lock(|| {
+            std::env::set_var(
+                ENV_CODEX,
+                "dare-ai-doctor-missing-bin-xyzzy-9f3a2c1b",
+            );
+            let entry = diagnose_provider(ProviderId::Codex).expect("diagnose");
+            std::env::remove_var(ENV_CODEX);
+            assert_eq!(entry.status, DoctorStatus::Missing);
+            assert!(entry
+                .reason
+                .as_deref()
+                .unwrap_or("")
+                .contains("provider executable not found:"));
+        });
     }
 }

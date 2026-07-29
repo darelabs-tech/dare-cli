@@ -10,6 +10,7 @@ mod provider;
 mod redact_log;
 mod request;
 mod schema;
+mod text_cli;
 
 use std::time::Duration;
 
@@ -27,6 +28,9 @@ pub use doctor::{
 pub use inject::{inject_enrichable, inject_sections};
 pub use mock::MockProvider;
 pub use provider::{resolve_provider, AiProvider, ProviderId};
+pub use text_cli::{
+    TextCliConfig, TextCliProvider, ANTIGRAVITY_CFG, CLAUDE_CFG, CURSOR_CFG,
+};
 pub use redact_log::{redact_prompt_for_log, redact_stderr_for_error};
 pub use request::{EnrichRaw, EnrichRequest};
 pub use schema::{parse_and_validate_sections, parse_and_validate_sections_with};
@@ -49,3 +53,13 @@ pub const ENV_CODEX: &str = "DARE_CODEX_COMMAND";
 pub const ENV_CLAUDE: &str = "DARE_CLAUDE_COMMAND";
 pub const ENV_CURSOR: &str = "DARE_CURSOR_COMMAND";
 pub const ENV_ANTIGRAVITY: &str = "DARE_ANTIGRAVITY_COMMAND";
+
+/// Serialize tests that mutate process env (parallel cargo test races).
+#[cfg(test)]
+pub(crate) fn with_env_lock<R>(f: impl FnOnce() -> R) -> R {
+    use std::sync::{Mutex, OnceLock};
+    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    let lock = LOCK.get_or_init(|| Mutex::new(()));
+    let _guard = lock.lock().unwrap_or_else(|e| e.into_inner());
+    f()
+}
