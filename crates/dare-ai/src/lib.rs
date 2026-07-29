@@ -1,6 +1,8 @@
 //! AI enrichment domain (microplano 024).
 
+mod capabilities;
 mod codex;
+mod doctor;
 mod inject;
 mod mock;
 mod provider;
@@ -10,7 +12,16 @@ mod schema;
 
 use std::time::Duration;
 
+pub use capabilities::{
+    default_program, default_timeout_secs, env_override_name, is_implemented,
+    list_provider_capabilities, ProviderCapability, ProvidersReport, PROVIDER_ORDER,
+    PROVIDERS_SCHEMA_VERSION,
+};
 pub use codex::{parse_argv_override, CodexCliProvider};
+pub use doctor::{
+    diagnose_all, diagnose_provider, DoctorReport, DoctorStatus, ProviderDoctorEntry,
+    DOCTOR_SCHEMA_VERSION,
+};
 pub use inject::{inject_enrichable, inject_sections};
 pub use mock::MockProvider;
 pub use provider::{resolve_provider, AiProvider, ProviderId};
