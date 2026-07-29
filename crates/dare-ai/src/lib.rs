@@ -1,5 +1,6 @@
 //! AI enrichment domain (microplano 024).
 
+pub mod command_registry;
 mod codex;
 mod inject;
 mod mock;
@@ -11,6 +12,7 @@ mod schema;
 use std::time::Duration;
 
 pub use codex::{parse_argv_override, CodexCliProvider};
+pub use command_registry::{sections_for_command, MSG_UNKNOWN_COMMAND};
 pub use inject::{inject_enrichable, inject_sections};
 pub use mock::MockProvider;
 pub use provider::{resolve_provider, AiProvider, ProviderId};
