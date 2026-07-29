@@ -65,7 +65,14 @@ pub fn default_program(id: ProviderId) -> &'static str {
 
 /// Whether enrich is implemented for this provider in v1.
 pub fn is_implemented(id: ProviderId) -> bool {
-    matches!(id, ProviderId::Mock | ProviderId::Codex)
+    matches!(
+        id,
+        ProviderId::Mock
+            | ProviderId::Codex
+            | ProviderId::ClaudeCode
+            | ProviderId::CursorCli
+            | ProviderId::AntigravityCli
+    )
 }
 
 /// Default enrich timeout in seconds (1200).
@@ -124,9 +131,12 @@ mod tests {
         assert!(report.providers[0].implemented);
         assert!(report.providers[0].enrich);
         assert!(report.providers[1].implemented);
-        assert!(!report.providers[2].implemented);
-        assert!(!report.providers[2].enrich);
+        assert!(report.providers[2].implemented);
+        assert!(report.providers[2].enrich);
+        assert!(report.providers[3].implemented);
+        assert!(report.providers[4].implemented);
         assert_eq!(report.providers[1].env_override.as_deref(), Some(ENV_CODEX));
+        assert_eq!(report.providers[2].env_override.as_deref(), Some(ENV_CLAUDE));
         assert!(report.providers[0].env_override.is_none());
     }
 

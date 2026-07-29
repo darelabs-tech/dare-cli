@@ -1,4 +1,8 @@
-//! Codex CLI provider — argv-only spawn via `SafeCommand`.
+//! Shared terminal-first CLI enrich providers (Claude / Cursor / Antigravity).
+//!
+//! Mirrors [`CodexCliProvider`](crate::CodexCliProvider): `SafeCommand` argv-only spawn,
+//! `DARE_*_COMMAND` overrides via [`parse_argv_override`](crate::parse_argv_override),
+//! stdin prompt, `ENRICH_TIMEOUT`, stdout/stderr caps. No shell.
 
 use std::sync::Arc;
 
@@ -7,43 +11,76 @@ use dare_core::{
     SystemProcessRunner,
 };
 
+use crate::codex::parse_argv_override;
 use crate::provider::{AiProvider, ProviderId};
 use crate::redact_log::{redact_prompt_for_log, redact_stderr_for_error};
 use crate::request::{EnrichRaw, EnrichRequest};
-use crate::{ENRICH_TIMEOUT, ENV_CODEX, STDERR_CAP, STDOUT_CAP};
+use crate::{ENRICH_TIMEOUT, ENV_ANTIGRAVITY, ENV_CLAUDE, ENV_CURSOR, STDERR_CAP, STDOUT_CAP};
 
 const MARKDOWN_PROMPT_MAX: usize = 32 * 1024;
 
-pub fn parse_argv_override(env_val: &str) -> CoreResult<(String, Vec<String>)> {
-    let trimmed = env_val.trim();
-    if trimmed.is_empty() {
-        return Err(CoreError::invalid_input(
-            "command override must not be empty",
-        ));
-    }
-    let parts: Vec<&str> = trimmed.split_whitespace().collect();
-    let program = parts[0].to_string();
-    let args = parts[1..].iter().map(|s| (*s).to_string()).collect();
-    Ok((program, args))
+/// Static defaults for a text CLI enrich provider.
+pub struct TextCliConfig {
+    pub id: ProviderId,
+    pub env_key: &'static str,
+    pub default_program: &'static str,
+    pub default_args: &'static [&'static str],
 }
 
-pub struct CodexCliProvider {
+/// Claude Code — default `claude -p --output-format text`.
+pub const CLAUDE_CFG: TextCliConfig = TextCliConfig {
+    id: ProviderId::ClaudeCode,
+    env_key: ENV_CLAUDE,
+    default_program: "claude",
+    default_args: &["-p", "--output-format", "text"],
+};
+
+/// Cursor CLI — default `cursor --print`.
+pub const CURSOR_CFG: TextCliConfig = TextCliConfig {
+    id: ProviderId::CursorCli,
+    env_key: ENV_CURSOR,
+    default_program: "cursor",
+    default_args: &["--print"],
+};
+
+/// Antigravity CLI — default `antigravity agent --print`.
+pub const ANTIGRAVITY_CFG: TextCliConfig = TextCliConfig {
+    id: ProviderId::AntigravityCli,
+    env_key: ENV_ANTIGRAVITY,
+    default_program: "antigravity",
+    default_args: &["agent", "--print"],
+};
+
+/// Generic CLI enrich provider parameterized by [`TextCliConfig`].
+pub struct TextCliProvider {
+    id: ProviderId,
     program: String,
     base_args: Vec<String>,
     runner: Arc<dyn ProcessRunner>,
 }
 
-impl CodexCliProvider {
-    pub fn from_env() -> CoreResult<Self> {
-        Self::from_env_with_runner(Arc::new(SystemProcessRunner))
+impl TextCliProvider {
+    pub fn from_env(config: &TextCliConfig) -> CoreResult<Self> {
+        Self::from_env_with_runner(config, Arc::new(SystemProcessRunner))
     }
 
-    pub fn from_env_with_runner(runner: Arc<dyn ProcessRunner>) -> CoreResult<Self> {
-        let (program, base_args) = match std::env::var(ENV_CODEX) {
+    pub fn from_env_with_runner(
+        config: &TextCliConfig,
+        runner: Arc<dyn ProcessRunner>,
+    ) -> CoreResult<Self> {
+        let (program, base_args) = match std::env::var(config.env_key) {
             Ok(val) => parse_argv_override(&val)?,
-            Err(_) => ("codex".to_string(), vec!["exec".to_string()]),
+            Err(_) => (
+                config.default_program.to_string(),
+                config
+                    .default_args
+                    .iter()
+                    .map(|s| (*s).to_string())
+                    .collect(),
+            ),
         };
         Ok(Self {
+            id: config.id,
             program,
             base_args,
             runner,
@@ -76,9 +113,9 @@ impl CodexCliProvider {
     }
 }
 
-impl AiProvider for CodexCliProvider {
+impl AiProvider for TextCliProvider {
     fn id(&self) -> ProviderId {
-        ProviderId::Codex
+        self.id
     }
 
     fn enrich(&self, req: &EnrichRequest) -> CoreResult<EnrichRaw> {
@@ -170,150 +207,99 @@ mod tests {
         }
     }
 
-    #[test]
-    fn argv_override_split() {
-        let (program, args) =
-            parse_argv_override("  /usr/bin/codex  exec  --model  gpt-4  ").unwrap();
-        assert_eq!(program, "/usr/bin/codex");
-        assert_eq!(args, vec!["exec", "--model", "gpt-4"]);
-
-        let err = parse_argv_override("   ").unwrap_err();
-        assert_eq!(err.kind(), ErrorKind::InvalidInput);
+    fn ok_stdout() -> ProcessOutput {
+        ProcessOutput {
+            exit_code: 0,
+            stdout: r#"{"sections":{"description":"d","objectives":"o","functional-requirements":"f","stack":"s"}}"#
+                .into(),
+            stderr: String::new(),
+            stdout_truncated: false,
+            stderr_truncated: false,
+            timed_out: false,
+            cancelled: false,
+        }
     }
 
     #[test]
-    fn codex_default_program_is_codex() {
+    fn resolve_claude_from_env_override() {
         crate::with_env_lock(|| {
-            std::env::remove_var(ENV_CODEX);
+            std::env::set_var(ENV_CLAUDE, "/opt/claude-bin -p --extra");
+            let mock = MockProcessRunner::new();
+            let result = TextCliProvider::from_env_with_runner(
+                &CLAUDE_CFG,
+                Arc::new(mock) as Arc<dyn ProcessRunner>,
+            );
+            std::env::remove_var(ENV_CLAUDE);
+            let provider = result.expect("from_env");
+            assert_eq!(provider.id(), ProviderId::ClaudeCode);
+            assert_eq!(provider.program, "/opt/claude-bin");
+            assert_eq!(provider.base_args, vec!["-p", "--extra"]);
+        });
+    }
+
+    #[test]
+    fn resolve_cursor_ok_with_fake_runner() {
+        crate::with_env_lock(|| {
+            std::env::remove_var(ENV_CURSOR);
             let dir = tempdir().expect("temp");
             let _ = std::fs::create_dir_all(dir.path().join("sub"));
             let root = ProjectRoot::new(dir.path()).expect("root");
             let req = sample_request(root);
 
             let mock = MockProcessRunner::new();
-            mock.push(ProcessOutput {
-                exit_code: 0,
-                stdout: r#"{"sections":{"description":"d","objectives":"o","functional-requirements":"f","stack":"s"}}"#
-                    .into(),
-                stderr: String::new(),
-                stdout_truncated: false,
-                stderr_truncated: false,
-                timed_out: false,
-                cancelled: false,
-            });
-
+            mock.push(ok_stdout());
             let recording = Arc::new(RecordingRunner::new(mock));
-            let provider = CodexCliProvider::from_env_with_runner(
-                Arc::clone(&recording) as Arc<dyn ProcessRunner>
+            let provider = TextCliProvider::from_env_with_runner(
+                &CURSOR_CFG,
+                Arc::clone(&recording) as Arc<dyn ProcessRunner>,
             )
             .unwrap();
-            assert_eq!(provider.id(), ProviderId::Codex);
+            assert_eq!(provider.id(), ProviderId::CursorCli);
 
             provider.enrich(&req).expect("enrich ok");
             let cmd = recording.last_cmd().expect("command recorded");
-            assert_eq!(cmd.program(), "codex");
-            assert_eq!(cmd.arg_list(), &["exec"]);
+            assert_eq!(cmd.program(), "cursor");
+            assert_eq!(cmd.arg_list(), &["--print"]);
         });
     }
 
     #[test]
-    fn codex_builds_command_with_mock_runner() {
+    fn resolve_antigravity_default_args() {
         crate::with_env_lock(|| {
-            std::env::remove_var(ENV_CODEX);
+            std::env::remove_var(ENV_ANTIGRAVITY);
             let dir = tempdir().expect("temp");
             let _ = std::fs::create_dir_all(dir.path().join("sub"));
             let root = ProjectRoot::new(dir.path()).expect("root");
             let req = sample_request(root);
 
             let mock = MockProcessRunner::new();
-            mock.push(ProcessOutput {
-                exit_code: 0,
-                stdout: r#"{"sections":{"description":"d","objectives":"o","functional-requirements":"f","stack":"s"}}"#
-                    .into(),
-                stderr: String::new(),
-                stdout_truncated: false,
-                stderr_truncated: false,
-                timed_out: false,
-                cancelled: false,
-            });
-
+            mock.push(ok_stdout());
             let recording = Arc::new(RecordingRunner::new(mock));
-            let provider = CodexCliProvider::from_env_with_runner(
-                Arc::clone(&recording) as Arc<dyn ProcessRunner>
+            let provider = TextCliProvider::from_env_with_runner(
+                &ANTIGRAVITY_CFG,
+                Arc::clone(&recording) as Arc<dyn ProcessRunner>,
             )
             .unwrap();
+            assert_eq!(provider.id(), ProviderId::AntigravityCli);
 
-            let raw = provider.enrich(&req).expect("enrich ok");
-            assert_eq!(raw.exit_code, 0);
-            assert!(raw.stdout.contains("sections"));
-
+            provider.enrich(&req).expect("enrich ok");
             let cmd = recording.last_cmd().expect("command recorded");
-            assert_eq!(cmd.program(), "codex");
-            assert_eq!(cmd.arg_list(), &["exec"]);
-            assert!(cmd.stdin_bytes().is_some());
-            let stdin = cmd.stdin_bytes().unwrap();
-            assert!(std::str::from_utf8(stdin).unwrap().contains("Payment API"));
+            assert_eq!(cmd.program(), "antigravity");
+            assert_eq!(cmd.arg_list(), &["agent", "--print"]);
         });
     }
 
     #[test]
-    fn codex_timeout_returns_err() {
+    fn empty_override_is_invalid_input() {
         crate::with_env_lock(|| {
-            std::env::remove_var(ENV_CODEX);
-            let dir = tempdir().expect("temp");
-            let _ = std::fs::create_dir_all(dir.path().join("sub"));
-            let root = ProjectRoot::new(dir.path()).expect("root");
-            let req = sample_request(root);
-
-            let mock = MockProcessRunner::new();
-            mock.push(ProcessOutput {
-                exit_code: 124,
-                stdout: String::new(),
-                stderr: "timed out".into(),
-                stdout_truncated: false,
-                stderr_truncated: false,
-                timed_out: true,
-                cancelled: false,
-            });
-
-            let provider =
-                CodexCliProvider::from_env_with_runner(Arc::new(mock) as Arc<dyn ProcessRunner>)
-                    .unwrap();
-
-            let err = provider.enrich(&req).expect_err("timeout");
-            assert_eq!(err.kind(), ErrorKind::Internal);
-            assert!(err.to_string().contains("timed out"));
-        });
-    }
-
-    #[test]
-    fn codex_nonzero_exit_redacts_stderr() {
-        crate::with_env_lock(|| {
-            std::env::remove_var(ENV_CODEX);
-            let dir = tempdir().expect("temp");
-            let _ = std::fs::create_dir_all(dir.path().join("sub"));
-            let root = ProjectRoot::new(dir.path()).expect("root");
-            let req = sample_request(root);
-
-            let mock = MockProcessRunner::new();
-            mock.push(ProcessOutput {
-                exit_code: 1,
-                stdout: String::new(),
-                stderr: "error api_key=topsecret".into(),
-                stdout_truncated: false,
-                stderr_truncated: false,
-                timed_out: false,
-                cancelled: false,
-            });
-
-            let provider =
-                CodexCliProvider::from_env_with_runner(Arc::new(mock) as Arc<dyn ProcessRunner>)
-                    .unwrap();
-
-            let err = provider.enrich(&req).expect_err("nonzero");
-            let msg = err.to_string();
-            assert!(!msg.contains("topsecret"));
-            assert!(msg.contains("[REDACTED]"));
+            std::env::set_var(ENV_CLAUDE, "   ");
+            let result = TextCliProvider::from_env_with_runner(
+                &CLAUDE_CFG,
+                Arc::new(MockProcessRunner::new()) as Arc<dyn ProcessRunner>,
+            );
+            std::env::remove_var(ENV_CLAUDE);
+            let err = result.err().expect("empty override");
+            assert_eq!(err.kind(), ErrorKind::InvalidInput);
         });
     }
 }
