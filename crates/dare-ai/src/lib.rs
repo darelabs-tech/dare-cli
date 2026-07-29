@@ -6,6 +6,7 @@ mod codex;
 mod doctor;
 mod inject;
 mod mock;
+pub mod prompt;
 mod provider;
 mod redact_log;
 mod request;
@@ -26,6 +27,7 @@ pub use doctor::{
 };
 pub use inject::{inject_enrichable, inject_sections};
 pub use mock::MockProvider;
+pub use prompt::{build_enrich_prompt, prompt_preview, PromptReport};
 pub use provider::{resolve_provider, AiProvider, ProviderId};
 pub use redact_log::{redact_prompt_for_log, redact_stderr_for_error};
 pub use request::{EnrichRaw, EnrichRequest};
