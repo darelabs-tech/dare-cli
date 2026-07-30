@@ -8,6 +8,7 @@ mod middleware;
 mod mode;
 mod routes;
 mod state;
+mod telemetry;
 
 pub use app::create_app;
 pub use auth::{MSG_UNAUTHORIZED, auth_middleware};
@@ -19,7 +20,9 @@ pub use config::{
 pub use error::{HttpError, HttpErrorBody};
 pub use middleware::{MSG_BODY_TOO_LARGE, cors_layer, security_headers_layers};
 pub use mode::AppMode;
+pub use routes::dashboard::MSG_PATH_ESCAPE;
 pub use state::AppState;
+pub use telemetry::build_telemetry_snapshot;
 
 #[cfg(test)]
 mod tests {
@@ -157,5 +160,95 @@ mod tests {
                 .and_then(|v| v.to_str().ok()),
             Some(CSP_DASHBOARD)
         );
+    }
+
+    #[tokio::test]
+    async fn dashboard_html_200() {
+        let (cfg, state, _dir) = test_cfg_state(false, DEFAULT_BODY_LIMIT);
+        let app = create_app(AppMode::Dashboard, &cfg, state);
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/dashboard")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let ct = response
+            .headers()
+            .get("content-type")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("");
+        assert!(ct.starts_with("text/html"), "content-type={ct}");
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let body = String::from_utf8_lossy(&bytes);
+        assert!(body.contains("<!DOCTYPE html>") || body.contains("<html"));
+    }
+
+    #[tokio::test]
+    async fn assets_traversal_403() {
+        let (cfg, state, _dir) = test_cfg_state(false, DEFAULT_BODY_LIMIT);
+        let app = create_app(AppMode::Dashboard, &cfg, state);
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/assets/%2e%2e/Cargo.toml")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(json["error"], MSG_PATH_ESCAPE);
+        assert_eq!(json["code"], "path_escape");
+    }
+
+    #[tokio::test]
+    async fn assets_exe_forbidden() {
+        let (cfg, state, _dir) = test_cfg_state(false, DEFAULT_BODY_LIMIT);
+        let app = create_app(AppMode::Dashboard, &cfg, state);
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/assets/evil.exe")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(json["code"], "forbidden");
+    }
+
+    #[tokio::test]
+    async fn telemetry_maps_keys() {
+        let (cfg, state, _dir) = test_cfg_state(false, DEFAULT_BODY_LIMIT);
+        let app = create_app(AppMode::Rest, &cfg, state);
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/telemetry")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert!(json.get("dag").is_some());
+        assert!(json.get("gates").is_some());
+        assert!(json.get("cost").is_some());
+        assert!(json.get("bestOfN").is_some());
+        assert!(json.get("guard").is_some());
+        assert!(json.get("drift").is_some());
+        assert!(json["dag"].get("tasksTotal").is_some());
+        assert!(json["drift"].get("available").is_some());
     }
 }
