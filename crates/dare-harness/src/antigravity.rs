@@ -234,12 +234,12 @@ mod tests {
         let root = ProjectRoot::new(dir.path()).unwrap();
         generate_antigravityrules(&root, true).unwrap();
         ensure_workflows_dir(&root, true).unwrap();
-        assert_eq!(install_antigravity(&root, true).unwrap(), 49);
-        assert_eq!(validate_antigravity_install(&root).unwrap(), 49);
+        assert_eq!(install_antigravity(&root, true).unwrap(), 50);
+        assert_eq!(validate_antigravity_install(&root).unwrap(), 50);
         // Codex after Antigravity reuses .agents/skills (preserve managed identical).
         generate_agents_md(&root, true).unwrap();
         let _ = install_codex_skills(&root, false).unwrap();
-        assert_eq!(validate_antigravity_install(&root).unwrap(), 49);
+        assert_eq!(validate_antigravity_install(&root).unwrap(), 50);
     }
 
     #[test]

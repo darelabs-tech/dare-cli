@@ -143,10 +143,10 @@ mod tests {
         let dir = tempdir().unwrap();
         let root = ProjectRoot::new(dir.path()).unwrap();
         generate_cursorrules(&root, true).unwrap();
-        assert_eq!(install_cursor_commands(&root, true).unwrap(), 49);
-        assert_eq!(validate_cursor_install(&root).unwrap(), 49);
+        assert_eq!(install_cursor_commands(&root, true).unwrap(), 50);
+        assert_eq!(validate_cursor_install(&root).unwrap(), 50);
         let n2 = install_cursor_commands(&root, false).unwrap();
-        assert_eq!(n2, 49); // managed rewritten
+        assert_eq!(n2, 50); // managed rewritten
     }
 
     #[test]
@@ -167,6 +167,6 @@ mod tests {
         let root = ProjectRoot::new(dir.path()).unwrap();
         let msg = validate_cursor_install(&root).unwrap_err().to_string();
         assert!(msg.contains("cursor commands missing"));
-        assert!(msg.contains("missing (49)") || msg.contains("(49):"));
+        assert!(msg.contains("missing (50)") || msg.contains("(50):"));
     }
 }

@@ -206,8 +206,8 @@ mod tests {
         let dir = tempdir().unwrap();
         let root = ProjectRoot::new(dir.path()).unwrap();
         generate_agents_md(&root, true).unwrap();
-        assert_eq!(install_codex_skills(&root, true).unwrap(), 49);
-        assert_eq!(validate_codex_install(&root).unwrap(), 49);
+        assert_eq!(install_codex_skills(&root, true).unwrap(), 50);
+        assert_eq!(validate_codex_install(&root).unwrap(), 50);
         let agents = read_to_string(&root, &SafeRelativePath::new(AGENTS_MD).unwrap()).unwrap();
         assert!(agents.contains("$dare-design"));
         let shared = SafeRelativePath::new(".agents/skills/dare-design/SKILL.md").unwrap();

@@ -195,12 +195,12 @@ mod tests {
         assert!(!detect_claude(&root).unwrap().claude_md);
         generate_claude_md(&root, true).unwrap();
         let n = install_commands(&root, true).unwrap();
-        assert_eq!(n, 49);
+        assert_eq!(n, 50);
         write_settings_json(&root, true).unwrap();
-        assert_eq!(validate_install(&root).unwrap(), 49);
+        assert_eq!(validate_install(&root).unwrap(), 50);
         // preserve: second install without force should write 0 if all managed
         let n2 = install_commands(&root, false).unwrap();
-        assert_eq!(n2, 49); // managed files are rewritten (idempotent)
+        assert_eq!(n2, 50); // managed files are rewritten (idempotent)
     }
 
     #[test]
@@ -223,7 +223,7 @@ mod tests {
         let err = validate_install(&root).unwrap_err();
         let msg = err.to_string();
         assert!(msg.contains("claude commands missing"));
-        assert!(msg.contains("(49):") || msg.contains("missing (49)"));
+        assert!(msg.contains("(50):") || msg.contains("missing (50)"));
     }
 
     #[test]
