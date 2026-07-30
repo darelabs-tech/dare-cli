@@ -9,10 +9,11 @@ exceptions:
 capabilities:
   - id: dare-ai
     title: "dare-ai"
-    description: "Capability IDE for dare-ai"
+    description: "AI enrich doctor/providers/run/prompt (dare ai)"
     instructions: |
-      Use the /dare-ai slash command when appropriate.
-    cli_commands: []
+      Use /dare-ai or `dare ai doctor|providers|run|prompt`.
+      See docs/compatibility/cli-ai.md (DEC-051).
+    cli_commands: ["ai"]
     outputs:
       claude: .claude/commands/dare-ai.md
       cursor: .cursor/commands/dare-ai.md
