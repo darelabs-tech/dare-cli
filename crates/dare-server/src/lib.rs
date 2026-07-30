@@ -2,18 +2,21 @@
 
 mod app;
 mod auth;
+mod browser;
 mod config;
 mod error;
 mod http_map;
 mod middleware;
 mod mode;
 mod routes;
+mod serve;
 mod state;
 mod tasks_md;
 mod telemetry;
 
 pub use app::create_app;
 pub use auth::{MSG_UNAUTHORIZED, auth_middleware};
+pub use browser::{is_allowed_browser_url, open_browser};
 pub use config::{
     parse_server_config_from_env, ServerConfig, TokenSource, DEFAULT_BODY_LIMIT,
     DEFAULT_DASHBOARD_BIND, DEFAULT_DASHBOARD_PORT, DEFAULT_REST_BIND, DEFAULT_REST_PORT,
@@ -24,6 +27,7 @@ pub use http_map::{MSG_GRAPH_DISABLED, MSG_INVALID_CONTEXT_TYPE};
 pub use middleware::{MSG_BODY_TOO_LARGE, cors_layer, security_headers_layers};
 pub use mode::AppMode;
 pub use routes::rest_router;
+pub use serve::serve;
 pub use state::AppState;
 pub use tasks_md::{
     get_task_view, put_task_status, TaskView, MSG_INVALID_STATUS, MSG_PATH_ESCAPE,
