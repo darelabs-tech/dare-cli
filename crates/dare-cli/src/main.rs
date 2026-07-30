@@ -14,6 +14,7 @@ use commands::bench::{run_bench_cmd, BenchCliOpts};
 use commands::blueprint::{run_blueprint, BlueprintInput};
 use commands::bootstrap::{run_bootstrap_cmd, BootstrapCliOpts};
 use commands::dag::{run_dag_viz, CliVizFormat};
+use commands::dashboard::{run_dashboard_cmd, DashboardCliOpts};
 use commands::design::run_design;
 use commands::discover::run_discover;
 use commands::dna::run_dna_cmd;
@@ -27,6 +28,7 @@ use commands::patterns::run_patterns_cmd;
 use commands::refine::{run_refine_cmd, RefineCliArgs};
 use commands::reverse::{run_reverse, ReverseCliOpts};
 use commands::review::{run_review_cmd, ReviewCliArgs};
+use commands::server::{run_server_cmd, ServerCliOpts};
 use commands::skill::{run_skill, SkillAction};
 use commands::hooks::{run_hooks_cmd, run_hooks_list, run_hooks_validate};
 use commands::steering::{run_steering_list, run_steering_show};
@@ -509,6 +511,33 @@ enum Commands {
     Ai {
         #[command(subcommand)]
         action: AiCmd,
+    },
+    /// Local read-only telemetry dashboard (microplano 051).
+    Dashboard {
+        /// Listen port (default: 4100).
+        #[arg(long)]
+        port: Option<u16>,
+        /// Do not open a browser after bind.
+        #[arg(long)]
+        no_open: bool,
+        /// Project directory (default: cwd; also honors DARE_PROJECT_PATH).
+        #[arg(short = 'd', long = "dir")]
+        dir: Option<PathBuf>,
+    },
+    /// REST-compatible HTTP server (microplano 051).
+    Server {
+        /// Protocol (`rest` only in v1).
+        #[arg(long)]
+        protocol: String,
+        /// Bind address (default: 127.0.0.1).
+        #[arg(long)]
+        bind: Option<String>,
+        /// Listen port (default: 3000).
+        #[arg(long)]
+        port: Option<u16>,
+        /// Project directory (default: cwd; also honors DARE_PROJECT_PATH).
+        #[arg(short = 'd', long = "dir")]
+        dir: Option<PathBuf>,
     },
 }
 
@@ -1305,6 +1334,32 @@ fn main() -> ExitCode {
                     }
                 }
             }
+            Some(Commands::Dashboard {
+                port,
+                no_open,
+                dir,
+            }) => run_dashboard_cmd(
+                DashboardCliOpts {
+                    port,
+                    no_open,
+                    dir,
+                },
+                &renderer,
+            ),
+            Some(Commands::Server {
+                protocol,
+                bind,
+                port,
+                dir,
+            }) => run_server_cmd(
+                ServerCliOpts {
+                    protocol,
+                    bind,
+                    port,
+                    dir,
+                },
+                &renderer,
+            ),
             other => {
                 let cli = Cli {
                     json: cli.json,
@@ -1632,6 +1687,8 @@ fn run(cli: Cli) -> Result<(String, serde_json::Value), CoreError> {
         Some(Commands::Graph { .. }) => unreachable!("graph handled in main"),
         Some(Commands::Bench { .. }) => unreachable!("bench handled in main"),
         Some(Commands::Ai { .. }) => unreachable!("ai handled in main"),
+        Some(Commands::Dashboard { .. }) => unreachable!("dashboard handled in main"),
+        Some(Commands::Server { .. }) => unreachable!("server handled in main"),
     }
 }
 
