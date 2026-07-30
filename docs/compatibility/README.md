@@ -40,6 +40,7 @@ Microplano **001** (governança, baseline e ADRs prioritárias) concluído em 20
 | [`cli-init-bootstrap.md`](cli-init-bootstrap.md) | CLI `dare init` / `dare bootstrap`: greenfield + idempotent scaffold (047 / DEC-048) | — |
 | [`cli-hooks-steering.md`](cli-hooks-steering.md) | CLI `dare hooks` / `dare steering`: trust gate, allowlist, `.env*` deny (048 / DEC-049) | — |
 | [`cli-verify-bench.md`](cli-verify-bench.md) | Advanced verify + CLI `dare bench`: Fix·Rate, aspects, execute flags (049 / DEC-050) | — |
+| [`cli-ai.md`](cli-ai.md) | CLI `dare ai` doctor/providers/run/prompt: enrich providers, write opt-in (050 / DEC-051) | — |
 
 ## Relacionamentos
 
