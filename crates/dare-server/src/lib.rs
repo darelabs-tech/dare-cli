@@ -33,6 +33,7 @@ pub use middleware::{MSG_BODY_TOO_LARGE, cors_layer, security_headers_layers};
 pub use mode::AppMode;
 pub use routes::rest_router;
 pub use serve::serve;
+pub use services::ServiceCtx;
 pub use state::AppState;
 pub use tasks_md::{
     get_task_view, put_task_status, TaskView, MSG_INVALID_STATUS, MSG_PATH_ESCAPE,

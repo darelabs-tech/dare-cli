@@ -17,6 +17,7 @@ pub mod hooks;
 pub mod info;
 pub mod init;
 mod init_prompts;
+pub mod mcp;
 pub mod migrate;
 pub mod path_resolve;
 pub mod patterns;

@@ -23,6 +23,7 @@ use commands::graph::{run_graph, GraphAction};
 use commands::guard::{run_guard_cmd, GuardCliOpts};
 use commands::info::{collect_info, format_human, report_to_json};
 use commands::init::{run_init_cmd, InitCliOpts};
+use commands::mcp::{run_mcp_serve_cmd, McpServeCliOpts};
 use commands::migrate::{run_migrate_cmd, MigrateCliOpts};
 use commands::patterns::run_patterns_cmd;
 use commands::refine::{run_refine_cmd, RefineCliArgs};
@@ -533,6 +534,30 @@ enum Commands {
         #[arg(long)]
         bind: Option<String>,
         /// Listen port (default: 3000).
+        #[arg(long)]
+        port: Option<u16>,
+        /// Project directory (default: cwd; also honors DARE_PROJECT_PATH).
+        #[arg(short = 'd', long = "dir")]
+        dir: Option<PathBuf>,
+    },
+    /// MCP transport serve (microplano 052).
+    Mcp {
+        #[command(subcommand)]
+        action: McpCmd,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+enum McpCmd {
+    /// Serve MCP over stdio or streamable-http.
+    Serve {
+        /// Transport (`stdio` | `streamable-http`). Default: stdio.
+        #[arg(long, default_value = "stdio")]
+        transport: String,
+        /// Bind address (streamable-http only; default 127.0.0.1).
+        #[arg(long)]
+        bind: Option<String>,
+        /// Listen port (streamable-http only; default 3100).
         #[arg(long)]
         port: Option<u16>,
         /// Project directory (default: cwd; also honors DARE_PROJECT_PATH).
@@ -1360,6 +1385,22 @@ fn main() -> ExitCode {
                 },
                 &renderer,
             ),
+            Some(Commands::Mcp { action }) => match action {
+                McpCmd::Serve {
+                    transport,
+                    bind,
+                    port,
+                    dir,
+                } => run_mcp_serve_cmd(
+                    McpServeCliOpts {
+                        transport,
+                        bind,
+                        port,
+                        dir,
+                    },
+                    &renderer,
+                ),
+            },
             other => {
                 let cli = Cli {
                     json: cli.json,
@@ -1689,6 +1730,7 @@ fn run(cli: Cli) -> Result<(String, serde_json::Value), CoreError> {
         Some(Commands::Ai { .. }) => unreachable!("ai handled in main"),
         Some(Commands::Dashboard { .. }) => unreachable!("dashboard handled in main"),
         Some(Commands::Server { .. }) => unreachable!("server handled in main"),
+        Some(Commands::Mcp { .. }) => unreachable!("mcp handled in main"),
     }
 }
 
