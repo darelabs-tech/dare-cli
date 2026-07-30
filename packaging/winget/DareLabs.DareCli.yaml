@@ -1,0 +1,44 @@
+# WinGet package manifest template for the DARE CLI (native Windows binary).
+# Microplano 053 / ADR-008 — placeholders must be filled per release before submitting to winget-pkgs.
+#
+# PackageIdentifier: DareLabs.DareCli
+#
+# How to fill InstallerUrl / InstallerSha256 from a GitHub Release (ADR-008):
+#   1. Pick TAG = git tag that named the Release (e.g. v0.1.0-alpha.1).
+#   2. Windows TARGET is always: x86_64-pc-windows-msvc
+#   3. Asset name: dare-${TAG}-${TARGET}.zip
+#      Example: dare-v0.1.0-alpha.1-x86_64-pc-windows-msvc.zip
+#   4. InstallerUrl = https://github.com/dewtech/dare-cli/releases/download/${TAG}/${ASSET}
+#   5. InstallerSha256 = uppercase hex from Release SHA256SUMS for that zip
+#      (sha256sum two-space format: "<digest>  <filename>")
+#
+# PLACEHOLDERS: replace REPLACE_ME_* (and PackageVersion) before publishing.
+# Scoop is intentionally out of scope for v1 (BLUEPRINT-053 T-10).
+
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.singleton.1.6.0.schema.json
+PackageIdentifier: DareLabs.DareCli
+PackageVersion: REPLACE_ME_VERSION
+PackageLocale: en-US
+Publisher: DareLabs
+PublisherUrl: https://github.com/dewtech/dare-cli
+PackageName: DARE CLI
+License: MIT
+ShortDescription: DARE CLI — Design, Architect, Review, Execute methodology toolkit
+Moniker: dare
+Tags:
+  - cli
+  - dare
+  - developer-tools
+Installers:
+  - Architecture: x64
+    InstallerType: zip
+    NestedInstallerType: portable
+    NestedInstallerFiles:
+      - RelativeFilePath: dare.exe
+        PortableCommandAlias: dare
+    # PLACEHOLDER InstallerUrl — ADR-008 asset dare-${TAG}-x86_64-pc-windows-msvc.zip
+    InstallerUrl: REPLACE_ME_INSTALLER_URL
+    # PLACEHOLDER InstallerSha256 — from Release SHA256SUMS for the same zip
+    InstallerSha256: REPLACE_ME_INSTALLER_SHA256
+ManifestType: singleton
+ManifestVersion: 1.6.0
