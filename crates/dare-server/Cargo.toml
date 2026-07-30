@@ -17,6 +17,7 @@ uuid = { workspace = true }
 rust-embed = { workspace = true }
 dare-core = { workspace = true }
 dare-contracts = { workspace = true }
+dare-graph = { workspace = true }
 
 [dev-dependencies]
 http-body-util = { workspace = true }
