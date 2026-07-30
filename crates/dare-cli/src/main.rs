@@ -7,6 +7,9 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
+use commands::ai::{
+    ai_exit_code, run_ai_doctor, run_ai_prompt, run_ai_providers, run_ai_run, AiEnrichCliOpts,
+};
 use commands::bench::{run_bench_cmd, BenchCliOpts};
 use commands::blueprint::{run_blueprint, BlueprintInput};
 use commands::bootstrap::{run_bootstrap_cmd, BootstrapCliOpts};
@@ -498,6 +501,69 @@ enum Commands {
         /// Glob filter on case id.
         #[arg(long)]
         filter: Option<String>,
+        /// Project directory (default: cwd).
+        #[arg(short = 'd', long = "dir")]
+        dir: Option<PathBuf>,
+    },
+    /// AI enrich doctor / providers / run / prompt (microplano 050).
+    Ai {
+        #[command(subcommand)]
+        action: AiCmd,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+enum AiCmd {
+    /// Diagnose AI provider readiness (PATH probe; never calls enrich).
+    Doctor {
+        /// Provider id (`mock`, `codex`, `claude-code`, `cursor-cli`, `antigravity-cli`).
+        #[arg(long)]
+        provider: Option<String>,
+        /// Project directory (default: cwd).
+        #[arg(short = 'd', long = "dir")]
+        dir: Option<PathBuf>,
+    },
+    /// List provider capabilities (`schemaVersion` 1).
+    Providers {
+        /// Project directory (default: cwd).
+        #[arg(short = 'd', long = "dir")]
+        dir: Option<PathBuf>,
+    },
+    /// Run enrich for a DARE command (`design` | `blueprint`).
+    Run {
+        /// Enrich command id (`design` | `blueprint`).
+        #[arg(long)]
+        command: String,
+        /// Provider id (default: `codex`).
+        #[arg(long)]
+        provider: Option<String>,
+        /// Project-relative facts JSON path.
+        #[arg(long)]
+        facts: Option<String>,
+        /// Project-relative markdown path.
+        #[arg(long)]
+        markdown: Option<String>,
+        /// Opt-in: write injected markdown back to `--markdown` path.
+        #[arg(long)]
+        write: bool,
+        /// Project directory (default: cwd).
+        #[arg(short = 'd', long = "dir")]
+        dir: Option<PathBuf>,
+    },
+    /// Preview redacted enrich prompt (never reads provider env overrides into body).
+    Prompt {
+        /// Enrich command id (`design` | `blueprint`).
+        #[arg(long)]
+        command: String,
+        /// Provider id (default: `codex`).
+        #[arg(long)]
+        provider: Option<String>,
+        /// Project-relative facts JSON path.
+        #[arg(long)]
+        facts: Option<String>,
+        /// Project-relative markdown path.
+        #[arg(long)]
+        markdown: Option<String>,
         /// Project directory (default: cwd).
         #[arg(short = 'd', long = "dir")]
         dir: Option<PathBuf>,
@@ -1194,6 +1260,51 @@ fn main() -> ExitCode {
                 },
                 &renderer,
             ),
+            Some(Commands::Ai { action }) => {
+                let result = match action {
+                    AiCmd::Doctor { provider, dir } => run_ai_doctor(provider, dir),
+                    AiCmd::Providers { dir } => run_ai_providers(dir),
+                    AiCmd::Run {
+                        command,
+                        provider,
+                        facts,
+                        markdown,
+                        write,
+                        dir,
+                    } => run_ai_run(AiEnrichCliOpts {
+                        command,
+                        provider,
+                        facts,
+                        markdown,
+                        write,
+                        dir,
+                    }),
+                    AiCmd::Prompt {
+                        command,
+                        provider,
+                        facts,
+                        markdown,
+                        dir,
+                    } => run_ai_prompt(AiEnrichCliOpts {
+                        command,
+                        provider,
+                        facts,
+                        markdown,
+                        write: false,
+                        dir,
+                    }),
+                };
+                match result {
+                    Ok((msg, data)) => {
+                        let _ = renderer.write_success(&msg, data);
+                        ExitCode::SUCCESS
+                    }
+                    Err(e) => {
+                        let _ = renderer.write_error(&e);
+                        exit(ai_exit_code(&e))
+                    }
+                }
+            }
             other => {
                 let cli = Cli {
                     json: cli.json,
@@ -1520,6 +1631,7 @@ fn run(cli: Cli) -> Result<(String, serde_json::Value), CoreError> {
         Some(Commands::Skill { .. }) => unreachable!("skill handled in main"),
         Some(Commands::Graph { .. }) => unreachable!("graph handled in main"),
         Some(Commands::Bench { .. }) => unreachable!("bench handled in main"),
+        Some(Commands::Ai { .. }) => unreachable!("ai handled in main"),
     }
 }
 

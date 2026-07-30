@@ -1,5 +1,6 @@
 //! Top-level CLI command modules.
 
+pub mod ai;
 pub mod bench;
 pub mod bootstrap;
 pub mod blueprint;
