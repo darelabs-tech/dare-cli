@@ -4,9 +4,14 @@ use std::net::IpAddr;
 use std::path::PathBuf;
 use std::process::ExitCode;
 use std::str::FromStr;
+use std::sync::Arc;
 
 use dare_core::{CoreError, CoreResult, ProjectRoot};
-use dare_server::{mcp::serve_stdio, ServiceCtx, ENV_PROJECT};
+use dare_server::{
+    mcp::{serve_stdio, serve_streamable_http},
+    ServiceCtx, ENV_PROJECT, ENV_TOKEN,
+};
+use uuid::Uuid;
 
 use crate::output::OutputRenderer;
 
@@ -20,9 +25,6 @@ pub const DEFAULT_MCP_HTTP_BIND: &str = "127.0.0.1";
 pub const DEFAULT_MCP_HTTP_PORT: u16 = 3100;
 pub const ENV_MCP_HTTP_BIND: &str = "DARE_MCP_HTTP_BIND";
 pub const ENV_MCP_HTTP_PORT: &str = "DARE_MCP_HTTP_PORT";
-
-/// Message when streamable-http is selected before mp052-005 lands.
-pub const MSG_STREAMABLE_HTTP_NOT_IMPLEMENTED: &str = "streamable-http not implemented yet";
 
 /// CLI args for `dare mcp serve`.
 pub struct McpServeCliOpts {
@@ -77,12 +79,28 @@ fn serve_stdio_blocking(dir: Option<PathBuf>) -> CoreResult<()> {
 }
 
 fn serve_streamable_http_cli(opts: McpServeCliOpts) -> CoreResult<()> {
-    let (_bind, _port) = resolve_http_bind_port(opts.bind.as_deref(), opts.port)?;
+    let (bind, port) = resolve_http_bind_port(opts.bind.as_deref(), opts.port)?;
     let root = resolve_project_root(opts.dir)?;
-    let _ctx = ServiceCtx::new(root);
+    let ctx = ServiceCtx::new(root);
+    let token = resolve_mcp_token();
+    let force_auth = std::env::var("DARE_MCP_FORCE_AUTH")
+        .ok()
+        .map(|v| {
+            let t = v.trim();
+            t == "1" || t.eq_ignore_ascii_case("true")
+        })
+        .unwrap_or(false);
+    let rt = tokio::runtime::Runtime::new()
+        .map_err(|e| CoreError::io(format!("tokio runtime: {e}")))?;
+    rt.block_on(serve_streamable_http(ctx, bind, port, token, force_auth))
+}
 
-    // Prefer calling `serve_streamable_http` when mp052-005 has added it.
-    serve_streamable_http_or_stub(_ctx, _bind, _port)
+fn resolve_mcp_token() -> Arc<str> {
+    std::env::var(ENV_TOKEN)
+        .ok()
+        .filter(|s| !s.trim().is_empty())
+        .map(Arc::from)
+        .unwrap_or_else(|| Arc::from(Uuid::new_v4().to_string()))
 }
 
 fn resolve_http_bind_port(
@@ -122,17 +140,3 @@ fn resolve_http_bind_port(
     Ok((bind, port))
 }
 
-/// Call `dare_server::mcp::serve_streamable_http` when present; otherwise exit-4 stub.
-///
-/// mp052-005 owns the real HTTP serve implementation. This helper keeps the CLI
-/// wired so a future worktree that already has the symbol can switch by updating
-/// this function body only.
-fn serve_streamable_http_or_stub(
-    _ctx: ServiceCtx,
-    _bind: IpAddr,
-    _port: u16,
-) -> CoreResult<()> {
-    // When `serve_streamable_http` exists in dare-server::mcp (mp052-005), prefer:
-    //   rt.block_on(dare_server::mcp::serve_streamable_http(ctx, bind, port, token, force_auth))
-    Err(CoreError::invalid_input(MSG_STREAMABLE_HTTP_NOT_IMPLEMENTED))
-}
