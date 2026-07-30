@@ -10,7 +10,7 @@ fn backup_rel_for(source_rel: &SafeRelativePath) -> CoreResult<SafeRelativePath>
     let mut hasher = Sha256::new();
     hasher.update(source_rel.as_str().as_bytes());
     let hash = hasher.finalize();
-    let sha8 = format!("{:x}", hash)[..8].to_string();
+    let sha8 = format!("{hash:x}")[..8].to_string();
     let ts = utc_stamp();
     let posix = source_rel.as_str();
     let path = format!(".dare/backups/{ts}-{sha8}/{posix}");
