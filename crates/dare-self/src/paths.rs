@@ -17,6 +17,15 @@ pub const BACKUP_DIR_NAME: &str = "backup";
 /// Scratch directory name under [`SelfHome`].
 pub const TMP_DIR_NAME: &str = "tmp";
 
+/// Backup binary file name under [`BACKUP_DIR_NAME`] (`dare` / `dare.exe`).
+pub fn backup_binary_name() -> &'static str {
+    if cfg!(windows) {
+        "dare.exe"
+    } else {
+        "dare"
+    }
+}
+
 /// Errors resolving or preparing [`SelfHome`].
 #[derive(Debug, Error)]
 pub enum PathsError {
@@ -74,6 +83,11 @@ impl SelfHome {
     /// Path to `tmp/`.
     pub fn tmp_dir(&self) -> PathBuf {
         self.root.join(TMP_DIR_NAME)
+    }
+
+    /// Path to `backup/dare` (+ `.exe` on Windows).
+    pub fn backup_binary_path(&self) -> PathBuf {
+        self.backup_dir().join(backup_binary_name())
     }
 
     /// Ensure `backup/` and `tmp/` exist under the root.

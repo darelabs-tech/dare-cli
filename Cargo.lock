@@ -968,11 +968,14 @@ name = "dare-self"
 version = "0.1.0-alpha.0"
 dependencies = [
  "dare-core",
+ "flate2",
  "fs4",
  "sha2 0.10.9",
+ "tar",
  "tempfile",
  "thiserror 2.0.12",
  "ureq",
+ "zip",
 ]
 
 [[package]]

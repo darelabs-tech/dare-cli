@@ -12,6 +12,9 @@ thiserror = { workspace = true }
 fs4 = { workspace = true }
 sha2 = { workspace = true }
 ureq = { workspace = true }
+flate2 = { workspace = true }
+tar = { workspace = true }
+zip = { workspace = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }
