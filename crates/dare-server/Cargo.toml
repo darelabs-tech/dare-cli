@@ -6,6 +6,12 @@ rust-version.workspace = true
 license.workspace = true
 publish = false
 
+[features]
+default = ["mcp"]
+# Actual rmcp 3.0.1 feature flags used (verified via `cargo info rmcp@3.0.1`):
+# server, macros, transport-io, transport-streamable-http-server, schemars
+mcp = ["dep:rmcp", "dep:rmcp-macros", "dep:schemars"]
+
 [dependencies]
 axum = { workspace = true }
 tokio = { workspace = true }
@@ -20,6 +26,15 @@ dare-core = { workspace = true }
 dare-contracts = { workspace = true }
 dare-graph = { workspace = true }
 dare-steering = { workspace = true }
+rmcp = { workspace = true, optional = true, features = [
+    "server",
+    "macros",
+    "transport-io",
+    "transport-streamable-http-server",
+    "schemars",
+] }
+rmcp-macros = { workspace = true, optional = true }
+schemars = { workspace = true, optional = true }
 
 [dev-dependencies]
 http-body-util = { workspace = true }
