@@ -10,6 +10,8 @@ publish = false
 dare-core = { workspace = true }
 thiserror = { workspace = true }
 fs4 = { workspace = true }
+sha2 = { workspace = true }
+ureq = { workspace = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }
