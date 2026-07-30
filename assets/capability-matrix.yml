@@ -146,7 +146,7 @@ capabilities:
     description: "Capability IDE for dare-dashboard"
     instructions: |
       Use the /dare-dashboard slash command when appropriate.
-    cli_commands: []
+    cli_commands: ["dashboard", "server"]
     outputs:
       claude: .claude/commands/dare-dashboard.md
       cursor: .cursor/commands/dare-dashboard.md

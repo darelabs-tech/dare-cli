@@ -2,31 +2,31 @@ version: 1
 assets:
 - id: template-design
   path: templates/DESIGN-template.md
-  sha256: d285d9f80983575975c8199a1faea3319264ad4f147365cd0323c920f7415734
+  sha256: e734c28215a7af74cc380f30619594f5435245ea641ed494caf8d37f9d065bfb
   kind: canonical
 - id: template-blueprint
   path: templates/BLUEPRINT-template.md
-  sha256: aaea3af4dbf194f61ed67a9a8736af8c510d8fcea745793921bc0b32066ea203
+  sha256: 7869902936bd5518f7216e15734fc068e0c5a3568f12127f86c0e24c6d4a0441
   kind: canonical
 - id: template-tasks
   path: templates/TASKS-template.md
-  sha256: cfd50a03b4fb4fd5f43f18a47239e75916315e8cf74fee9bd202b2835d181368
+  sha256: eb5d2eebf4f19a98523b46f8423c8b4bf529a98c7a3a8fe389b46c48cfc08845
   kind: canonical
 - id: template-task-spec
   path: templates/TASK-SPEC-template.md
-  sha256: 4861d7217d0cdac303221d236febfff42dfa6773215acdea5f26ab17dc85adfe
+  sha256: f4466da8a9432278807fbee7cd6d3a1e1634b000acd5c3f6e86b40e7464fe20f
   kind: canonical
 - id: template-telemetry
   path: templates/TELEMETRY-template.md
-  sha256: 08029642cc30a56aa80264b5298b06bda944c0e1e692ac85ec285d5d1deb5f06
+  sha256: 77fadae0aa24d5dd52bae8a8689cac03405624ac3425b41069be349fd351d2a7
   kind: canonical
 - id: template-hooks-adapter
   path: templates/HOOKS-ADAPTER.md
-  sha256: c9d81bad1aebdc57b909d262e0f78dcb7dc619b0b168a3793f550582806ce3bb
+  sha256: d3300dea856537c4c8d283cb6e68c0c0941fb71513efac6d67b31221986d33f1
   kind: canonical
 - id: capability-matrix
   path: capability-matrix.yml
-  sha256: f387f73548512bc32889afda413346856718427afe7a4d5f03206fb6204bb269
+  sha256: 4fe7104e1edb532cc6ff2b50b586b71861d1b5b3c4c99b9d11926858017770a6
   kind: canonical
 - id: update-manifest-v2
   path: update-manifest.v2.json
