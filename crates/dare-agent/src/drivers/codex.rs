@@ -525,8 +525,7 @@ mod tests {
         assert_eq!(err.kind(), ErrorKind::Internal);
         assert!(
             err.to_string().contains("executable not found: codex"),
-            "msg={}",
-            err
+            "msg={err}"
         );
     }
 

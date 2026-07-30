@@ -121,7 +121,7 @@ fn to_posix_rel(root: &Path, path: &Path) -> String {
 }
 
 fn skip_dir_name(name: &str) -> bool {
-    SKIP_DIRS.iter().any(|s| *s == name)
+    SKIP_DIRS.contains(&name)
 }
 
 fn read_capped(path: &Path, cap: usize) -> Option<String> {
@@ -327,7 +327,7 @@ fn mine_module(acc: &mut Acc, module_id: &str, mod_root: &Path, project_root: &P
             return;
         };
         // structural
-        if STRUCTURAL_NAMES.iter().any(|s| *s == name) {
+        if STRUCTURAL_NAMES.contains(&name) {
             acc.bump(
                 "structural-idiom",
                 name,
@@ -379,7 +379,7 @@ fn mine_module(acc: &mut Acc, module_id: &str, mod_root: &Path, project_root: &P
         }
         // path segment layers
         for seg in rel.split('/') {
-            if LAYER_DIRS.iter().any(|l| *l == seg) {
+            if LAYER_DIRS.contains(&seg) {
                 acc.bump(
                     "inferred-layer",
                     seg,

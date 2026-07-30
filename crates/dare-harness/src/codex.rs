@@ -162,7 +162,7 @@ pub fn validate_codex_install(root: &ProjectRoot) -> CoreResult<usize> {
 }
 
 pub fn update_policies_include_codex() -> bool {
-    UPDATE_HARNESS_IDES.iter().any(|id| *id == "codex")
+    UPDATE_HARNESS_IDES.contains(&"codex")
 }
 
 #[cfg(test)]

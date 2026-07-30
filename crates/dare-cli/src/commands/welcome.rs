@@ -120,9 +120,7 @@ fn frame_row(inner: &str) -> String {
 fn banner_colored() -> String {
     let blank = " ".repeat(52);
     let method = format!(
-        "  {muted}Discover · Design · Architect · Review · Execute{reset}  ",
-        muted = C_MUTED,
-        reset = C_RESET,
+        "  {C_MUTED}Discover · Design · Architect · Review · Execute{C_RESET}  ",
     );
 
     let mut out = String::new();

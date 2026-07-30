@@ -318,7 +318,7 @@ fn render_dag_yaml(title: &str, tasks: &[TaskDef]) -> String {
     let mut out = String::new();
     out.push_str(MANAGED_YAML);
     out.push('\n');
-    out.push_str(&format!("title: \"{} - Development Tasks\"\n", title));
+    out.push_str(&format!("title: \"{title} - Development Tasks\"\n"));
     out.push_str("version: \"1.0.0\"\n\n");
     out.push_str("limits:\n");
     out.push_str("  parent_context_chars: 2000\n");

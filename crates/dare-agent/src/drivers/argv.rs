@@ -33,8 +33,7 @@ mod tests {
         assert!(
             err.to_string()
                 .contains("command override must not be empty"),
-            "msg={}",
-            err
+            "msg={err}"
         );
         let err = parse_argv_override("   \t  ").unwrap_err();
         assert!(err

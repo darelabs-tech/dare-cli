@@ -330,7 +330,7 @@ pub fn collect_signals(
                 format!("DARE/{}", task.spec_file.trim_start_matches('/'))
             }
         } else {
-            format!("DARE/EXECUTION/{}.md", task_id)
+            format!("DARE/EXECUTION/{task_id}.md")
         },
     ];
     for rel in &spec_candidates {

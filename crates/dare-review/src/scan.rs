@@ -16,7 +16,7 @@ pub fn is_scannable_path(path: &str) -> bool {
     let Some((_, ext)) = name.rsplit_once('.') else {
         return false;
     };
-    SCANNABLE_EXT.iter().any(|e| *e == ext)
+    SCANNABLE_EXT.contains(&ext)
 }
 
 pub fn is_test_path(path: &str) -> bool {

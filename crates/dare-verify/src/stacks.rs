@@ -138,7 +138,7 @@ mod tests {
     fn gate_commands_not_implemented_nestjs() {
         let err = gate_commands("node-nestjs").expect_err("not implemented");
         assert!(matches!(err, CoreError::InvalidInput(_)));
-        assert!(err.to_string().contains("not implemented"), "msg={}", err);
+        assert!(err.to_string().contains("not implemented"), "msg={err}");
     }
 
     #[test]

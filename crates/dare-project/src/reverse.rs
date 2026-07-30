@@ -141,14 +141,14 @@ fn to_posix_rel(root: &Path, path: &Path) -> String {
 }
 
 fn is_skip_dir(name: &str) -> bool {
-    SKIP_DIRS.iter().any(|s| *s == name)
+    SKIP_DIRS.contains(&name)
 }
 
 fn is_source_file(name: &str) -> bool {
     Path::new(name)
         .extension()
         .and_then(|e| e.to_str())
-        .is_some_and(|ext| SOURCE_EXTS.iter().any(|s| *s == ext))
+        .is_some_and(|ext| SOURCE_EXTS.contains(&ext))
 }
 
 fn sanitize_module_id(raw: &str) -> String {

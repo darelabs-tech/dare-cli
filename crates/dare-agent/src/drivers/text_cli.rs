@@ -501,8 +501,7 @@ mod tests {
             assert!(
                 err.to_string()
                     .contains(&format!("executable not found: {}", cfg.default_program)),
-                "msg={}",
-                err
+                "msg={err}"
             );
         }
     }
