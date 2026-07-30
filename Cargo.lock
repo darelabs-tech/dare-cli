@@ -753,6 +753,7 @@ dependencies = [
  "dare-project",
  "dare-review",
  "dare-scaffold",
+ "dare-server",
  "dare-skills",
  "dare-steering",
  "dare-update",
@@ -762,6 +763,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tempfile",
+ "tokio",
  "tracing-subscriber",
  "zip",
 ]
