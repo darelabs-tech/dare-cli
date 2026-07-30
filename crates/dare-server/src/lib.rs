@@ -1,4 +1,5 @@
 //! HTTP server domain crate (dashboard + REST) — microplano 051.
+//! MCP transport (optional feature `mcp`) — microplano 052.
 
 mod app;
 mod auth;
@@ -13,6 +14,9 @@ mod serve;
 mod state;
 mod tasks_md;
 mod telemetry;
+
+#[cfg(feature = "mcp")]
+pub mod mcp;
 
 pub use app::create_app;
 pub use auth::{MSG_UNAUTHORIZED, auth_middleware};
