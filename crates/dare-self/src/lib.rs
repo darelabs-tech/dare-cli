@@ -1,6 +1,7 @@
-//! Self-update domain: home layout, channel, lock, plan, download, verify, apply.
+//! Self-update domain: home layout, channel, lock, plan, download, verify, apply,
+//! rollback, uninstall.
 //!
-//! Rollback / uninstall / CLI surface live in later microplano tasks.
+//! CLI surface (`dare self …`) lives in a later microplano task.
 
 mod apply;
 mod channel;
@@ -8,6 +9,8 @@ mod download;
 mod lock;
 mod paths;
 mod plan;
+mod rollback;
+mod uninstall;
 mod verify;
 
 pub use apply::{
@@ -30,6 +33,8 @@ pub use plan::{
     asset_name_for, host_target_triple, plan_update, UpdateOpts, UpdatePlan, DEFAULT_RELEASE_REPO,
     ENV_RELEASE_REPO, PLAN_ACTIONS,
 };
+pub use rollback::{rollback, RollbackOpts, RollbackReport, MSG_NO_BACKUP};
+pub use uninstall::{uninstall, UninstallOpts, UninstallReport};
 pub use verify::{
     allow_unsigned_enabled, reject_if_signing_skipped, timeout_from_env, verify_sha256,
     warn_allow_unsigned, CosignCliVerifier, RejectSkippedVerifier, SignatureVerifier,

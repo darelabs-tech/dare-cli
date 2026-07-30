@@ -234,7 +234,7 @@ fn restore_from_backup(backup: &Path, target: &Path) -> CoreResult<()> {
 }
 
 /// Replace `target` with bytes/file at `new_bin`, restoring on failure when a side-old exists.
-fn atomic_replace(new_bin: &Path, target: &Path) -> CoreResult<()> {
+pub(crate) fn atomic_replace(new_bin: &Path, target: &Path) -> CoreResult<()> {
     #[cfg(windows)]
     {
         let side_old = side_old_path(target);
