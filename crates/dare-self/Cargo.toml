@@ -1,0 +1,15 @@
+[package]
+name = "dare-self"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+dare-core = { workspace = true }
+thiserror = { workspace = true }
+fs4 = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

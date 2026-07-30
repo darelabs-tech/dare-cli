@@ -964,6 +964,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "dare-self"
+version = "0.1.0-alpha.0"
+dependencies = [
+ "dare-core",
+ "fs4",
+ "tempfile",
+ "thiserror 2.0.12",
+]
+
+[[package]]
 name = "dare-server"
 version = "0.1.0-alpha.0"
 dependencies = [
