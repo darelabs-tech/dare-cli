@@ -62,12 +62,20 @@ pub fn backup_binary_path(home: &SelfHome) -> PathBuf {
     home.backup_binary_path()
 }
 
+fn paths_to_core(e: crate::paths::PathsError) -> CoreError {
+    match e {
+        crate::paths::PathsError::HomeUnresolved => CoreError::not_found(e.to_string()),
+        crate::paths::PathsError::Io(msg) => CoreError::io(msg),
+    }
+}
+
 /// Production entry: resolve home + `current_exe`, download via ureq, apply.
 pub fn apply_update(
     opts: UpdateOpts,
     verifier: &dyn SignatureVerifier,
+    force_unlock: bool,
 ) -> CoreResult<ApplyReport> {
-    let home = SelfHome::resolve().map_err(|e| CoreError::io(e.to_string()))?;
+    let home = SelfHome::resolve().map_err(paths_to_core)?;
     let current_exe = std::env::current_exe()
         .map_err(|e| CoreError::not_found(format!("cannot resolve current_exe: {e}")))?;
     let timeout = timeout_from_env().as_secs().max(1);
@@ -80,7 +88,7 @@ pub fn apply_update(
             client: &client,
             artifacts: None,
             failpoint: None,
-            force_unlock: false,
+            force_unlock,
             skip_smoke: false,
         },
         verifier,

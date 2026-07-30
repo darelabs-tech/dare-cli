@@ -24,6 +24,7 @@ pub mod patterns;
 pub mod refine;
 pub mod reverse;
 pub mod review;
+pub mod self_cmd;
 pub mod server;
 pub mod skill;
 pub mod steering;

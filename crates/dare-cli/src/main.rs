@@ -29,6 +29,10 @@ use commands::patterns::run_patterns_cmd;
 use commands::refine::{run_refine_cmd, RefineCliArgs};
 use commands::reverse::{run_reverse, ReverseCliOpts};
 use commands::review::{run_review_cmd, ReviewCliArgs};
+use commands::self_cmd::{
+    run_self_rollback, run_self_uninstall, run_self_update, SelfRollbackCliOpts,
+    SelfUninstallCliOpts, SelfUpdateCliOpts,
+};
 use commands::server::{run_server_cmd, ServerCliOpts};
 use commands::skill::{run_skill, SkillAction};
 use commands::hooks::{run_hooks_cmd, run_hooks_list, run_hooks_validate};
@@ -545,6 +549,13 @@ enum Commands {
         #[command(subcommand)]
         action: McpCmd,
     },
+    /// Manage the dare CLI binary itself (self-update / rollback / uninstall).
+    /// Distinct from `dare update`, which refreshes project assets under a ProjectRoot.
+    #[command(name = "self")]
+    Self_ {
+        #[command(subcommand)]
+        action: SelfCmd,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -563,6 +574,40 @@ enum McpCmd {
         /// Project directory (default: cwd; also honors DARE_PROJECT_PATH).
         #[arg(short = 'd', long = "dir")]
         dir: Option<PathBuf>,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+enum SelfCmd {
+    /// Download, verify, and replace the dare CLI binary (not project assets).
+    Update {
+        /// Release channel (`beta` | `stable`). Mutually exclusive with `--version`.
+        #[arg(long)]
+        channel: Option<String>,
+        /// Explicit release tag (e.g. `v0.1.0-alpha.2`). Mutually exclusive with `--channel`.
+        #[arg(long)]
+        version: Option<String>,
+        /// Plan only; no download or binary replace.
+        #[arg(long)]
+        dry_run: bool,
+        /// Skip confirmation prompt (required when non-interactive).
+        #[arg(short = 'y', long = "yes")]
+        yes: bool,
+        /// Remove a stale `update.lock` before acquiring.
+        #[arg(long)]
+        force_unlock: bool,
+    },
+    /// Restore the previous binary from `~/.dare/self/backup`.
+    Rollback {
+        /// Skip confirmation prompt (required when non-interactive).
+        #[arg(short = 'y', long = "yes")]
+        yes: bool,
+    },
+    /// Remove only the current dare binary (no `--purge` in v1).
+    Uninstall {
+        /// Skip confirmation prompt (required when non-interactive).
+        #[arg(short = 'y', long = "yes")]
+        yes: bool,
     },
 }
 
@@ -1581,6 +1626,23 @@ fn run(cli: Cli) -> Result<(String, serde_json::Value), CoreError> {
             target,
             dir,
         }) => run_update(dry_run, yes, force, target, dir),
+        Some(Commands::Self_ { action }) => match action {
+            SelfCmd::Update {
+                channel,
+                version,
+                dry_run,
+                yes,
+                force_unlock,
+            } => run_self_update(SelfUpdateCliOpts {
+                channel,
+                version,
+                dry_run,
+                yes,
+                force_unlock,
+            }),
+            SelfCmd::Rollback { yes } => run_self_rollback(SelfRollbackCliOpts { yes }),
+            SelfCmd::Uninstall { yes } => run_self_uninstall(SelfUninstallCliOpts { yes }),
+        },
         Some(Commands::Assets {
             action: AssetsCmd::Verify,
         }) => {

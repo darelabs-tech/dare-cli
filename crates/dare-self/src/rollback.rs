@@ -41,7 +41,10 @@ pub struct RollbackReport {
 pub fn rollback(opts: RollbackOpts) -> CoreResult<RollbackReport> {
     let home = match opts.home {
         Some(h) => h,
-        None => SelfHome::resolve().map_err(|e| CoreError::io(e.to_string()))?,
+        None => SelfHome::resolve().map_err(|e| match e {
+            crate::paths::PathsError::HomeUnresolved => CoreError::not_found(e.to_string()),
+            crate::paths::PathsError::Io(msg) => CoreError::io(msg),
+        })?,
     };
     let current_exe = match opts.current_exe {
         Some(p) => p,

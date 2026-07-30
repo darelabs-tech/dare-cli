@@ -1,7 +1,7 @@
 //! Self-update domain: home layout, channel, lock, plan, download, verify, apply,
 //! rollback, uninstall.
 //!
-//! CLI surface (`dare self …`) lives in a later microplano task.
+//! CLI surface: `dare self …` in `dare-cli` (`commands/self_cmd.rs`).
 
 mod apply;
 mod channel;
