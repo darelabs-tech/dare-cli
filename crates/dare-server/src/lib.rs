@@ -16,6 +16,8 @@ mod state;
 mod tasks_md;
 mod telemetry;
 
+pub use services::ServiceCtx;
+
 #[cfg(feature = "mcp")]
 pub mod mcp;
 
