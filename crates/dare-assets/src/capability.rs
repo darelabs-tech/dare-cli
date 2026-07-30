@@ -181,7 +181,7 @@ mod tests {
         let file = EmbeddedAssets::get("capability-matrix.yml").expect("embedded");
         let yaml = std::str::from_utf8(file.data.as_ref()).unwrap();
         let m = load_capability_matrix_from_str(yaml).unwrap();
-        assert_eq!(m.capabilities.len(), 49);
+        assert_eq!(m.capabilities.len(), 50);
         assert_eq!(m.exceptions.len(), 3);
         validate_capability_matrix(&m).unwrap();
     }

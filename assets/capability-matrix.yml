@@ -357,6 +357,19 @@ capabilities:
       codex: .codex/skills/dare-migrate/SKILL.md
       antigravity: .antigravity/commands/dare-migrate.md
     assets: []
+  - id: dare-mcp
+    title: "dare-mcp"
+    description: "MCP real transport: dare mcp serve (stdio|streamable-http) via rmcp; shared services with REST"
+    instructions: |
+      Use /dare-mcp or `dare mcp serve [--transport stdio|streamable-http]`.
+      See docs/compatibility/cli-mcp.md (DEC-053). Alias dare-mcp-server is REST+deprecation only.
+    cli_commands: ["mcp"]
+    outputs:
+      claude: .claude/commands/dare-mcp.md
+      cursor: .cursor/commands/dare-mcp.md
+      codex: .codex/skills/dare-mcp/SKILL.md
+      antigravity: .antigravity/commands/dare-mcp.md
+    assets: []
   - id: dare-patterns
     title: "dare-patterns"
     description: "Capability IDE for dare-patterns"
