@@ -109,10 +109,7 @@ mod tests {
     use super::*;
     use dare_core::{ErrorKind, MockProcessRunner};
     use std::fs;
-    use std::sync::Mutex;
     use tempfile::tempdir;
-
-    static ENV_LOCK: Mutex<()> = Mutex::new(());
 
     fn design_markdown() -> String {
         let begin = |id: &str| format!("<!-- AGENT:BEGIN section=\"{id}\" -->");
@@ -154,39 +151,40 @@ mod tests {
 
     #[test]
     fn run_mock_ok() {
-        let _guard = ENV_LOCK.lock().expect("env lock");
-        std::env::remove_var("DARE_AI_MOCK_MODE");
+        crate::with_env_lock(|| {
+            std::env::remove_var("DARE_AI_MOCK_MODE");
 
-        let dir = tempdir().expect("temp");
-        let root = ProjectRoot::new(dir.path()).expect("root");
-        let md = design_markdown();
-        let req = sample_req(root, md, None);
-        let runner = MockProcessRunner::new();
+            let dir = tempdir().expect("temp");
+            let root = ProjectRoot::new(dir.path()).expect("root");
+            let md = design_markdown();
+            let req = sample_req(root, md, None);
+            let runner = MockProcessRunner::new();
 
-        let report = run_enrich(&req, &runner).expect("run_enrich");
-        assert_eq!(report.schema_version, AI_REPORT_SCHEMA);
-        assert_eq!(report.schema_version, 1);
-        assert!(report.ok);
-        assert!(report.enriched);
-        assert!(!report.written);
-        assert!(report.write_path.is_none());
-        assert_eq!(report.command, "design");
-        assert_eq!(report.provider, "mock");
-        assert_eq!(
-            report.sections,
-            vec![
-                "description",
-                "objectives",
-                "functional-requirements",
-                "stack",
-            ]
-        );
-        assert!(report.warnings.is_empty());
+            let report = run_enrich(&req, &runner).expect("run_enrich");
+            assert_eq!(report.schema_version, AI_REPORT_SCHEMA);
+            assert_eq!(report.schema_version, 1);
+            assert!(report.ok);
+            assert!(report.enriched);
+            assert!(!report.written);
+            assert!(report.write_path.is_none());
+            assert_eq!(report.command, "design");
+            assert_eq!(report.provider, "mock");
+            assert_eq!(
+                report.sections,
+                vec![
+                    "description",
+                    "objectives",
+                    "functional-requirements",
+                    "stack",
+                ]
+            );
+            assert!(report.warnings.is_empty());
 
-        let json = serde_json::to_string(&report).expect("serialize");
-        assert!(json.contains("\"schemaVersion\":1"));
-        assert!(json.contains("\"writePath\":null"));
-        assert!(json.contains("\"durationMs\""));
+            let json = serde_json::to_string(&report).expect("serialize");
+            assert!(json.contains("\"schemaVersion\":1"));
+            assert!(json.contains("\"writePath\":null"));
+            assert!(json.contains("\"durationMs\""));
+        });
     }
 
     struct ClearMockMode;
@@ -199,92 +197,83 @@ mod tests {
 
     #[test]
     fn schema_fail_no_write() {
-        let _guard = ENV_LOCK.lock().expect("env lock");
-        let _clear = ClearMockMode;
-        std::env::set_var("DARE_AI_MOCK_MODE", "invalid-json");
+        crate::with_env_lock(|| {
+            let _clear = ClearMockMode;
+            std::env::set_var("DARE_AI_MOCK_MODE", "invalid-json");
 
-        let dir = tempdir().expect("temp");
-        let root = ProjectRoot::new(dir.path()).expect("root");
-        let rel = SafeRelativePath::new("DARE/DESIGN.md").expect("rel");
-        let original = design_markdown();
-        atomic_write(&root, &rel, original.as_bytes()).expect("seed");
+            let dir = tempdir().expect("temp");
+            let root = ProjectRoot::new(dir.path()).expect("root");
+            let rel = SafeRelativePath::new("DARE/DESIGN.md").expect("rel");
+            let original = design_markdown();
+            atomic_write(&root, &rel, original.as_bytes()).expect("seed");
 
-        let req = sample_req(root.clone(), original.clone(), Some(rel.clone()));
-        let runner = MockProcessRunner::new();
-        let err = run_enrich(&req, &runner).expect_err("schema fail");
-        assert_eq!(err.kind(), ErrorKind::InvalidInput);
+            let req = sample_req(root.clone(), original.clone(), Some(rel.clone()));
+            let runner = MockProcessRunner::new();
+            let err = run_enrich(&req, &runner).expect_err("schema fail");
+            assert_eq!(err.kind(), ErrorKind::InvalidInput);
 
-        let after = dare_core::fs::read_to_string(&root, &rel).expect("read");
-        assert_eq!(after, original, "must not write on schema failure");
+            let after = dare_core::fs::read_to_string(&root, &rel).expect("read");
+            assert_eq!(after, original, "must not write on schema failure");
+        });
     }
 
     #[test]
     fn write_injects_markers() {
-        let _guard = ENV_LOCK.lock().expect("env lock");
-        std::env::remove_var("DARE_AI_MOCK_MODE");
+        crate::with_env_lock(|| {
+            std::env::remove_var("DARE_AI_MOCK_MODE");
 
-        let dir = tempdir().expect("temp");
-        let root = ProjectRoot::new(dir.path()).expect("root");
-        let rel = SafeRelativePath::new("DARE/DESIGN.md").expect("rel");
-        let original = design_markdown();
-        atomic_write(&root, &rel, original.as_bytes()).expect("seed");
+            let dir = tempdir().expect("temp");
+            let root = ProjectRoot::new(dir.path()).expect("root");
+            let rel = SafeRelativePath::new("DARE/DESIGN.md").expect("rel");
+            let original = design_markdown();
+            atomic_write(&root, &rel, original.as_bytes()).expect("seed");
 
-        let req = sample_req(root.clone(), original, Some(rel.clone()));
-        let runner = MockProcessRunner::new();
-        let report = run_enrich(&req, &runner).expect("write ok");
-        assert!(report.written);
-        assert_eq!(report.write_path.as_deref(), Some("DARE/DESIGN.md"));
-        assert!(report.enriched);
+            let req = sample_req(root.clone(), original, Some(rel.clone()));
+            let runner = MockProcessRunner::new();
+            let report = run_enrich(&req, &runner).expect("write ok");
+            assert!(report.written);
+            assert_eq!(report.write_path.as_deref(), Some("DARE/DESIGN.md"));
+            assert!(report.enriched);
 
-        let after = dare_core::fs::read_to_string(&root, &rel).expect("read");
-        assert!(after.contains("Unmanaged paragraph must survive."));
-        assert!(after.contains("<!-- AGENT:BEGIN section=\"description\" -->"));
-        assert!(after.contains("<!-- AGENT:END section=\"description\" -->"));
-        assert!(after.contains("API de pagamentos com Stripe"));
-        assert!(after.contains("Generated by mock"));
-        assert!(!after.contains("old description"));
-        assert!(!after.contains("old stack"));
+            let after = dare_core::fs::read_to_string(&root, &rel).expect("read");
+            assert!(after.contains("Unmanaged paragraph must survive."));
+            assert!(after.contains("<!-- AGENT:BEGIN section=\"description\" -->"));
+            assert!(after.contains("<!-- AGENT:END section=\"description\" -->"));
+            assert!(after.contains("API de pagamentos com Stripe"));
+            assert!(after.contains("Generated by mock"));
+            assert!(!after.contains("old description"));
+            assert!(!after.contains("old stack"));
+        });
     }
 
     #[test]
     fn write_requires_path() {
-        let _guard = ENV_LOCK.lock().expect("env lock");
-        std::env::remove_var("DARE_AI_MOCK_MODE");
+        crate::with_env_lock(|| {
+            std::env::remove_var("DARE_AI_MOCK_MODE");
 
-        let dir = tempdir().expect("temp");
-        let root = ProjectRoot::new(dir.path()).expect("root");
-        let rel = SafeRelativePath::new("DARE/DESIGN.md").expect("rel");
-        let original = design_markdown();
-        atomic_write(&root, &rel, original.as_bytes()).expect("seed");
+            let dir = tempdir().expect("temp");
+            let root = ProjectRoot::new(dir.path()).expect("root");
+            let rel = SafeRelativePath::new("DARE/DESIGN.md").expect("rel");
+            let original = design_markdown();
+            atomic_write(&root, &rel, original.as_bytes()).expect("seed");
 
-        // No write_rel ⇒ must not touch disk (path required for --write).
-        let req = sample_req(root.clone(), original.clone(), None);
-        let runner = MockProcessRunner::new();
-        let report = run_enrich(&req, &runner).expect("enrich without write");
-        assert!(!report.written);
-        assert!(report.write_path.is_none());
+            // No write_rel ⇒ must not touch disk (path required for --write).
+            let req = sample_req(root.clone(), original.clone(), None);
+            let runner = MockProcessRunner::new();
+            let report = run_enrich(&req, &runner).expect("enrich without write");
+            assert!(!report.written);
+            assert!(report.write_path.is_none());
 
-        let after = dare_core::fs::read_to_string(&root, &rel).expect("read");
-        assert_eq!(after, original);
-        assert!(MSG_WRITE_NEEDS_MARKDOWN.contains("--write requires --markdown"));
+            let after = dare_core::fs::read_to_string(&root, &rel).expect("read");
+            assert_eq!(after, original);
+            assert!(MSG_WRITE_NEEDS_MARKDOWN.contains("--write requires --markdown"));
+        });
     }
 
     #[test]
-    fn not_implemented_provider() {
-        let _guard = ENV_LOCK.lock().expect("env lock");
-        std::env::remove_var("DARE_AI_MOCK_MODE");
-
-        let dir = tempdir().expect("temp");
-        let root = ProjectRoot::new(dir.path()).expect("root");
-        let mut req = sample_req(root, design_markdown(), None);
-        req.provider = ProviderId::ClaudeCode;
-        let runner = MockProcessRunner::new();
-        let err = run_enrich(&req, &runner).expect_err("not impl");
-        assert_eq!(err.kind(), ErrorKind::InvalidInput);
-        assert_eq!(
-            err.message(),
-            "provider not implemented: claude-code"
-        );
+    fn provider_not_impl_message_template() {
+        // After mp050-006 all ProviderId variants resolve; keep template for errors/docs.
+        assert_eq!(MSG_PROVIDER_NOT_IMPL, "provider not implemented: {id}");
         assert!(MSG_PROVIDER_NOT_IMPL.contains("provider not implemented"));
     }
 

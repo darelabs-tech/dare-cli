@@ -100,29 +100,31 @@ mod tests {
 
     #[test]
     fn prompt_no_env_leak() {
-        let secret = "super-secret-codex-override-xyz-9f3a";
-        let prev_codex = std::env::var(ENV_CODEX).ok();
-        let prev_path = std::env::var("PATH").ok();
-        std::env::set_var(ENV_CODEX, format!("{secret} --flag"));
-        std::env::set_var("PATH", format!("/leaked/path/bin:{secret}"));
+        crate::with_env_lock(|| {
+            let secret = "super-secret-codex-override-xyz-9f3a";
+            let prev_codex = std::env::var(ENV_CODEX).ok();
+            let prev_path = std::env::var("PATH").ok();
+            std::env::set_var(ENV_CODEX, format!("{secret} --flag"));
+            std::env::set_var("PATH", format!("/leaked/path/bin:{secret}"));
 
-        let report = prompt_preview(&sample_req("# md"), ENRICHABLE);
+            let report = prompt_preview(&sample_req("# md"), ENRICHABLE);
 
-        assert!(!report.env_leaked);
-        assert!(!report.prompt_preview.contains(secret));
-        assert!(!report.prompt_preview.contains("/leaked/path/bin"));
-        let full = build_enrich_prompt(&sample_req("# md"), ENRICHABLE);
-        assert!(!full.contains(secret));
-        assert!(!full.contains("/leaked/path/bin"));
+            assert!(!report.env_leaked);
+            assert!(!report.prompt_preview.contains(secret));
+            assert!(!report.prompt_preview.contains("/leaked/path/bin"));
+            let full = build_enrich_prompt(&sample_req("# md"), ENRICHABLE);
+            assert!(!full.contains(secret));
+            assert!(!full.contains("/leaked/path/bin"));
 
-        match prev_codex {
-            Some(v) => std::env::set_var(ENV_CODEX, v),
-            None => std::env::remove_var(ENV_CODEX),
-        }
-        match prev_path {
-            Some(v) => std::env::set_var("PATH", v),
-            None => std::env::remove_var("PATH"),
-        }
+            match prev_codex {
+                Some(v) => std::env::set_var(ENV_CODEX, v),
+                None => std::env::remove_var(ENV_CODEX),
+            }
+            match prev_path {
+                Some(v) => std::env::set_var("PATH", v),
+                None => std::env::remove_var("PATH"),
+            }
+        });
     }
 
     #[test]
