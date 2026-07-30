@@ -35,6 +35,30 @@ impl HttpError {
     pub fn body_too_large(message: impl Into<String>) -> Self {
         Self::new(StatusCode::PAYLOAD_TOO_LARGE, message, "body_too_large")
     }
+
+    pub fn invalid_input(message: impl Into<String>) -> Self {
+        Self::new(StatusCode::BAD_REQUEST, message, "invalid_input")
+    }
+
+    pub fn path_escape(message: impl Into<String>) -> Self {
+        Self::new(StatusCode::FORBIDDEN, message, "path_escape")
+    }
+
+    pub fn forbidden(message: impl Into<String>) -> Self {
+        Self::new(StatusCode::FORBIDDEN, message, "forbidden")
+    }
+
+    pub fn not_found(message: impl Into<String>) -> Self {
+        Self::new(StatusCode::NOT_FOUND, message, "not_found")
+    }
+
+    pub fn graph_unavailable(message: impl Into<String>) -> Self {
+        Self::new(StatusCode::SERVICE_UNAVAILABLE, message, "graph_unavailable")
+    }
+
+    pub fn internal(message: impl Into<String>) -> Self {
+        Self::new(StatusCode::INTERNAL_SERVER_ERROR, message, "internal")
+    }
 }
 
 impl IntoResponse for HttpError {

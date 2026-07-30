@@ -4,10 +4,12 @@ mod app;
 mod auth;
 mod config;
 mod error;
+mod http_map;
 mod middleware;
 mod mode;
 mod routes;
 mod state;
+mod tasks_md;
 
 pub use app::create_app;
 pub use auth::{MSG_UNAUTHORIZED, auth_middleware};
@@ -17,9 +19,15 @@ pub use config::{
     CSP_DASHBOARD, ENV_BIND, ENV_BODY_LIMIT, ENV_LOG_TOKEN, ENV_PORT, ENV_PROJECT, ENV_TOKEN,
 };
 pub use error::{HttpError, HttpErrorBody};
+pub use http_map::{MSG_GRAPH_DISABLED, MSG_INVALID_CONTEXT_TYPE};
 pub use middleware::{MSG_BODY_TOO_LARGE, cors_layer, security_headers_layers};
 pub use mode::AppMode;
+pub use routes::rest_router;
 pub use state::AppState;
+pub use tasks_md::{
+    get_task_view, put_task_status, TaskView, MSG_INVALID_STATUS, MSG_PATH_ESCAPE,
+    MSG_TASK_NOT_FOUND, TASKS_REL,
+};
 
 #[cfg(test)]
 mod tests {
@@ -157,5 +165,202 @@ mod tests {
                 .and_then(|v| v.to_str().ok()),
             Some(CSP_DASHBOARD)
         );
+    }
+
+    fn rest_app(dir: &tempfile::TempDir) -> (ServerConfig, axum::Router) {
+        let root = ProjectRoot::new(dir.path()).expect("root");
+        let cfg = ServerConfig {
+            bind: IpAddr::from_str("127.0.0.1").unwrap(),
+            port: 3000,
+            project_root: ProjectRoot::new(dir.path()).expect("root"),
+            token: "test-token-ok".to_string(),
+            token_source: TokenSource::Generated,
+            body_limit: DEFAULT_BODY_LIMIT,
+            open_browser: false,
+            log_token_value: false,
+        };
+        let state = AppState::new(
+            root,
+            cfg.token.clone(),
+            DEFAULT_BODY_LIMIT,
+            AppMode::Rest,
+            "0.1.0-test",
+        );
+        let app = create_app(AppMode::Rest, &cfg, state);
+        (cfg, app)
+    }
+
+    #[tokio::test]
+    async fn tools_order() {
+        let dir = tempfile::tempdir().unwrap();
+        let (_cfg, app) = rest_app(&dir);
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/tools")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        let names: Vec<&str> = json["tools"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|t| t["name"].as_str().unwrap())
+            .collect();
+        assert_eq!(
+            names,
+            vec![
+                "health",
+                "tools",
+                "context_query",
+                "blueprint",
+                "dag",
+                "tasks_get",
+                "tasks_put",
+                "graph_locate",
+                "graph_map_requirement",
+                "graph_traverse",
+                "project",
+                "steering",
+            ]
+        );
+    }
+
+    #[tokio::test]
+    async fn context_bad_type() {
+        let dir = tempfile::tempdir().unwrap();
+        let (_cfg, app) = rest_app(&dir);
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/context/query")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"type":"foo","query":"x"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(json["error"], MSG_INVALID_CONTEXT_TYPE);
+        assert_eq!(json["code"], "invalid_input");
+    }
+
+    #[tokio::test]
+    async fn steering_env_403() {
+        let dir = tempfile::tempdir().unwrap();
+        let (_cfg, app) = rest_app(&dir);
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/steering?file=.env")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(json["code"], "forbidden");
+        assert!(json["error"].as_str().unwrap().contains(".env"));
+    }
+
+    #[tokio::test]
+    async fn put_task_roundtrip() {
+        let dir = tempfile::tempdir().unwrap();
+        let dare = dir.path().join("DARE");
+        std::fs::create_dir_all(&dare).unwrap();
+        std::fs::write(
+            dare.join("TASKS.md"),
+            "| id | title | status |\n| mp051-001 | Skeleton | ⏳ PENDING |\n",
+        )
+        .unwrap();
+        let (_cfg, app) = rest_app(&dir);
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("PUT")
+                    .uri("/tasks/mp051-001")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"status":"DONE"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(json["id"], "mp051-001");
+        assert_eq!(json["status"], "DONE");
+        let text = std::fs::read_to_string(dare.join("TASKS.md")).unwrap();
+        assert!(text.contains("✅"));
+        assert!(text.contains("DONE"));
+    }
+
+    #[tokio::test]
+    async fn graph_empty_query_400() {
+        let dir = tempfile::tempdir().unwrap();
+        let (_cfg, app) = rest_app(&dir);
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/graph/locate")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"query":"  "}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(json["code"], "invalid_input");
+    }
+
+    #[tokio::test]
+    async fn path_id_escape_403() {
+        let dir = tempfile::tempdir().unwrap();
+        let (_cfg, app) = rest_app(&dir);
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/tasks/a..b")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(json["error"], MSG_PATH_ESCAPE);
+        assert_eq!(json["code"], "path_escape");
+    }
+
+    #[tokio::test]
+    async fn dashboard_put_tasks_404() {
+        let (cfg, state, _dir) = test_cfg_state(false, DEFAULT_BODY_LIMIT);
+        let app = create_app(AppMode::Dashboard, &cfg, state);
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("PUT")
+                    .uri("/tasks/mp051-001")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"status":"DONE"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
     }
 }
