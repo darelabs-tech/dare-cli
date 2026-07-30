@@ -13,8 +13,20 @@ pub use health::health;
 
 use axum::routing::{get, post};
 use axum::Router;
+use dare_core::CoreError;
 
+use crate::error::HttpError;
+use crate::http_map::{map_core_error, MSG_GRAPH_DISABLED};
 use crate::state::AppState;
+
+/// Map domain `CoreError` to HTTP Class A errors (incl. graph 503).
+pub(crate) fn map_service_error(err: CoreError) -> HttpError {
+    if err.message() == MSG_GRAPH_DISABLED {
+        HttpError::graph_unavailable(MSG_GRAPH_DISABLED)
+    } else {
+        map_core_error(err)
+    }
+}
 
 /// REST legacy surface (AppMode::Rest only).
 pub fn rest_router() -> Router<AppState> {

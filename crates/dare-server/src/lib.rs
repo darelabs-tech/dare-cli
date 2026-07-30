@@ -10,6 +10,7 @@ mod middleware;
 mod mode;
 mod routes;
 mod serve;
+mod services;
 mod state;
 mod tasks_md;
 mod telemetry;
