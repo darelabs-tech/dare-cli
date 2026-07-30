@@ -143,10 +143,10 @@ mod tests {
         let dir = tempdir().unwrap();
         let root = ProjectRoot::new(dir.path()).unwrap();
         generate_cursorrules(&root, true).unwrap();
-        assert_eq!(install_cursor_commands(&root, true).unwrap(), 50);
-        assert_eq!(validate_cursor_install(&root).unwrap(), 50);
+        assert_eq!(install_cursor_commands(&root, true).unwrap(), 51);
+        assert_eq!(validate_cursor_install(&root).unwrap(), 51);
         let n2 = install_cursor_commands(&root, false).unwrap();
-        assert_eq!(n2, 50); // managed rewritten
+        assert_eq!(n2, 51); // managed rewritten
     }
 
     #[test]
@@ -156,7 +156,7 @@ mod tests {
         let rel = SafeRelativePath::new(".cursor/commands/dare-design.md").unwrap();
         atomic_write(&root, &rel, b"# custom cursor command\n").unwrap();
         let n = install_cursor_commands(&root, false).unwrap();
-        assert_eq!(n, 49);
+        assert_eq!(n, 50);
         let content = read_to_string(&root, &rel).unwrap();
         assert!(content.contains("custom cursor command"));
     }
@@ -167,6 +167,6 @@ mod tests {
         let root = ProjectRoot::new(dir.path()).unwrap();
         let msg = validate_cursor_install(&root).unwrap_err().to_string();
         assert!(msg.contains("cursor commands missing"));
-        assert!(msg.contains("missing (50)") || msg.contains("(50):"));
+        assert!(msg.contains("missing (51)") || msg.contains("(51):"));
     }
 }

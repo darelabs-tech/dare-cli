@@ -100,7 +100,7 @@ fn capabilities_validate_ok() {
         .assert()
         .success()
         .stdout(predicate::str::contains("capabilities validate: ok"))
-        .stdout(predicate::str::contains("50"));
+        .stdout(predicate::str::contains("51"));
 }
 
 #[test]
@@ -112,13 +112,13 @@ fn harness_claude_install_validate_detect() {
         .args(["harness", "claude", "install", "--force", "--root", root])
         .assert()
         .success()
-        .stdout(predicate::str::contains("harness claude install: wrote 50"));
+        .stdout(predicate::str::contains("harness claude install: wrote 51"));
     Command::new(cargo_bin("dare"))
         .args(["harness", "claude", "validate", "--root", root])
         .assert()
         .success()
         .stdout(predicate::str::contains("harness claude validate: ok"))
-        .stdout(predicate::str::contains("50"));
+        .stdout(predicate::str::contains("51"));
 
     Command::new(cargo_bin("dare"))
         .args(["harness", "claude", "detect", "--root", root])
@@ -137,14 +137,14 @@ fn harness_cursor_install_validate_detect() {
         .args(["harness", "cursor", "install", "--force", "--root", root])
         .assert()
         .success()
-        .stdout(predicate::str::contains("harness cursor install: wrote 50"));
+        .stdout(predicate::str::contains("harness cursor install: wrote 51"));
 
     Command::new(cargo_bin("dare"))
         .args(["harness", "cursor", "validate", "--root", root])
         .assert()
         .success()
         .stdout(predicate::str::contains("harness cursor validate: ok"))
-        .stdout(predicate::str::contains("50"));
+        .stdout(predicate::str::contains("51"));
 
     Command::new(cargo_bin("dare"))
         .args(["harness", "cursor", "detect", "--root", root])
@@ -163,14 +163,14 @@ fn harness_codex_install_validate_detect() {
         .args(["harness", "codex", "install", "--force", "--root", root])
         .assert()
         .success()
-        .stdout(predicate::str::contains("harness codex install: wrote 50"));
+        .stdout(predicate::str::contains("harness codex install: wrote 51"));
 
     Command::new(cargo_bin("dare"))
         .args(["harness", "codex", "validate", "--root", root])
         .assert()
         .success()
         .stdout(predicate::str::contains("harness codex validate: ok"))
-        .stdout(predicate::str::contains("50"));
+        .stdout(predicate::str::contains("51"));
 
     Command::new(cargo_bin("dare"))
         .args(["harness", "codex", "detect", "--root", root])
@@ -196,7 +196,7 @@ fn harness_antigravity_install_validate_detect() {
         .assert()
         .success()
         .stdout(predicate::str::contains(
-            "harness antigravity install: wrote 50",
+            "harness antigravity install: wrote 51",
         ));
 
     Command::new(cargo_bin("dare"))
@@ -204,7 +204,7 @@ fn harness_antigravity_install_validate_detect() {
         .assert()
         .success()
         .stdout(predicate::str::contains("harness antigravity validate: ok"))
-        .stdout(predicate::str::contains("50"));
+        .stdout(predicate::str::contains("51"));
 
     Command::new(cargo_bin("dare"))
         .args(["harness", "antigravity", "detect", "--root", root])
@@ -2738,8 +2738,7 @@ fn graph_doctor_reports_compiled() {
     let v: Value = serde_json::from_str(out.trim()).expect("json");
     assert_eq!(v["ok"], true);
     assert_eq!(
-        v["data"]["report"]["semanticCompiled"],
-        false,
+        v["data"]["report"]["semanticCompiled"], false,
         "default dare-cli binary must not enable feature semantic"
     );
     assert!(v["data"]["report"]["embedDim"].as_u64().is_some());

@@ -484,6 +484,20 @@ capabilities:
       codex: .codex/skills/dare-security/SKILL.md
       antigravity: .antigravity/commands/dare-security.md
     assets: []
+  - id: dare-self
+    title: "dare-self"
+    description: "CLI binary self-update / rollback / uninstall (not project assets)"
+    instructions: |
+      Use `dare self update|rollback|uninstall` to manage the dare CLI binary.
+      Distinct from `dare update` (project assets). See docs/compatibility/cli-self-update.md (DEC-054).
+      Cosign is fail-closed for self-update (≠ ADR-008 soft-fail installers).
+    cli_commands: ["self"]
+    outputs:
+      claude: .claude/commands/dare-self.md
+      cursor: .cursor/commands/dare-self.md
+      codex: .codex/skills/dare-self/SKILL.md
+      antigravity: .antigravity/commands/dare-self.md
+    assets: []
   - id: dare-skill
     title: "dare-skill"
     description: "Capability IDE for dare-skill"

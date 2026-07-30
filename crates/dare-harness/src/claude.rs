@@ -195,12 +195,12 @@ mod tests {
         assert!(!detect_claude(&root).unwrap().claude_md);
         generate_claude_md(&root, true).unwrap();
         let n = install_commands(&root, true).unwrap();
-        assert_eq!(n, 50);
+        assert_eq!(n, 51);
         write_settings_json(&root, true).unwrap();
-        assert_eq!(validate_install(&root).unwrap(), 50);
+        assert_eq!(validate_install(&root).unwrap(), 51);
         // preserve: second install without force should write 0 if all managed
         let n2 = install_commands(&root, false).unwrap();
-        assert_eq!(n2, 50); // managed files are rewritten (idempotent)
+        assert_eq!(n2, 51); // managed files are rewritten (idempotent)
     }
 
     #[test]
@@ -210,8 +210,8 @@ mod tests {
         let rel = SafeRelativePath::new(".claude/commands/dare-design.md").unwrap();
         atomic_write(&root, &rel, b"# custom user command\n").unwrap();
         let n = install_commands(&root, false).unwrap();
-        // 49 written (one preserved)
-        assert_eq!(n, 49);
+        // 50 written (one preserved)
+        assert_eq!(n, 50);
         let content = read_to_string(&root, &rel).unwrap();
         assert!(content.contains("custom user command"));
     }
@@ -223,7 +223,7 @@ mod tests {
         let err = validate_install(&root).unwrap_err();
         let msg = err.to_string();
         assert!(msg.contains("claude commands missing"));
-        assert!(msg.contains("(50):") || msg.contains("missing (50)"));
+        assert!(msg.contains("(51):") || msg.contains("missing (51)"));
     }
 
     #[test]
