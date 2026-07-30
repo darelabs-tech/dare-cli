@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DARE Dashboard</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <h1>DARE Dashboard</h1>
+    <p class="tagline">Read-only project telemetry</p>
+  </header>
+
+  <p id="status" class="status" role="status" aria-live="polite">Loading telemetry…</p>
+
+  <main class="sections">
+    <section id="section-dag" aria-labelledby="heading-dag">
+      <h2 id="heading-dag">DAG</h2>
+      <div class="panel" data-section="dag"></div>
+    </section>
+
+    <section id="section-gates" aria-labelledby="heading-gates">
+      <h2 id="heading-gates">Gates</h2>
+      <div class="panel" data-section="gates"></div>
+    </section>
+
+    <section id="section-cost" aria-labelledby="heading-cost">
+      <h2 id="heading-cost">Cost</h2>
+      <div class="panel" data-section="cost"></div>
+    </section>
+
+    <section id="section-bestOfN" aria-labelledby="heading-bestOfN">
+      <h2 id="heading-bestOfN">Best of N</h2>
+      <div class="panel" data-section="bestOfN"></div>
+    </section>
+
+    <section id="section-guard" aria-labelledby="heading-guard">
+      <h2 id="heading-guard">Guard</h2>
+      <div class="panel" data-section="guard"></div>
+    </section>
+
+    <section id="section-drift" aria-labelledby="heading-drift">
+      <h2 id="heading-drift">Drift</h2>
+      <div class="panel" data-section="drift"></div>
+    </section>
+  </main>
+
+  <script src="/assets/app.js"></script>
+</body>
+</html>
