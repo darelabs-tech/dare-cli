@@ -210,8 +210,8 @@ mod tests {
         let rel = SafeRelativePath::new(".claude/commands/dare-design.md").unwrap();
         atomic_write(&root, &rel, b"# custom user command\n").unwrap();
         let n = install_commands(&root, false).unwrap();
-        // 48 written (one preserved)
-        assert_eq!(n, 48);
+        // 49 written (one preserved)
+        assert_eq!(n, 49);
         let content = read_to_string(&root, &rel).unwrap();
         assert!(content.contains("custom user command"));
     }

@@ -156,7 +156,7 @@ mod tests {
         let rel = SafeRelativePath::new(".cursor/commands/dare-design.md").unwrap();
         atomic_write(&root, &rel, b"# custom cursor command\n").unwrap();
         let n = install_cursor_commands(&root, false).unwrap();
-        assert_eq!(n, 48);
+        assert_eq!(n, 49);
         let content = read_to_string(&root, &rel).unwrap();
         assert!(content.contains("custom cursor command"));
     }
