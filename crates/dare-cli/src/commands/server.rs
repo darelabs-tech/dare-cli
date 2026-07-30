@@ -3,10 +3,9 @@
 use std::path::PathBuf;
 use std::process::ExitCode;
 
+use dare_cli::{run_rest_server, RestServerOpts};
 use dare_core::{CoreError, CoreResult};
-use dare_server::{parse_server_config_from_env, AppMode};
 
-use crate::commands::dashboard::serve_until_ctrl_c;
 use crate::output::OutputRenderer;
 
 /// Message pattern for unknown `--protocol` (BLUEPRINT §0.1 `MSG_UNKNOWN_PROTOCOL`).
@@ -37,15 +36,9 @@ fn run_server(opts: ServerCliOpts) -> CoreResult<()> {
     if opts.protocol != "rest" {
         return Err(CoreError::usage(msg_unknown_protocol(&opts.protocol)));
     }
-    let root_path = opts
-        .dir
-        .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
-    let cfg = parse_server_config_from_env(
-        AppMode::Rest,
-        opts.bind.as_deref(),
-        opts.port,
-        &root_path,
-        false,
-    )?;
-    serve_until_ctrl_c(AppMode::Rest, cfg)
+    run_rest_server(RestServerOpts {
+        bind: opts.bind,
+        port: opts.port,
+        dir: opts.dir,
+    })
 }

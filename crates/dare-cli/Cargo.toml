@@ -6,9 +6,17 @@ rust-version.workspace = true
 license.workspace = true
 publish = false
 
+[lib]
+name = "dare_cli"
+path = "src/lib.rs"
+
 [[bin]]
 name = "dare"
 path = "src/main.rs"
+
+[[bin]]
+name = "dare-mcp-server"
+path = "src/bin/dare_mcp_server.rs"
 
 [features]
 default = []
