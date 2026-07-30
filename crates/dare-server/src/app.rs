@@ -11,15 +11,21 @@ use crate::mode::AppMode;
 use crate::routes;
 use crate::state::AppState;
 
-/// Build the shared app router for the given mode (health + dashboard read-only routes).
+/// Build the shared app router for the given mode (health + dashboard; REST when Rest).
 pub fn create_app(mode: AppMode, cfg: &ServerConfig, mut state: AppState) -> Router {
     state.mode = mode;
     let body_limit = cfg.body_limit;
     let (nosniff, frame, csp) = security_headers_layers();
 
-    Router::new()
+    let mut router = Router::new()
         .route("/health", get(routes::health))
-        .merge(routes::dashboard::router())
+        .merge(routes::dashboard::router());
+
+    if mode == AppMode::Rest {
+        router = router.merge(routes::rest_router());
+    }
+
+    router
         .layer(axum::middleware::from_fn_with_state(
             state.clone(),
             auth_middleware,

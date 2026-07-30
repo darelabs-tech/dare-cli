@@ -919,6 +919,7 @@ dependencies = [
  "dare-contracts",
  "dare-core",
  "dare-graph",
+ "dare-steering",
  "http-body-util",
  "rust-embed",
  "serde",
