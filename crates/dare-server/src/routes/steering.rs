@@ -2,11 +2,12 @@
 
 use axum::extract::{Query, State};
 use axum::Json;
-use dare_steering::{show_steering, SteeringShowReport};
+use dare_steering::SteeringShowReport;
 use serde::Deserialize;
 
 use crate::error::HttpError;
-use crate::http_map::map_core_error;
+use crate::routes::map_service_error;
+use crate::services::{steering_show, ServiceCtx};
 use crate::state::AppState;
 
 #[derive(Debug, Deserialize)]
@@ -24,6 +25,7 @@ pub async fn steering(
         .map(str::trim)
         .filter(|s| !s.is_empty())
         .ok_or_else(|| HttpError::invalid_input("query param file is required"))?;
-    let report = show_steering(state.root.as_ref(), file).map_err(map_core_error)?;
+    let ctx = ServiceCtx::new((*state.root).clone());
+    let report = steering_show(&ctx, file).map_err(map_service_error)?;
     Ok(Json(report))
 }
