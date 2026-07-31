@@ -1,0 +1,112 @@
+title: "Inventário e empacotamento de assets (009) - Development Tasks"
+version: "1.0.0"
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp009-001
+    title: "Verificar docker-compose.ci.yml"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION-009/mp009-001.md
+    subtask_prompt: |
+      Microplano 009 Fase 1 — containerização.
+      Arquivo: docker-compose.ci.yml (raiz).
+      Validar: `docker compose -f docker-compose.ci.yml config` exit 0.
+      Se Docker ausente: confirmar YAML parseável e documentar no output.
+      Fix só se erro sintático. Sem novas crates. Sem git commit.
+      Complete: dare execute --dag DARE/dare-dag-009.yaml --complete mp009-001 --output "..."
+
+  - id: mp009-002
+    title: "Harden path + materialize errors"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION-009/mp009-002.md
+    subtask_prompt: |
+      Microplano 009 Fase 2 — Blueprint §5.3–5.5 T-05 RS-01.
+      Em crates/dare-assets:
+      1) Criar/exportar fn assert_safe_asset_path(path: &str) -> CoreResult<()>:
+         non-empty; sem leading / ou \; sem segmento ".."; sem '\' no path.
+         Err: CoreError::config com mensagem contendo o path.
+      2) Chamar assert_safe_asset_path em verify_embedded_assets (todas entries) e materialize_to (antes de write).
+      3) materialize.rs: remover .expect / unwrap_or("") — encoding UTF-8 falha → CoreError tipado.
+      4) Testes: rejects_dotdot_path; rejects_backslash_path; verify_embedded_ok ainda passa.
+      Gate: cargo test -p dare-assets
+      Sem git commit.
+
+  - id: mp009-003
+    title: "Freshness hashes + templates README"
+    depends_on: [mp009-002]
+    complexity: MED
+    spec_file: EXECUTION-009/mp009-003.md
+    subtask_prompt: |
+      Microplano 009 Fase 3 — T-10 RF-16.
+      Adicionar teste manifest_hashes_match_assets_dir em dare-assets:
+      - Ler assets/ via PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../assets")
+      - load_manifest_from_str do manifest.yml no FS
+      - Para cada entry kind != External: ler ficheiro, sha256_hex == entry.sha256
+      Criar templates/README.md: SoT = assets/templates; raiz templates/ é espelho legado Class B; editar só assets/.
+      Gate: cargo test -p dare-assets manifest_hashes
+      Sem git commit.
+
+  - id: mp009-004
+    title: "Scripts regen + sync espelho"
+    depends_on: [mp009-002]
+    complexity: MED
+    spec_file: EXECUTION-009/mp009-004.md
+    subtask_prompt: |
+      Microplano 009 Fase 4 — SHOULD RF-14 T-02.
+      CRIAR scripts/regen-assets-manifest.py:
+        - Lê assets/manifest.yml; para cada non-external recalcula sha256 do ficheiro sob assets/{path};
+        - Escreve manifest preservando id/path/kind/order; hex lowercase.
+      CRIAR scripts/sync-templates-from-assets.ps1: Copy-Item assets/templates/* → templates/
+      Documentar uso em comentário no topo dos scripts + 1 parágrafo em docs (mp009-005 pode expandir).
+      Não alterar hashes sem necessidade (se já corretos, script é no-op).
+      Sem git commit.
+
+  - id: mp009-005
+    title: "CLI smoke + docs DEC-010"
+    depends_on: [mp009-003, mp009-004]
+    complexity: MED
+    spec_file: EXECUTION-009/mp009-005.md
+    subtask_prompt: |
+      Microplano 009 Fase 5.
+      1) crates/dare-cli/tests/cli_smoke.rs: teste assets_verify_ok — args ["assets","verify"] success; stdout contém "assets verify: ok".
+      2) EXPANDIR docs/compatibility/assets-inventory.md: T-01..T-12; API verify/materialize/assert_safe_asset_path; inventário mínimo; Class A/B/C TS; RS-01..10; scripts regen/sync; link DEC-010.
+      3) NÃO criar DEC-011. Verificar DEC-010 no DECISION-LOG.
+      Gate: cargo test -p dare-cli --test cli_smoke assets_verify
+      Sem git commit.
+
+  - id: mp009-006
+    title: "Auditoria Ralph test/clippy/audit/deny"
+    depends_on: [mp009-001, mp009-005]
+    complexity: MED
+    spec_file: EXECUTION-009/mp009-006.md
+    subtask_prompt: |
+      Microplano 009 Fase 6 (N-1).
+      Rodar e corrigir:
+      - cargo test --workspace
+      - cargo clippy --workspace --all-targets -- -D warnings
+      - cargo audit
+      - cargo deny check (se deny.toml)
+      RS checklist na doc assets-inventory.md.
+      Output: exit codes. Sem git commit.
+
+  - id: mp009-007
+    title: "Fechamento microplano 009"
+    depends_on: [mp009-006]
+    complexity: LOW
+    spec_file: EXECUTION-009/mp009-007.md
+    subtask_prompt: |
+      Microplano 009 Fase 7.
+      Atualizar DARE/TASKS-009-inventario-e-empacotamento-de-assets.md: 7/7 (100%); todas ✅ DONE.
+      Output: próximo 010-modelo-canonico-de-capabilities.
+      Sem código de produto. Sem git commit.

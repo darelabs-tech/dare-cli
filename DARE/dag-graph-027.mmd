@@ -1,0 +1,27 @@
+flowchart TB
+  subgraph rank_0["Rank 0"]
+    mp027_001["mp027-001<br/>Verificar docker-compose.ci.yml"]
+    mp027_002["mp027-002<br/>viz Mermaid core + goldens"]
+  end
+  subgraph rank_1["Rank 1"]
+    mp027_003["mp027-003<br/>viz DOT + Excalidraw + cores + OUTPUT_C…"]
+  end
+  subgraph rank_2["Rank 2"]
+    mp027_004["mp027-004<br/>CLI dare dag viz + smokes"]
+  end
+  subgraph rank_3["Rank 3"]
+    mp027_005["mp027-005<br/>Capability matrix + cli-dag-viz.md + DE…"]
+  end
+  subgraph rank_4["Rank 4"]
+    mp027_006["mp027-006<br/>Auditoria Ralph (fmt/clippy/test/audit)"]
+  end
+  subgraph rank_5["Rank 5"]
+    mp027_007["mp027-007<br/>Fechamento TASKS/matriz/Blueprint"]
+  end
+  mp027_001 --> mp027_006
+  mp027_002 --> mp027_003
+  mp027_003 --> mp027_004
+  mp027_004 --> mp027_005
+  mp027_004 --> mp027_006
+  mp027_005 --> mp027_006
+  mp027_006 --> mp027_007

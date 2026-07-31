@@ -1,0 +1,115 @@
+title: "Microplano 054 — Hardening de paridade e segurança"
+version: "1.0.0"
+microplano: "054"
+name: hardening-de-paridade-e-seguranca
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor: { HIGH: gpt-5.3-codex, MED: composer-2, LOW: auto-low }
+  claude: { HIGH: claude-sonnet-4-5, MED: claude-haiku-4, LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro, MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp054-001
+    title: "Scaffold dare-parity + CaseSpec + tests/ layout"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION-054/mp054-001.md
+    subtask_prompt: |
+      BLUEPRINT-054 Fase A / T-01: create crates/dare-parity (publish=false) workspace member.
+      Modules: axis.rs (CompareAxis enum lowercase serde), case.rs (CaseSpec schemaVersion 1,
+        load_case, validate_case, SkipSpec/DiffClass A|B|C|D), perf.rs
+        (within_regression(baseline, measured, max=0.15) + unit), lib.rs re-exports.
+      Case id regex ^[a-z0-9]+(\.[a-z0-9_-]+)+$; skip without class → MSG_SKIP_NEEDS_CLASS.
+      Create tests/golden|security|cross-platform (+ fixtures/) with README placeholders.
+      Unit: load_case rejects bad schemaVersion; skip without class fails validate;
+        regression_over_15_percent_fails. Do NOT implement normalize/runner/security.
+      Avoid mass CRLF.
+
+  - id: mp054-006
+    title: "Perf scripts + baseline stub + diff-log skeleton"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION-054/mp054-006.md
+    subtask_prompt: |
+      BLUEPRINT-054 Fase F (scripts) + T-06 skeleton — PARALLEL rank 0 with 001:
+        Do NOT modify crates/dare-parity (001 owns it). Create only:
+        scripts/measure-perf.sh + measure-perf.ps1 (build release dare-cli; 5×
+        --version drop 1st median; RSS; size+sha256; write docs/perf/baseline-054.md);
+        docs/perf/baseline-054.md placeholder front-matter schemaVersion 1;
+        docs/compatibility/parity-diff-log.md table header + 1 example PD row Class C.
+      Document PERF_REGRESSION_MAX=0.15 in script comments. Gate Rust unit lives in
+        mp054-001 perf.rs (or 007 verifies). Avoid mass CRLF.
+
+  - id: mp054-002
+    title: "Normalizer N-01..N-08 + anti over-normalize"
+    depends_on: [mp054-001]
+    complexity: HIGH
+    spec_file: EXECUTION-054/mp054-002.md
+    subtask_prompt: |
+      BLUEPRINT-054 Fase B / §0.3: crates/dare-parity/src/normalize.rs —
+        normalize_text(input, &NormalizeCtx) applying ONLY N-01..N-08 (timestamps→1970,
+        UUID→fixed, temp paths→$TMP/, strip ANSI, \→/, drive→$DRIVE:, version→$VERSION,
+        redact→$REDACTED via dare_core::redact).
+      MUST NOT normalize exit codes / JSON contract keys / flag names.
+      tests/normalize_anti_cheat.rs: over_normalize_does_not_hide_exit_code;
+        over_normalize_does_not_hide_json_key (MSG_OVER_NORMALIZE semantics).
+      Unit per N-01..N-08. Avoid mass CRLF.
+
+  - id: mp054-004
+    title: "Security suite injection/leak/archive/sig/bidi"
+    depends_on: [mp054-001]
+    complexity: HIGH
+    spec_file: EXECUTION-054/mp054-004.md
+    subtask_prompt: |
+      BLUEPRINT-054 Fase D / §5.5: security/{injection,env_leak,archive,signature,bidi}.rs
+      + tests/security_suite.rs. Fixtures under tests/security/:
+        injection/payloads.txt (6 MUST lines from Blueprint); archives zip-slip+tar-slip;
+        signatures bad sums + signing-skipped.sig.
+      Call dare_skills::extract_archive_safe (do NOT reimplement). dare_self verify_sha256
+        mismatch + signing skipped. SafeCommand argv-only injection. env leak probes
+        ghp_TESTONLY_LEAK_PROBE / sk_TESTONLY absent from stdout/stderr. Bidi U+202E path Err.
+      cargo test -p dare-parity --test security_suite. Avoid mass CRLF.
+
+  - id: mp054-005
+    title: "proptest paths/parsers + cross-platform"
+    depends_on: [mp054-001]
+    complexity: MED
+    spec_file: EXECUTION-054/mp054-005.md
+    subtask_prompt: |
+      BLUEPRINT-054 Fase E: fuzz_paths.rs + fuzz_parsers.rs with proptest 256 cases —
+        SafeRelativePath::new no panic; CaseSpec::try_from_yaml_bytes malformed → Err no panic.
+      tests/cross_platform.rs + tests/cross-platform/windows-path-cases/: separators,
+        drive casing normalize; cfg where needed. Document cargo-fuzz SHOULD in README
+        (do not require cargo-fuzz installed). Avoid mass CRLF.
+
+  - id: mp054-003
+    title: "Golden runner + fixtures + diff-log"
+    depends_on: [mp054-002]
+    complexity: HIGH
+    spec_file: EXECUTION-054/mp054-003.md
+    subtask_prompt: |
+      BLUEPRINT-054 Fase C / §5.3: runner.rs run_case/run_suite; report.rs DiffReport
+        schemaVersion 1; DiffLogIndex parse docs/compatibility/parity-diff-log.md.
+      Materialize minimal tests/fixtures (empty-project etc stubs) + golden cases:
+        dare --help, welcome --help, self --help, mcp --help; ≥1 HTTP health axis optional
+        if cheap. Skip without class fails. Snapshots committed (no npm).
+      cargo test -p dare-parity --test golden_suite green. last-report.json gitignore OK.
+      Avoid mass CRLF.
+
+  - id: mp054-007
+    title: "Docs DEC-055 + CI paths + Ralph"
+    depends_on: [mp054-003, mp054-004, mp054-005, mp054-006]
+    complexity: MED
+    spec_file: EXECUTION-054/mp054-007.md
+    subtask_prompt: |
+      BLUEPRINT-054 Fase G: docs/compatibility/parity-hardening.md (how to run golden/
+        security/normalize policy) + ensure parity-diff-log.md complete.
+      Append DEC-055 ONLY (do not edit DEC-054). NO new capability (stay at 51).
+      Matriz 000A: 054 Concluído. ci.yml paths add tests/** scripts/measure-perf.* docs/perf/**.
+      Ensure baseline-054.md has ≥1 triple measured. Ralph: fmt --check; test dare-parity;
+        cli_smoke; clippy dare-parity; cargo audit. Avoid mass CRLF.

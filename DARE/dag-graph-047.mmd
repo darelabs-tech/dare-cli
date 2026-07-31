@@ -1,0 +1,23 @@
+```mermaid
+flowchart TD
+  subgraph rank0 [Rank 0]
+    A[mp047-001 clap+resolve]
+    B[mp047-002 ConflictPolicy+frontend]
+  end
+  subgraph rank1 [Rank 1]
+    C[mp047-003 run_init]
+    E[mp047-005 run_bootstrap]
+  end
+  D[mp047-004 interactive]
+  F[mp047-006 golden+CLI]
+  G[mp047-007 docs+DEC-048]
+  A --> C
+  B --> C
+  A --> E
+  B --> E
+  C --> D
+  C --> F
+  D --> F
+  E --> F
+  F --> G
+```

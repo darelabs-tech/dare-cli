@@ -1,0 +1,31 @@
+# DAG 018 — Discover detecção brownfield
+
+```mermaid
+flowchart TB
+  subgraph rank0["Rank 0"]
+    mp018-001["mp018-001<br/>compose LOW"]
+    mp018-002["mp018-002<br/>dare-project stacks HIGH"]
+  end
+  subgraph rank1["Rank 1"]
+    mp018-003["mp018-003<br/>detect() HIGH"]
+    mp018-005["mp018-005<br/>docs LOW"]
+  end
+  subgraph rank2["Rank 2"]
+    mp018-004["mp018-004<br/>CLI+smoke MED"]
+  end
+  subgraph rank3["Rank 3"]
+    mp018-006["mp018-006<br/>Ralph MED"]
+  end
+  subgraph rank4["Rank 4"]
+    mp018-007["mp018-007<br/>fechamento LOW"]
+  end
+  mp018-002 --> mp018-003
+  mp018-002 --> mp018-005
+  mp018-003 --> mp018-004
+  mp018-001 --> mp018-006
+  mp018-004 --> mp018-006
+  mp018-005 --> mp018-006
+  mp018-006 --> mp018-007
+```
+
+Progress: 0/7 · Ready: mp018-001, mp018-002

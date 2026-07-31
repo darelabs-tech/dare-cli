@@ -1,0 +1,122 @@
+title: "Microplano 046 — Scaffolding contratos, stacks e artefatos AX"
+version: "1.0.0"
+microplano: "046"
+name: scaffolding-contracts-stacks-ax
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor: { HIGH: gpt-5.3-codex, MED: composer-2, LOW: auto-low }
+  claude: { HIGH: claude-sonnet-4-5, MED: claude-haiku-4, LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro, MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp046-001
+    title: "crate + types + registry (11 stacks)"
+    depends_on: []
+    complexity: HIGH
+    spec_file: EXECUTION-046/mp046-001.md
+    subtask_prompt: |
+      Create crates/dare-scaffold and register in workspace Cargo.toml members.
+
+      Per BLUEPRINT-046 §0.1–0.5:
+      - types.rs: StackKind, Toolchain, Transport, FrontendKind, StackMetadata,
+        ScaffoldRequest, ScaffoldPlan*, ScaffoldApplyReport, ValidationReport
+        (camelCase serde; schema_version=1).
+      - registry.rs: STACK_IDS exactly 11 ASC (go-gin…rust-axum per §0.2);
+        list_stack_ids(); scaffolder_for(id); unknown → InvalidInput "unknown stack id";
+        id=="rails" → message also contains "did you mean ruby-rails-8?".
+      - StackScaffolder trait stubs ok for plan/validate returning todo-ish ONLY if
+        marked internal — prefer empty plan Ok(empty items) for now OR leave plan
+        as Err("not implemented") — CONGELADO: plan/validate return Ok with empty
+        plan / ok=false missing=["pending"] is NOT allowed for public API.
+        CONGELADO: mp046-001 implements trait + GenericScaffolder metadata only;
+        plan() returns Ok(ScaffoldPlan{items: vec![], …}) temporarily is ACCEPTABLE
+        only if unit tests for registry pass; real plan lands in 002–004.
+
+      Prefer table-driven GenericScaffolder with static metadata for all 11.
+      Unit: registry_lists_eleven_sorted; scaffolder_unknown; scaffolder_rails_hint;
+        metadata_rate_limit_paths.
+      Do NOT add CLI. Do NOT implement apply yet. Avoid mass CRLF fmt.
+
+  - id: mp046-002
+    title: "templates assets/stacks + render"
+    depends_on: [mp046-001]
+    complexity: HIGH
+    spec_file: EXECUTION-046/mp046-002.md
+    subtask_prompt: |
+      Port MVP templates under assets/stacks/<id>/ for all 11 stack ids
+      (BLUEPRINT §0.6): dare.config.json.tpl + skeleton files per stack.
+      Implement render.rs: replace {{project_name}} and {{stack_id}} only.
+      Secret scan before write helpers: needles password=, api_key=,
+      BEGIN PRIVATE KEY (case-insensitive) → InvalidInput
+      "template contains forbidden secret pattern".
+      Ensure dare-assets embed still verifies (update manifest hashes if required).
+      Unit: render_substitutes; secret_scan_rejects_api_key; each stack template root exists.
+      No apply/CLI. Avoid mass CRLF.
+
+  - id: mp046-003
+    title: "AX generators (7 artefatos)"
+    depends_on: [mp046-001]
+    complexity: MED
+    spec_file: EXECUTION-046/mp046-003.md
+    subtask_prompt: |
+      Implement ax.rs generating the 7 AX artifacts per BLUEPRINT §0.3:
+      llms.txt, README.md (## Bootstrap + ## Docs), .env.example, openapi.json
+      (HTTP /healthz vs MCP paths:{}), Dockerfile, docker-compose.yml,
+      rate-limit file at metadata.rate_limit_rel.
+      Unit: ax_paths_for_each_stack (all 11); openapi_mcp_stub_empty_paths;
+        readme_has_required_sections; secret_scan on generated AX.
+      No apply/CLI. Can run parallel with mp046-002. Avoid mass CRLF.
+
+  - id: mp046-004
+    title: "plan / apply / rollback"
+    depends_on: [mp046-002, mp046-003]
+    complexity: HIGH
+    spec_file: EXECUTION-046/mp046-004.md
+    subtask_prompt: |
+      Implement plan.rs + apply.rs per BLUEPRINT §0.5:
+      plan_scaffold: validate project_name regex; reject frontend Some;
+        fail-fast InvalidInput "path already exists" if !force and collision;
+        force → Replace; items sorted path ASC; kinds template|ax|meta.
+      apply_scaffold: journal under .dare/scaffold-session-*; atomic_write;
+        on error → rollback then Err; success deletes journal; rolled_back flag.
+      run_scaffold: if check → plan only, report check=true, zero writes.
+      Tests: plan_sorted; check_zero_write; force_replace; rollback_restores
+        (inject fail after first write). Path jail via SafeRelativePath.
+      No CLI. Avoid mass CRLF.
+
+  - id: mp046-005
+    title: "validate + fixtures greenfield"
+    depends_on: [mp046-004]
+    complexity: MED
+    spec_file: EXECUTION-046/mp046-005.md
+    subtask_prompt: |
+      validate.rs: validate_stack_output checks 7 AX + dare.config.json exist;
+        secret_hits; ok = missing empty && secret_hits empty.
+      Integration test greenfield_fixtures.rs: run_scaffold happy for
+        node-nestjs, rust-axum, mcp-node-ts; then validate ok=true.
+      Unit: validate_missing_lists; validate_unknown_stack.
+      No CLI. Avoid mass CRLF.
+
+  - id: mp046-006
+    title: "Docs DEC-047 + matriz + Ralph close"
+    depends_on: [mp046-005]
+    complexity: MED
+    spec_file: EXECUTION-046/mp046-006.md
+    subtask_prompt: |
+      Create docs/compatibility/scaffold-contracts.md (11 ids, AX list, plan/apply,
+        rails→ruby-rails-8 alias, no CLI).
+      Append DEC-047 ONLY to docs/DECISION-LOG.md.
+      Mark 046 Concluído in 000A-MATRIZ-DE-STATUS.md.
+      Optional pointer from cli-migrate.md.
+      Update TASKS-046 to 6/6 DONE.
+      Ralph:
+        cargo test -p dare-scaffold
+        cargo clippy -p dare-scaffold --all-targets -- -D warnings
+        cargo test -p dare-assets
+        cargo audit
+      No mass CRLF fmt. No dare init CLI.

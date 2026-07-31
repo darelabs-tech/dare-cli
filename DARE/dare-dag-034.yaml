@@ -1,0 +1,55 @@
+schema_version: "2.1"
+meta:
+  microplano: "034"
+  title: "Guard"
+tasks:
+  - id: mp034-001
+    title: "ErrorKind GuardFail exit 6"
+    status: DONE
+    depends_on: []
+    complexity: S
+  - id: mp034-002
+    title: "dare-guard unicode"
+    status: DONE
+    depends_on: [mp034-001]
+    complexity: M
+  - id: mp034-003
+    title: "scan-rules injection"
+    status: DONE
+    depends_on: [mp034-002]
+    complexity: M
+  - id: mp034-004
+    title: "provenance trustedPaths"
+    status: DONE
+    depends_on: [mp034-002]
+    complexity: S
+  - id: mp034-005
+    title: "Ed25519 signing"
+    status: DONE
+    depends_on: [mp034-002]
+    complexity: M
+  - id: mp034-006
+    title: "pipeline report"
+    status: DONE
+    depends_on: [mp034-003, mp034-004, mp034-005]
+    complexity: M
+  - id: mp034-007
+    title: "CLI dare guard"
+    status: DONE
+    depends_on: [mp034-006]
+    complexity: M
+  - id: mp034-008
+    title: "agent preflight"
+    status: DONE
+    depends_on: [mp034-006, mp034-007]
+    complexity: M
+  - id: mp034-009
+    title: "docs DEC matriz"
+    status: DONE
+    depends_on: [mp034-007, mp034-008]
+    complexity: S
+  - id: mp034-010
+    title: "Ralph close"
+    status: DONE
+    depends_on: [mp034-009]
+    complexity: S

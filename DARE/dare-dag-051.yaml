@@ -1,0 +1,147 @@
+title: "Microplano 051 — Dashboard e REST compatível"
+version: "1.0.0"
+microplano: "051"
+name: dashboard-e-rest-compativel
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor: { HIGH: gpt-5.3-codex, MED: composer-2, LOW: auto-low }
+  claude: { HIGH: claude-sonnet-4-5, MED: claude-haiku-4, LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro, MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp051-001
+    title: "Crate dare-server + config/auth/middleware/health"
+    depends_on: []
+    complexity: HIGH
+    spec_file: EXECUTION-051/mp051-001.md
+    subtask_prompt: |
+      Create crates/dare-server per BLUEPRINT-051 §2–3 / Fase A.
+      Workspace Cargo.toml: member dare-server; pins axum=0.8.8,
+        tokio=1.45.1 (macros,rt-multi-thread,net,signal,fs,io-util),
+        tower-http=0.6.8 (limit,set-header,cors,trace), tower=0.5.2,
+        http-body-util=0.1.3; rust-embed already workspace.
+      dare-server deps: axum,tokio,tower-http,tower,serde,serde_json,
+        uuid,rust-embed,dare-core,dare-contracts — NO dare-ai/dare-agent.
+      Modules: mode.rs AppMode::{Dashboard,Rest}; config.rs ServerConfig +
+        parse_server_config_from_env (ENV DARE_MCP_BIND/PORT/TOKEN/BODY_LIMIT/
+        PROJECT_PATH/LOG_TOKEN; defaults bind 127.0.0.1, ports 4100/3000,
+        body 1048576); state.rs AppState; error.rs JSON {error,code};
+        auth.rs Bearer + loopback rules §0.3 + force_auth test flag;
+        middleware.rs nosniff, X-Frame-Options DENY, CSP const, CORS,
+        RequestBodyLimitLayer -> 413 code body_too_large;
+        app.rs create_app(mode,cfg,state)->Router with GET /health only
+        (ok,version,protocol:"rest",mode); routes/health.rs.
+      Unit: health_ok oneshot; auth_force_require_401; body_too_large_413;
+        headers_present. Avoid mass CRLF.
+
+  - id: mp051-002
+    title: "Dashboard static assets (HTML/CSS/JS)"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION-051/mp051-002.md
+    subtask_prompt: |
+      Create crates/dare-server/assets/dashboard/ per BLUEPRINT T-04:
+        index.html (vanilla: title DARE Dashboard, fetches /api/telemetry,
+        renders dag/gates/cost/bestOfN/guard/drift JSON sections),
+        styles.css (simple readable layout, no CDN),
+        app.js (fetch telemetry, escape textContent only — no innerHTML raw).
+      CSP-friendly: no inline script/style if possible (external files).
+      Parallel with mp051-001 — create dirs even if crate Cargo.toml lands
+        in 001. No Rust code in this task. Avoid mass CRLF.
+
+  - id: mp051-003
+    title: "Dashboard routes + embed + telemetry"
+    depends_on: [mp051-001, mp051-002]
+    complexity: HIGH
+    spec_file: EXECUTION-051/mp051-003.md
+    subtask_prompt: |
+      BLUEPRINT §5.3–5.5 / Fase B: rust-embed folder assets/dashboard.
+      routes/dashboard.rs: GET /dashboard -> index.html text/html + CSP;
+        GET /assets/{*path} — reject .., absolute, \, empty segment, non-
+        allowlist ext js|css|svg|png|ico|woff2|map -> 403 path_escape/forbidden;
+        missing -> 404; GET /api/telemetry -> build_telemetry_snapshot JSON.
+      telemetry.rs: build_telemetry_snapshot(root)->TelemetrySnapshot;
+        dag counts from .dare/state.json TaskStatus if present else zeros
+        + source none; gates/cost/bestOfN/guard {}; drift {available:bool}
+        if open_graph ok. Mount dashboard routes in BOTH modes (read-only).
+      Tests: dashboard_html_200; assets_traversal_403; telemetry_maps_keys;
+        assets_exe_forbidden. Avoid mass CRLF.
+
+  - id: mp051-004
+    title: "REST routes tools/context/dag/tasks/graph/steering/project"
+    depends_on: [mp051-001]
+    complexity: HIGH
+    spec_file: EXECUTION-051/mp051-004.md
+    subtask_prompt: |
+      BLUEPRINT §5.6–5.13 / Fase C+D tasks: ONLY when AppMode::Rest.
+      GET /tools — 12 tools frozen order §5.6.
+      POST /context/query — type architecture|task|dependency; query 1..=512;
+        invalid type -> 400 MSG_INVALID_CONTEXT_TYPE; resolve per §4.4.
+      GET /blueprint -> {path,content,bytes} jail BLUEPRINT.md; >2MiB -> 400.
+      GET /dag -> load_dag JSON; GET /project snapshot §5.12 (no dare-cli dep).
+      GET|PUT /tasks/{id}: id regex ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$;
+        .. / \ -> 403; tasks_md.rs get_task_view/put_task_status emoji table
+        §4.5; atomic_write; PUT body {status} wire PENDING|RUNNING|DONE|
+        FAILED|SKIPPED; Dashboard mode MUST NOT register PUT.
+      POST /graph/locate|traverse|map-requirement per §0.4/§4.6; graph fail
+        -> 503 graph_unavailable; empty query -> 400.
+      GET /steering?file= -> show_steering; .env* -> 403; escape -> 403.
+      Tests oneshot Rest: tools_order; context_bad_type; steering_env_403;
+        put_task_roundtrip; graph_empty_query_400; path_id_escape_403.
+      Parallel with mp051-003. Avoid mass CRLF.
+
+  - id: mp051-005
+    title: "serve + open_browser + graceful shutdown"
+    depends_on: [mp051-001, mp051-003]
+    complexity: MED
+    spec_file: EXECUTION-051/mp051-005.md
+    subtask_prompt: |
+      BLUEPRINT §5.14 serve/browser Fase D:
+      serve.rs: bind TcpListener cfg.bind:port; axum::serve + graceful
+        shutdown future; dashboard+open_browser -> open_browser after listen.
+      browser.rs: open_browser(url,&dyn ProcessRunner); URL allowlist
+        ^https?://(127\.0\.0\.1|localhost)(:\d+)?(/.*)?$; else invalid_input.
+        Win: cmd.exe /C start "" url; macOS open; Linux xdg-open — SafeCommand
+        argv only. Browser fail = warn log, serve continues.
+      Startup human log: bind, port, token=set|generated (value only if
+        DARE_MCP_LOG_TOKEN=1). Unit: url_reject_evil; open_browser_mock_ok.
+      Avoid mass CRLF.
+
+  - id: mp051-006
+    title: "CLI dare dashboard/server + http contract smokes"
+    depends_on: [mp051-003, mp051-004, mp051-005]
+    complexity: HIGH
+    spec_file: EXECUTION-051/mp051-006.md
+    subtask_prompt: |
+      BLUEPRINT §5.15: commands/dashboard.rs + server.rs; main Commands.
+      dare dashboard [--port] [--no-open] [-d]; defaults 127.0.0.1:4100.
+      dare server --protocol rest [--bind] [--port] [-d]; default port 3000;
+        protocol != rest -> exit 2 MSG_UNKNOWN_PROTOCOL.
+      Exits: 0 shutdown; 2 usage; 3 root missing; 4 invalid; 5 bind IO.
+      crates/dare-cli/tests/dashboard_cli.rs: help_lists_dashboard_server;
+        server_bad_protocol_exit_2; (optional) --no-open with mock.
+      Ensure dare-cli depends on dare-server. Consolidate http_contracts in
+        dare-server/tests covering happy+403+401 force_auth+413.
+      Avoid mass CRLF.
+
+  - id: mp051-007
+    title: "Docs DEC-052 + capability + Ralph"
+    depends_on: [mp051-006]
+    complexity: MED
+    spec_file: EXECUTION-051/mp051-007.md
+    subtask_prompt: |
+      docs/compatibility/cli-dashboard-rest.md (CLI+HTTP+auth+Class A/B/C).
+      Append DEC-052 ONLY to docs/DECISION-LOG.md (do not edit DEC-051).
+      assets/capability-matrix.yml: dare-dashboard
+        cli_commands:["dashboard","server"]; update manifest hash.
+      Matriz 000A: 051 Concluído. TASKS-051 -> 7/7 DONE.
+      Ralph: cargo test -p dare-server; cargo test -p dare-cli --test
+        dashboard_cli; clippy -p dare-server -p dare-cli --all-targets
+        -- -D warnings; cargo audit.
+      If assets_verify_ok fails: cargo clean -p dare-assets.
+      Avoid mass CRLF.

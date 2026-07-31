@@ -1,0 +1,53 @@
+%% DARE DAG — Erros, tracing e saída da CLI (Microplano 004) - Development Tasks
+%% Generated: 2026-07-21T01:42:33.756Z
+graph LR
+  subgraph rank_0 ["Rank 0"]
+    direction TB
+    mp004_001["mp004-001\nVerificar docker-compose.ci.yml (Fase 1)\n⏳ PENDING"]
+    mp004_002["mp004-002\nErrorKind + CoreError + exit_code\n⏳ PENDING"]
+    mp004_003["mp004-003\nredact + fixtures\n⏳ PENDING"]
+  end
+  subgraph rank_1 ["Rank 1"]
+    direction TB
+    mp004_004["mp004-004\nExecutionContext + telemetry + uuid\n⏳ PENDING"]
+  end
+  subgraph rank_2 ["Rank 2"]
+    direction TB
+    mp004_005["mp004-005\nOutputRenderer + JSON canónico + wire main\n⏳ PENDING"]
+  end
+  subgraph rank_3 ["Rank 3"]
+    direction TB
+    mp004_006["mp004-006\nDocs cli-output-and-errors + DEC-005\n⏳ PENDING"]
+  end
+  subgraph rank_4 ["Rank 4"]
+    direction TB
+    mp004_007["mp004-007\nAuditoria RS-* + audit/deny\n⏳ PENDING"]
+  end
+  subgraph rank_5 ["Rank 5"]
+    direction TB
+    mp004_008["mp004-008\nFechamento microplano 004\n⏳ PENDING"]
+  end
+  mp004_002 --> mp004_004
+  mp004_002 --> mp004_005
+  mp004_003 --> mp004_005
+  mp004_004 --> mp004_005
+  mp004_005 --> mp004_006
+  mp004_003 --> mp004_007
+  mp004_005 --> mp004_007
+  mp004_006 --> mp004_007
+  mp004_001 --> mp004_008
+  mp004_006 --> mp004_008
+  mp004_007 --> mp004_008
+  class mp004_001 st_pending;
+  class mp004_002 st_pending;
+  class mp004_003 st_pending;
+  class mp004_004 st_pending;
+  class mp004_005 st_pending;
+  class mp004_006 st_pending;
+  class mp004_007 st_pending;
+  class mp004_008 st_pending;
+  classDef st_pending fill:#f3f4f6,stroke:#9ca3af,color:#374151;
+  classDef st_running fill:#dbeafe,stroke:#2563eb,color:#1e3a8a;
+  classDef st_done fill:#dcfce7,stroke:#16a34a,color:#14532d;
+  classDef st_failed fill:#fee2e2,stroke:#dc2626,color:#7f1d1d;
+  classDef st_skipped fill:#e5e7eb,stroke:#6b7280,color:#374151;

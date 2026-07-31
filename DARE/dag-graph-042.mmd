@@ -1,0 +1,22 @@
+flowchart TB
+  subgraph rank_0["Rank 0"]
+    mp042_001["mp042-001<br/>cosine + SearchOptions.no_semantic + hy…"]
+    mp042_002["mp042-002<br/>semantic.rs fastembed + cache + ensure_…"]
+  end
+  subgraph rank_1["Rank 1"]
+    mp042_003["mp042-003<br/>Wire vector_rank + 3-list RRF + fallbac…"]
+  end
+  subgraph rank_2["Rank 2"]
+    mp042_004["mp042-004<br/>CLI --no-semantic + doctor + enable + s…"]
+  end
+  subgraph rank_3["Rank 3"]
+    mp042_005["mp042-005<br/>Docs graphrag-semantic + DEC-045 + matr…"]
+  end
+  subgraph rank_4["Rank 4"]
+    mp042_006["mp042-006<br/>Ralph dual-feature + audit close"]
+  end
+  mp042_001 --> mp042_003
+  mp042_002 --> mp042_003
+  mp042_003 --> mp042_004
+  mp042_004 --> mp042_005
+  mp042_005 --> mp042_006

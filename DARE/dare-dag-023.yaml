@@ -1,0 +1,139 @@
+title: "Design determinístico — dare design (023) - Development Tasks"
+version: "1.0.0"
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp023-001
+    title: "Verificar docker-compose.ci.yml"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION-023/mp023-001.md
+    subtask_prompt: |
+      Microplano 023 Fase 1 — BLUEPRINT-023 §6 Fase 1 T-11.
+      Validar: `docker compose -f docker-compose.ci.yml config` exit 0.
+      Se Docker ausente: confirmar YAML + Dockerfile.rust existem; waiver para
+      docs/compatibility/cli-design.md § Local verify (mp023-006).
+      Sem nova imagem. Sem git commit. NÃO implementar design.rs nem CLI design.
+
+  - id: mp023-002
+    title: "Tipos DesignInput/Report + render_canonical + markers"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION-023/mp023-002.md
+    subtask_prompt: |
+      Microplano 023 Fase 2 — BLUEPRINT-023 §4–5.2 T-01 T-03 T-04 T-05 T-07 T-13.
+      CRIAR crates/dare-cli/src/commands/design.rs (+ export em commands/mod.rs).
+      Constantes: DESIGN_REL="DARE/DESIGN.md"; DESIGN_SCHEMA_VERSION=1; DESC_MAX=32768;
+      DESIGN_READ_CAP=262144; MARKER_BEGIN; MARKER_END_PREFIX;
+      ENRICHABLE=["description","objectives","functional-requirements","stack"].
+      Tipos: DesignInput { title, description, interactive, fixed_date: Option<String> };
+      DesignReport { schemaVersion, mode, ok, path, action, title, markerCount,
+      preservedRegions, interactive, warnings } — JSON camelCase; mode="design".
+      Fns MUST: validate_description; derive_title (chars take 60, empty→Untitled);
+      render_canonical(input) — 12 secções do assets/templates/DESIGN-template.md
+      com 4 markers AGENT:BEGIN/END; fixed_date Some("1970-01-01") em testes.
+      format_human; report_to_json.
+      NÃO merge_preserve / apply_design / CLI clap (mp023-003/004). Sem --ai.
+      Testes MUST: validate_description_rejects_empty; validate_description_rejects_oversize;
+      derive_title_truncates_60; render_contains_four_enrichable_markers;
+      render_stable_with_fixed_date; report_schema_version_1.
+      Gate: cargo test -p dare-cli -- design. Sem git commit.
+
+  - id: mp023-003
+    title: "merge_preserve + apply_design + fixtures golden"
+    depends_on: [mp023-002]
+    complexity: HIGH
+    spec_file: EXECUTION-023/mp023-003.md
+    subtask_prompt: |
+      Microplano 023 Fase 3 — BLUEPRINT-023 §5.3 §4.3 T-02 T-08 RS-03 RS-06.
+      Em design.rs: merge_preserve(existing, fresh) -> String|CoreResult:
+      (1) parse fresh → map section_id→full_block ENRICHABLE;
+      (2) existing sem AGENT:BEGIN → write fresh + APPENDIX Preserved previous content
+         + <!-- dare:preserved --> + existing; preservedRegions=1;
+      (3) existing com markers → base=existing; replace cada bloco ENRICHABLE pelo de fresh;
+         texto fora de markers intacto; marker ausente → inserir após heading ou append;
+      (4) BEGIN sem END → InvalidInput "malformed AGENT markers in DARE/DESIGN.md".
+      apply_design(root: &ProjectRoot, input) -> CoreResult<DesignReport>:
+      ensure DARE/; se missing→created+fresh; se exists read cap DESIGN_READ_CAP + merge;
+      atomic_write DESIGN_REL sob jail; markerCount=4; action created|updated.
+      Fixtures: tests/fixtures/design/input-basic.txt; golden-basic.md (Data normalizada);
+      existing-with-notes.md.
+      Testes MUST: merge_preserve_keeps_unmanaged_paragraph;
+      merge_first_existing_without_markers_appends_appendix; apply write temp.
+      Gate: cargo test -p dare-cli -- design. Sem CLI clap. Sem git commit. Sem --ai.
+
+  - id: mp023-004
+    title: "CLI dare design + interactive + smokes"
+    depends_on: [mp023-003]
+    complexity: MED
+    spec_file: EXECUTION-023/mp023-004.md
+    subtask_prompt: |
+      Microplano 023 Fase 4 — BLUEPRINT-023 §5.4–5.9 T-06 RS-01 RS-02.
+      main.rs Commands::Design { description: Vec<String>, interactive: bool }.
+      Regras clap: interactive+desc → Usage "cannot combine --interactive with description";
+      !interactive+empty → Usage "description required (or --interactive)".
+      run_design: find_project_root; interactive→is_stdin_tty else Usage exit 2
+      "design --interactive requires a TTY"; prompts en-US single-line Title + Description;
+      join description Vec with " "; validate_description; derive_title se title vazio;
+      apply_design; human/JSON envelope; exit 0/2/4/5 via write_error.
+      NÃO flag --ai. Smokes MUST em cli_smoke.rs: design_creates_file; design_json_schema
+      (data.schemaVersion==1, mode==design); design_empty_desc_usage_or_4;
+      design_preserve_notes; design_interactive_no_tty_exits_2.
+      Gate: cargo test -p dare-cli --test cli_smoke -- design. Sem git commit.
+
+  - id: mp023-005
+    title: "Capability matrix cli_commands design"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION-023/mp023-005.md
+    subtask_prompt: |
+      Microplano 023 Fase 5 — BLUEPRINT-023 §5.10 T-10 RF-10/11.
+      Em assets/capability-matrix.yml entry dare-design: set cli_commands: ["design"].
+      Se assets/capabilities/dare-design/ ausente/vazio: criar README.md en-US apontando
+      para matrix outputs (claude/cursor/codex/antigravity paths).
+      Assert: validate_capability_matrix passa; cli_commands contém design.
+      Sem git commit. NÃO alterar design.rs.
+
+  - id: mp023-006
+    title: "Docs cli-design.md + DEC-024"
+    depends_on: [mp023-002]
+    complexity: LOW
+    spec_file: EXECUTION-023/mp023-006.md
+    subtask_prompt: |
+      Microplano 023 Fase 6 — BLUEPRINT-023 §5.11 T-12.
+      CRIAR docs/compatibility/cli-design.md: flags (sem --ai); path DARE/DESIGN.md;
+      markers tabela ENRICHABLE; preserve/appendix; interactive TTY exit 2; exit codes
+      0/2/4/5; DesignReport schema 1; snapshots/fixtures; fora de escopo --ai→024;
+      Local verify compose (waiver se mp023-001); classification vs TS.
+      ADD DEC-024 em docs/DECISION-LOG.md (design determinístico markers/preserve).
+      Sem git commit. Sem código Rust obrigatório.
+
+  - id: mp023-007
+    title: "Auditoria Ralph"
+    depends_on: [mp023-001, mp023-004, mp023-005, mp023-006]
+    complexity: MED
+    spec_file: EXECUTION-023/mp023-007.md
+    subtask_prompt: |
+      Microplano 023 Fase 7 — BLUEPRINT-023 §6 Fase 7 §7 RS-04.
+      cargo fmt --check; cargo clippy --workspace --all-features -- -D warnings;
+      cargo test --workspace; cargo audit; cargo deny check.
+      Reportar exit codes. Sem git commit.
+
+  - id: mp023-008
+    title: "Fechamento microplano 023"
+    depends_on: [mp023-007]
+    complexity: LOW
+    spec_file: EXECUTION-023/mp023-008.md
+    subtask_prompt: |
+      Microplano 023 Fase 8 — BLUEPRINT-023 §6 Fase 8.
+      TASKS-023 8/8 DONE; canvas/próximo → 024-fundacao-de-enrichment-por-ia.
+      Marcar DESIGN/BLUEPRINT-023 APPROVED se ainda DRAFT. Sem código. Sem git commit.

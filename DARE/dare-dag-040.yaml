@@ -1,0 +1,69 @@
+version: "2.1"
+title: "Microplano 040 — GraphRAG storage e compatibilidade"
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+models:
+  runner:
+    HIGH: default
+    MED: default
+    LOW: default
+tasks:
+  - id: mp040-001
+    title: "Workspace member dare-graph + rusqlite"
+    depends_on: []
+    complexity: LOW
+    spec_file: DARE/EXECUTION-040/mp040-001.md
+    subtask_prompt: |
+      Adicionar crates/dare-graph ao workspace Cargo.toml com rusqlite 0.32.1 bundled.
+      Sem CLI. Atualizar deny.toml se licença sqlite exigir.
+  - id: mp040-002
+    title: "types + ids canônicos + vector f32 LE"
+    depends_on: [mp040-001]
+    complexity: MED
+    spec_file: DARE/EXECUTION-040/mp040-002.md
+    subtask_prompt: |
+      Implementar NodeType/EdgeType (12/13), GraphNode/GraphEdge, ids canônicos, serialize/deserialize f32 LE.
+  - id: mp040-003
+    title: "KnowledgeGraph trait + migrations"
+    depends_on: [mp040-002]
+    complexity: MED
+    spec_file: DARE/EXECUTION-040/mp040-003.md
+    subtask_prompt: |
+      Trait KnowledgeGraph storage-only sync; migrations versionadas; open nunca ALTER.
+  - id: mp040-004
+    title: "SqliteGraph + testes legado"
+    depends_on: [mp040-003]
+    complexity: HIGH
+    spec_file: DARE/EXECUTION-040/mp040-004.md
+    subtask_prompt: |
+      Backend rusqlite; schema TS; abrir/mutar cópia DB legado; upsert/delete/vectors.
+  - id: mp040-005
+    title: "JsonGraph + contract tests"
+    depends_on: [mp040-004]
+    complexity: HIGH
+    spec_file: DARE/EXECUTION-040/mp040-005.md
+    subtask_prompt: |
+      Backend JSON atomic_write; contract tests paridade com SQLite.
+  - id: mp040-006
+    title: "Config factory + path safety"
+    depends_on: [mp040-005]
+    complexity: MED
+    spec_file: DARE/EXECUTION-040/mp040-006.md
+    subtask_prompt: |
+      load_graph_config + open_graph; defaults .dare/graph.db|json; neo4j → error.
+  - id: mp040-007
+    title: "Docs + DEC-036 + matriz"
+    depends_on: [mp040-006]
+    complexity: MED
+    spec_file: DARE/EXECUTION-040/mp040-007.md
+    subtask_prompt: |
+      docs/compatibility/graphrag-storage.md; DEC-036; matriz 040 Concluído.
+  - id: mp040-008
+    title: "Ralph Loop + fechamento"
+    depends_on: [mp040-007]
+    complexity: MED
+    spec_file: DARE/EXECUTION-040/mp040-008.md
+    subtask_prompt: |
+      cargo fmt --check && clippy -D warnings && test --workspace; audit se deps; marcar tasks DONE.

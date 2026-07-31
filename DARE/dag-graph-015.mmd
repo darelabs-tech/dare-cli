@@ -1,0 +1,30 @@
+# DAG 015 — Pipeline de release nativo alpha
+
+```mermaid
+flowchart TB
+  subgraph rank0["Rank 0"]
+    mp015-001["mp015-001 ✅"]
+    mp015-002["mp015-002 ✅"]
+    mp015-004["mp015-004 ✅"]
+  end
+  subgraph rank1["Rank 1"]
+    mp015-003["mp015-003 ✅"]
+  end
+  subgraph rank2["Rank 2"]
+    mp015-005["mp015-005 ✅"]
+  end
+  subgraph rank3["Rank 3"]
+    mp015-006["mp015-006 ✅"]
+  end
+  subgraph rank4["Rank 4"]
+    mp015-007["mp015-007 ✅"]
+  end
+  mp015-002 --> mp015-003
+  mp015-003 --> mp015-005
+  mp015-004 --> mp015-005
+  mp015-001 --> mp015-006
+  mp015-005 --> mp015-006
+  mp015-006 --> mp015-007
+```
+
+Progress: **7/7 DONE** · Próximo: `016-comando-welcome`

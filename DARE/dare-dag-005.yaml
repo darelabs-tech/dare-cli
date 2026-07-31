@@ -1,0 +1,117 @@
+title: "Filesystem seguro e path safety (Microplano 005) - Development Tasks"
+version: "1.0.0"
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 900
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp005-001
+    title: "Verificar docker-compose.ci.yml (Fase 1)"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION-005/mp005-001.md
+    subtask_prompt: |
+      Microplano 005. BLUEPRINT-005 Fase 1.
+      Confirmar docker-compose.ci.yml; rodar docker compose -f docker-compose.ci.yml config.
+      DONE: exit 0. Sem novo Dockerfile. Sem git commit.
+      TASKS-005 → mp005-001 DONE.
+
+  - id: mp005-002
+    title: "Deps camino/tempfile/fs4/sha2"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION-005/mp005-002.md
+    subtask_prompt: |
+      Microplano 005. BLUEPRINT-005 §2 Fase 2.
+      Adicionar workspace pins EXATOS: camino=1.1.9, tempfile=3.20.0, fs4=0.12.1, sha2=0.10.9.
+      dare-core depende de todos. cargo check -p dare-core. Atualizar Cargo.lock.
+      Sem implementar path/fs ainda. Sem git commit. TASKS-005 → mp005-002 DONE.
+
+  - id: mp005-003
+    title: "path.rs ProjectRoot + SafeRelativePath"
+    depends_on: [mp005-002]
+    complexity: HIGH
+    spec_file: EXECUTION-005/mp005-003.md
+    subtask_prompt: |
+      Microplano 005. BLUEPRINT-005 §4.1–4.3 §5.1 §5.6 Fase 3.
+      CRIAR crates/dare-core/src/path.rs: SafeRelativePath::new, ProjectRoot::new/resolve/contains,
+      SafeAbsolutePath, to_posix. Mensagem escape: "path must be relative and stay within the project"
+      via CoreError::invalid_input. Política resolve T-01/T-06.
+      Exportar em lib.rs. Testes: safe_relative_rejects_dotdot_and_absolute; to_posix_normalizes_backslashes;
+      resolve_keeps_path_within_root (tempdir). Sem Command/shell. cargo test -p dare-core.
+      Sem git commit. TASKS-005 → mp005-003 DONE.
+
+  - id: mp005-004
+    title: "Testes symlink/junction (T-01)"
+    depends_on: [mp005-003]
+    complexity: MED
+    spec_file: EXECUTION-005/mp005-004.md
+    subtask_prompt: |
+      Microplano 005. BLUEPRINT-005 Fase 4 / T-01.
+      Teste cfg(unix) symlink_escape_is_rejected: link para fora do temp root → resolve Err.
+      Symlink interno OK se viável. cfg(windows): junction ou #[ignore] + comentário DEC.
+      Refinar resolve se gaps. cargo test -p dare-core. Sem git commit. TASKS-005 → mp005-004 DONE.
+
+  - id: mp005-005
+    title: "fs atomic_write + backup/restore"
+    depends_on: [mp005-003]
+    complexity: HIGH
+    spec_file: EXECUTION-005/mp005-005.md
+    subtask_prompt: |
+      Microplano 005. BLUEPRINT-005 §4.4 §5.2–5.4 Fase 5.
+      CRIAR crates/dare-core/src/fs/{mod,atomic,backup}.rs.
+      atomic_write algoritmo Blueprint; read_to_string; backup layout .dare/backups/<utc>-<sha8>/<rel>;
+      restore. Testes: atomic_write roundtrip; atomic_write_preserves_original_on_pre_rename_failure;
+      backup_restore_roundtrip. Export fs no lib. cargo test -p dare-core. Sem git commit.
+      TASKS-005 → mp005-005 DONE.
+
+  - id: mp005-006
+    title: "fs FileLock contenção"
+    depends_on: [mp005-003]
+    complexity: MED
+    spec_file: EXECUTION-005/mp005-006.md
+    subtask_prompt: |
+      Microplano 005. BLUEPRINT-005 §5.5 Fase 6.
+      CRIAR fs/lock.rs FileLock::try_acquire com fs4 try_lock_exclusive em <abs>.darelock.
+      Drop unlock. Teste file_lock_try_acquire_contention. Wire em fs/mod.rs.
+      cargo test -p dare-core. Sem git commit. TASKS-005 → mp005-006 DONE.
+
+  - id: mp005-007
+    title: "Docs path-safety + DEC-006"
+    depends_on: [mp005-004, mp005-005, mp005-006]
+    complexity: MED
+    spec_file: EXECUTION-005/mp005-007.md
+    subtask_prompt: |
+      Microplano 005. BLUEPRINT-005 Fase 7.
+      CRIAR docs/compatibility/path-safety.md: política symlink, mensagem escape, layout backup,
+      API overview, RS checklist placeholder, release notes Ciclo 005.
+      APPEND DEC-006 em docs/DECISION-LOG.md (T-01..T-08, camino/fs4/tempfile/sha2).
+      Sem git commit. TASKS-005 → mp005-007 DONE.
+
+  - id: mp005-008
+    title: "Auditoria RS-* + audit/deny"
+    depends_on: [mp005-005, mp005-006, mp005-007]
+    complexity: HIGH
+    spec_file: EXECUTION-005/mp005-008.md
+    subtask_prompt: |
+      Microplano 005. BLUEPRINT-005 Fase 8.
+      cargo test --workspace; clippy -D warnings; cargo audit; cargo deny check — todos exit 0.
+      Completar RS-01..RS-09 em path-safety.md. Corrigir gaps. Sem Command novo.
+      Sem git commit. TASKS-005 → mp005-008 DONE.
+
+  - id: mp005-009
+    title: "Fechamento microplano 005"
+    depends_on: [mp005-001, mp005-007, mp005-008]
+    complexity: LOW
+    spec_file: EXECUTION-005/mp005-009.md
+    subtask_prompt: |
+      Microplano 005. BLUEPRINT-005 Fase 9.
+      TASKS-005 → 9/9 DONE 100%. Confirmar path.rs + fs/* + docs + DEC-006.
+      Microplano 006 desbloqueado. Sem git commit. Return closeout summary.

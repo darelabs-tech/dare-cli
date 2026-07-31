@@ -1,0 +1,24 @@
+```mermaid
+flowchart TD
+  subgraph rank0 [Rank 0]
+    A[mp050-001 registry]
+    B[mp050-002 capabilities+doctor]
+  end
+  subgraph rank1 [Rank 1]
+    C[mp050-003 prompt]
+    D[mp050-004 run_enrich]
+  end
+  subgraph rank2 [Rank 2]
+    E[mp050-005 CLI ai]
+    F[mp050-006 SHOULD providers]
+  end
+  G[mp050-007 docs+DEC-051]
+  A --> C
+  A --> D
+  B --> E
+  C --> E
+  D --> E
+  B --> F
+  E --> G
+  F --> G
+```

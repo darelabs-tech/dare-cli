@@ -1,0 +1,20 @@
+```mermaid
+flowchart TD
+  subgraph rank0 [Rank 0]
+    A[mp048-001 dare-hooks defs]
+    B[mp048-002 dare-steering]
+  end
+  subgraph rank1 [Rank 1]
+    C[mp048-003 trust+idempotency]
+    F[mp048-006 CLI steering]
+  end
+  D[mp048-004 run_hooks]
+  E[mp048-005 CLI hooks]
+  G[mp048-007 docs+DEC-049]
+  A --> C
+  B --> F
+  C --> D
+  D --> E
+  E --> G
+  F --> G
+```

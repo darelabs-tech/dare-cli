@@ -1,0 +1,43 @@
+# dare:managed
+title: "045 Skills lifecycle e publish seguro"
+version: "2.1"
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+models:
+  runner:
+    HIGH: default
+    MED: default
+    LOW: default
+tasks:
+  - id: mp045-001
+    title: Artefatos DARE DESIGN BLUEPRINT TASKS dag EXECUTION
+    depends_on: []
+    complexity: LOW
+    subtask_prompt: "Gerar artefatos DARE do microplano 045."
+    spec_file: DARE/EXECUTION-045/mp045-001.md
+  - id: mp045-002
+    title: install.rs atomic lifecycle e path jail
+    depends_on: [mp045-001]
+    complexity: HIGH
+    subtask_prompt: "Implementar install/remove/update e extract_archive_safe."
+    spec_file: DARE/EXECUTION-045/mp045-002.md
+  - id: mp045-003
+    title: publish.rs pack hash sign validate
+    depends_on: [mp045-001]
+    complexity: MED
+    subtask_prompt: "Implementar publish seguro com MIT e dare_version."
+    spec_file: DARE/EXECUTION-045/mp045-003.md
+  - id: mp045-004
+    title: CLI SkillAction extend e smokes
+    depends_on: [mp045-002, mp045-003]
+    complexity: MED
+    subtask_prompt: "Estender clap e smokes de add/remove/publish/traversal."
+    spec_file: DARE/EXECUTION-045/mp045-004.md
+  - id: mp045-005
+    title: Docs DEC-043 e matriz 045
+    depends_on: [mp045-004]
+    complexity: LOW
+    subtask_prompt: "Atualizar cli-skill.md, DEC-043, matriz Concluído."
+    spec_file: DARE/EXECUTION-045/mp045-005.md

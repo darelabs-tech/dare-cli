@@ -1,0 +1,100 @@
+title: "Modelo canónico de capabilities (010) - Development Tasks"
+version: "1.0.0"
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp010-001
+    title: "Verificar docker-compose.ci.yml"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION-010/mp010-001.md
+    subtask_prompt: |
+      Microplano 010 Fase 1 — containerização.
+      Validar: `docker compose -f docker-compose.ci.yml config` exit 0.
+      Se Docker ausente: YAML parseável documentado. Sem git commit.
+      Complete: dare execute --dag DARE/dare-dag-010.yaml --complete mp010-001 --output "..."
+
+  - id: mp010-002
+    title: "Harden validate + exceptions YAML"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION-010/mp010-002.md
+    subtask_prompt: |
+      Microplano 010 Fase 2 — BLUEPRINT-010 §5.2 T-04/T-05/T-06.
+      EDIT crates/dare-assets/src/capability.rs validate_capability_matrix:
+      1) id deve match ^[a-z0-9]+(-[a-z0-9]+)*$ (rejeitar '_' e espaços e maiúsculas se presentes).
+      2) Para cada outputs.claude/cursor/codex/antigravity Some: assert_safe_asset_path(path)?.
+      3) Para cada assets[] path: assert_safe_asset_path.
+      4) exceptions: se presentes, id e reason non-empty.
+      EDIT assets/capability-matrix.yml — exceptions:
+        - id: cursor-commands-full-parity reason Class C defer 012
+        - id: cursor-rules-full-parity reason Class C
+        - id: agent-skills-full-parity reason Class C
+      Correr python scripts/regen-assets-manifest.py se hash mudou.
+      Testes: rejects_underscore_id; rejects_dotdot_output_path.
+      Gate: cargo test -p dare-assets
+      Sem git commit.
+
+  - id: mp010-003
+    title: "Contagem 49 + validate green"
+    depends_on: [mp010-002]
+    complexity: LOW
+    spec_file: EXECUTION-010/mp010-003.md
+    subtask_prompt: |
+      Microplano 010 Fase 3 — T-02.
+      Confirmar matrix_loads_and_validates: capabilities.len()==49 e validate Ok com exceptions.
+      Opcional: se .claude/commands existir, doc ou teste soft (não falhar se ausente).
+      Gate: cargo test -p dare-assets matrix_loads
+      Sem git commit.
+
+  - id: mp010-004
+    title: "Render snapshots"
+    depends_on: [mp010-002]
+    complexity: LOW
+    spec_file: EXECUTION-010/mp010-004.md
+    subtask_prompt: |
+      Microplano 010 Fase 4 — §5.3.
+      Manter render_reproducible.
+      Adicionar render_agent_skill_has_frontmatter: output contém "---\nname:" e description line.
+      Gate: cargo test -p dare-assets render_
+      Sem git commit.
+
+  - id: mp010-005
+    title: "CLI smoke + docs DEC-011"
+    depends_on: [mp010-003, mp010-004]
+    complexity: MED
+    spec_file: EXECUTION-010/mp010-005.md
+    subtask_prompt: |
+      Microplano 010 Fase 5.
+      cli_smoke: capabilities_validate_ok — args ["capabilities","validate"] success; stdout contains "capabilities validate: ok" e "49".
+      EXPANDIR docs/compatibility/capabilities-canonical.md: ADR-007 fields, T-01..T-12, exceptions T-04, Class C 33/25/48, API validate/render, types in dare-assets.
+      NÃO criar DEC-012. Verificar DEC-011 no decision log.
+      Gate: cargo test -p dare-cli --test cli_smoke capabilities_validate
+      Sem git commit.
+
+  - id: mp010-006
+    title: "Auditoria Ralph"
+    depends_on: [mp010-001, mp010-005]
+    complexity: MED
+    spec_file: EXECUTION-010/mp010-006.md
+    subtask_prompt: |
+      Microplano 010 Fase 6.
+      cargo test --workspace; clippy -D warnings; cargo audit; cargo deny check.
+      RS checklist na doc. Output exit codes. Sem git commit.
+
+  - id: mp010-007
+    title: "Fechamento microplano 010"
+    depends_on: [mp010-006]
+    complexity: LOW
+    spec_file: EXECUTION-010/mp010-007.md
+    subtask_prompt: |
+      Atualizar TASKS-010: 7/7 DONE. Próximo: 011-adapter-claude-code. Sem código. Sem git commit.

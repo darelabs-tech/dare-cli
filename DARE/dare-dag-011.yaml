@@ -1,0 +1,99 @@
+title: "Adapter Claude Code (011) - Development Tasks"
+version: "1.0.0"
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp011-001
+    title: "Verificar docker-compose.ci.yml"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION-011/mp011-001.md
+    subtask_prompt: |
+      Microplano 011 Fase 1 — containerização.
+      Validar: `docker compose -f docker-compose.ci.yml config` exit 0.
+      Se Docker ausente: YAML parseável documentado. Sem git commit.
+      Complete: dare execute --dag DARE/dare-dag-011.yaml --complete mp011-001 --output "..."
+
+  - id: mp011-002
+    title: "Congelar detect + generate_claude_md + preserve"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION-011/mp011-002.md
+    subtask_prompt: |
+      Microplano 011 Fase 2 — BLUEPRINT-011 §5.1–5.2 T-03/T-11.
+      Congelar em crates/dare-harness/src/claude.rs:
+      - detect_claude(root) -> ClaudeDetect { claude_md, claude_dir } sem side effects
+      - generate_claude_md(root, force) com prefixo <!-- dare:managed; body stub §5.2
+      - preserve: CLAUDE.md unmanaged + !force = no-op
+      Testes unit: detect empty; generate creates managed; preserve unmanaged CLAUDE.md.
+      Gate: cargo test -p dare-harness -- claude::
+      Sem git commit. Sem alterar Cursor/Codex adapters.
+
+  - id: mp011-003
+    title: "install_commands + validate_install (49 + preserve)"
+    depends_on: [mp011-002]
+    complexity: MED
+    spec_file: EXECUTION-011/mp011-003.md
+    subtask_prompt: |
+      Microplano 011 Fase 3 — BLUEPRINT-011 §5.3 §5.5 T-05/T-09/T-10.
+      install_commands: matrix embed + render_claude_command + managed prefix; return written count.
+      force → 49; unmanaged path + !force → skip that file; validate_install exige todos paths Claude existem; missing Err com amostra ≤5.
+      Testes: install_validate_roundtrip_force (49); preserve_unmanaged_command (48 + content).
+      Gate: cargo test -p dare-harness -- claude::
+      Sem git commit.
+
+  - id: mp011-004
+    title: "settings.json + PostToolUse + help --force"
+    depends_on: [mp011-002]
+    complexity: MED
+    spec_file: EXECUTION-011/mp011-004.md
+    subtask_prompt: |
+      Microplano 011 Fase 4 — BLUEPRINT-011 §5.4 §5.6 T-04/T-07/T-08 RS-06/RS-07.
+      write_settings_json: _dare_managed true; PostToolUse matcher Write; command echo Ralph Loop fixo §5.4.
+      Preserve settings sem _dare_managed + !force = no-op.
+      CLI install: generate_claude_md → install_commands → write_settings_json.
+      clap --force help: menciona overwrite unmanaged.
+      Teste unit: settings JSON parse + preserve unmanaged settings.
+      Gate: cargo test -p dare-harness -- claude:: ; cargo build -p dare-cli
+      Sem git commit.
+
+  - id: mp011-005
+    title: "CLI smoke + docs DEC-012 + golden SHOULD"
+    depends_on: [mp011-003, mp011-004]
+    complexity: MED
+    spec_file: EXECUTION-011/mp011-005.md
+    subtask_prompt: |
+      Microplano 011 Fase 5.
+      cli_smoke: tempdir → dare harness claude install --force --root … → validate ok 49; detect claude_md=true.
+      EXPANDIR docs/compatibility/harness-claude.md: CLI, preserve, settings schema, T-01..T-14, RS map, DEC-012.
+      SHOULD: nota paths = matrix outputs.claude (49) vs baseline TS Classe B/C.
+      Verificar DEC-012 no decision log. NÃO implementar adapters 012+.
+      Gate: cargo test -p dare-cli --test cli_smoke
+      Sem git commit.
+
+  - id: mp011-006
+    title: "Auditoria Ralph"
+    depends_on: [mp011-001, mp011-005]
+    complexity: MED
+    spec_file: EXECUTION-011/mp011-006.md
+    subtask_prompt: |
+      Microplano 011 Fase 6.
+      cargo test --workspace; clippy -D warnings; cargo audit; cargo deny check.
+      RS checklist na doc. Output exit codes. Sem git commit.
+
+  - id: mp011-007
+    title: "Fechamento microplano 011"
+    depends_on: [mp011-006]
+    complexity: LOW
+    spec_file: EXECUTION-011/mp011-007.md
+    subtask_prompt: |
+      Atualizar TASKS-011: 7/7 DONE. Próximo: 012-adapter-cursor. Sem código. Sem git commit.

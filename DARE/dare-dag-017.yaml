@@ -1,0 +1,91 @@
+title: "Comando info (017) - Development Tasks"
+version: "1.0.0"
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp017-001
+    title: "Verificar docker-compose.ci.yml"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION-017/mp017-001.md
+    subtask_prompt: |
+      Microplano 017 Fase 1 — BLUEPRINT-017 §6 Fase 1 T-10.
+      Validar: `docker compose -f docker-compose.ci.yml config` exit 0.
+      Se Docker ausente: YAML parseável + Dockerfile.rust; waiver para cli-info.md § Local verify (mp017-004).
+      Sem nova imagem. Sem git commit. NÃO alterar info.rs.
+
+  - id: mp017-002
+    title: "Congelar collect_info + schema 1 + TASKS sort + read-only"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION-017/mp017-002.md
+    subtask_prompt: |
+      Microplano 017 Fase 2 — BLUEPRINT-017 §4–§5.1–5.4 T-01..T-09.
+      Em crates/dare-cli/src/commands/info.rs:
+      - INFO_SCHEMA_VERSION=1; InfoReport camelCase fields congelados
+      - find_project_root: markers dare.config.json | DARE/ | Cargo.toml
+      - collect_info: zero writes; assets via verify_embedded_assets; backend ide|backend via ProjectRoot
+      - graph: dare-graph.yml raiz senão DARE/dare-graph.yml
+      - tasks_progress: prefer DARE/TASKS.md; senão TASKS-*.md SORT LEXICO pick first
+      - Heurística: done=count("✅")+count("DONE"); pending=count("⏳")+count("PENDING")
+      - format_human MUST incluir "mode: read-only (zero mutations)"
+      Testes: find_root_walks_up; collect_is_read_only_and_schema_stable; tasks_picks_lexicographic_tasks_star (NOVO)
+      Gate: cargo test -p dare-cli -- info
+      Sem git commit. NÃO smoke (mp017-003). NÃO discover 018.
+
+  - id: mp017-003
+    title: "CLI wiring + smoke info / --json"
+    depends_on: [mp017-002]
+    complexity: LOW
+    spec_file: EXECUTION-017/mp017-003.md
+    subtask_prompt: |
+      Microplano 017 Fase 3 — BLUEPRINT-017 §5.5 §5.7.
+      main.rs: Commands::Info { --root }; collect_info → (format_human, report_to_json) → renderer.
+      cli_smoke.rs ADICIONAR:
+      - info_human_tempdir: dare info --root <tmp> → success; contains "read-only"; version
+      - info_json_schema: dare info --json --root <tmp> → schemaVersion 1; assetsOk bool
+      Gate: cargo test -p dare-cli --test cli_smoke -- info
+      Sem git commit.
+
+  - id: mp017-004
+    title: "Docs cli-info.md + DEC-018"
+    depends_on: [mp017-002]
+    complexity: LOW
+    spec_file: EXECUTION-017/mp017-004.md
+    subtask_prompt: |
+      Microplano 017 Fase 4 — BLUEPRINT-017 §5.8 T-11.
+      CRIAR docs/compatibility/cli-info.md: flags; schema 1 fields; root markers; disk contracts;
+      tasks heuristic + lexico sort; zero mutations; DEC-018; Local verify compose.
+      Adicionar DEC-018 em docs/DECISION-LOG.md (tabela + nota) apontando cli-info.md.
+      Sem git commit. Sem código Rust.
+
+  - id: mp017-005
+    title: "Auditoria Ralph"
+    depends_on: [mp017-001, mp017-003, mp017-004]
+    complexity: MED
+    spec_file: EXECUTION-017/mp017-005.md
+    subtask_prompt: |
+      Microplano 017 Fase 5.
+      cargo fmt --check; cargo clippy --workspace --all-targets -- -D warnings;
+      cargo test --workspace; cargo audit; cargo deny check.
+      Reportar exit codes. Sem git commit.
+
+  - id: mp017-006
+    title: "Fechamento microplano 017"
+    depends_on: [mp017-005]
+    complexity: LOW
+    spec_file: EXECUTION-017/mp017-006.md
+    subtask_prompt: |
+      Microplano 017 Fase 6.
+      Atualizar DARE/TASKS-017-comando-info.md: 6/6 DONE; próximo 018-discover-deteccao-brownfield.
+      Opcional: Status APPROVED em DESIGN-017 e BLUEPRINT-017.
+      Sem código funcional. Sem git commit.

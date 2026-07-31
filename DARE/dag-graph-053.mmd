@@ -1,0 +1,15 @@
+flowchart TD
+  mp053-001["mp053-001\npaths+lock+channel\nMED"]
+  mp053-006["mp053-006\nHomebrew+WinGet\nMED"]
+  mp053-002["mp053-002\nplan+sha256\nHIGH"]
+  mp053-003["mp053-003\ncosign+apply\nHIGH"]
+  mp053-004["mp053-004\nrollback+uninstall\nMED"]
+  mp053-005["mp053-005\nCLI dare self\nHIGH"]
+  mp053-007["mp053-007\ndocs DEC-054\nMED"]
+
+  mp053-001 --> mp053-002
+  mp053-002 --> mp053-003
+  mp053-003 --> mp053-004
+  mp053-004 --> mp053-005
+  mp053-005 --> mp053-007
+  mp053-006 --> mp053-007

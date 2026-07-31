@@ -1,0 +1,47 @@
+%% DARE DAG — Design determinístico — dare design (023) - Development Tasks
+%% Generated: 2026-07-22T00:02:47.884Z
+graph LR
+  subgraph rank_0 ["Rank 0"]
+    direction TB
+    mp023_001["mp023-001\nVerificar docker-compose.ci.yml\n⏳ PENDING"]
+    mp023_002["mp023-002\nTipos DesignInput/Report + render_canonical + markers\n⏳ PENDING"]
+    mp023_005["mp023-005\nCapability matrix cli_commands design\n⏳ PENDING"]
+  end
+  subgraph rank_1 ["Rank 1"]
+    direction TB
+    mp023_003["mp023-003\nmerge_preserve + apply_design + fixtures golden\n⏳ PENDING"]
+    mp023_006["mp023-006\nDocs cli-design.md + DEC-024\n⏳ PENDING"]
+  end
+  subgraph rank_2 ["Rank 2"]
+    direction TB
+    mp023_004["mp023-004\nCLI dare design + interactive + smokes\n⏳ PENDING"]
+  end
+  subgraph rank_3 ["Rank 3"]
+    direction TB
+    mp023_007["mp023-007\nAuditoria Ralph\n⏳ PENDING"]
+  end
+  subgraph rank_4 ["Rank 4"]
+    direction TB
+    mp023_008["mp023-008\nFechamento microplano 023\n⏳ PENDING"]
+  end
+  mp023_002 --> mp023_003
+  mp023_003 --> mp023_004
+  mp023_002 --> mp023_006
+  mp023_001 --> mp023_007
+  mp023_004 --> mp023_007
+  mp023_005 --> mp023_007
+  mp023_006 --> mp023_007
+  mp023_007 --> mp023_008
+  class mp023_001 st_pending;
+  class mp023_002 st_pending;
+  class mp023_003 st_pending;
+  class mp023_004 st_pending;
+  class mp023_005 st_pending;
+  class mp023_006 st_pending;
+  class mp023_007 st_pending;
+  class mp023_008 st_pending;
+  classDef st_pending fill:#f3f4f6,stroke:#9ca3af,color:#374151;
+  classDef st_running fill:#dbeafe,stroke:#2563eb,color:#1e3a8a;
+  classDef st_done fill:#dcfce7,stroke:#16a34a,color:#14532d;
+  classDef st_failed fill:#fee2e2,stroke:#dc2626,color:#7f1d1d;
+  classDef st_skipped fill:#e5e7eb,stroke:#6b7280,color:#374151;

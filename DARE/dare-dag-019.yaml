@@ -1,0 +1,120 @@
+title: "Discover instalação do DARE (019) - Development Tasks"
+version: "1.0.0"
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp019-001
+    title: "Verificar docker-compose.ci.yml"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION-019/mp019-001.md
+    subtask_prompt: |
+      Microplano 019 Fase 1 — BLUEPRINT-019 §6 Fase 1 T-14.
+      Validar: `docker compose -f docker-compose.ci.yml config` exit 0.
+      Se Docker ausente: YAML + Dockerfile.rust; waiver para cli-discover-install.md § Local verify (mp019-006).
+      Sem nova imagem. Sem git commit. NÃO implementar install.
+
+  - id: mp019-002
+    title: "Tipos InstallPlan/Report + plan_install + select_ide + conflicts"
+    depends_on: []
+    complexity: HIGH
+    spec_file: EXECUTION-019/mp019-002.md
+    subtask_prompt: |
+      Microplano 019 Fase 2 — BLUEPRINT-019 §4 §5.1–5.2 T-01 T-02 T-04 T-11 T-13 T-16 T-17.
+      Em crates/dare-project (já existe):
+      1) Cargo.toml: add deps dare-assets, dare-config, dare-contracts (manter dare-core, dare-harness, serde).
+         NÃO depend de dare-cli. NÃO [build] target global.
+      2) install.rs (novo) + re-export em lib.rs:
+         INSTALL_SCHEMA_VERSION=1; INSTALL_READ_CAP=262144;
+         GITIGNORE_BEGIN/END; GITIGNORE_LINES=[".dare/",".dare/backups/"];
+         InstallOptions { force, dry_run, strict_conflicts };
+         InstallPlan, InstallReport, StepResult (camelCase serde); status enum strings.
+      3) select_ide(report) — tabela §4.6 BLUEPRINT (default claude-code; hybrid; claude-hybrid).
+      4) plan_install(report, opts):
+         - project_root None → Err(invalid_input(...))
+         - strict_conflicts && !conflicts.is_empty() → Err(invalid_input(...))
+         - warnings se conflicts; steps = 11 ids canónicos §4.3
+      5) Testes MUST: select_ide_defaults_claude_code; select_ide_hybrid; plan_strict_conflicts_errors;
+         plan_conflicts_warns; install_report_schema_version_1.
+      Gate: cargo test -p dare-project
+      Sem git commit. NÃO apply FS/harness/CLI (mp019-003+).
+
+  - id: mp019-003
+    title: "apply FS steps + journal/rollback + dry_run"
+    depends_on: [mp019-002]
+    complexity: HIGH
+    spec_file: EXECUTION-019/mp019-003.md
+    subtask_prompt: |
+      Microplano 019 Fase 3 — BLUEPRINT-019 §5.3–5.5 steps ensure_dirs..merge_gitignore T-05..T-09 T-16.
+      Em dare-project: SessionJournal + rollback; apply_install dry_run zero writes;
+      steps 1–5 (ensure_dirs, write_config, materialize_templates, write_graph, merge_gitignore);
+      steps 6–11 skipped placeholder até mp019-004.
+      Testes: apply_dry_run_zero_writes; apply_creates_config_dare_gitignore; apply_idempotent_second_run;
+         merge_gitignore_block_stable; templates_copied_under_templates_dir; graph_created_once;
+         rollback_restores_forced_config; ensure_dirs_preserves_existing_execution_files.
+      Gate: cargo test -p dare-project. Sem git commit. NÃO harness/CLI.
+
+  - id: mp019-004
+    title: "Harnesses + ensure_capability + validate + install()"
+    depends_on: [mp019-003]
+    complexity: HIGH
+    spec_file: EXECUTION-019/mp019-004.md
+    subtask_prompt: |
+      Microplano 019 Fase 4 — BLUEPRINT-019 §5.4 steps 6–11 §5.6 T-03 T-10.
+      Implementar 4 harness installs + ensure_capability_discover + validate_harnesses;
+      pub fn install(start, opts); remover placeholders steps 6–11.
+      Gate: cargo test -p dare-project. Sem git commit. NÃO CLI (mp019-005).
+
+  - id: mp019-005
+    title: "CLI discover install + flags + smokes"
+    depends_on: [mp019-004]
+    complexity: MED
+    spec_file: EXECUTION-019/mp019-005.md
+    subtask_prompt: |
+      Microplano 019 Fase 5 — BLUEPRINT-019 §5.8 §5.11 T-12.
+      Discover flags: dir, check, force, dry_run, strict_conflicts.
+      Remover stub Internal 018; check→detect; else→install.
+      Smokes: discover_install_node_fixture; discover_install_idempotent;
+         discover_check_still_read_only; discover_strict_conflicts_exits_4;
+         discover_dry_run_no_writes; discover_install_json_schema.
+      Gate: cargo test -p dare-cli --test cli_smoke -- discover. Sem git commit.
+
+  - id: mp019-006
+    title: "Docs cli-discover-install.md + DEC-020"
+    depends_on: [mp019-002]
+    complexity: LOW
+    spec_file: EXECUTION-019/mp019-006.md
+    subtask_prompt: |
+      Microplano 019 Fase 6 — BLUEPRINT-019 §5.12 T-15.
+      CRIAR docs/compatibility/cli-discover-install.md + DEC-020 em DECISION-LOG.md.
+      Sem git commit. Sem código Rust obrigatório.
+
+  - id: mp019-007
+    title: "Auditoria Ralph"
+    depends_on: [mp019-001, mp019-005, mp019-006]
+    complexity: MED
+    spec_file: EXECUTION-019/mp019-007.md
+    subtask_prompt: |
+      Microplano 019 Fase 7.
+      cargo fmt --check; cargo clippy --workspace --all-features -- -D warnings;
+      cargo test --workspace; cargo audit; cargo deny check.
+      Reportar exit codes. Sem git commit.
+
+  - id: mp019-008
+    title: "Fechamento microplano 019"
+    depends_on: [mp019-007]
+    complexity: LOW
+    spec_file: EXECUTION-019/mp019-008.md
+    subtask_prompt: |
+      Microplano 019 Fase 8.
+      TASKS-019 8/8 DONE; próximo 020-validate.
+      Opcional APPROVED em DESIGN/BLUEPRINT 019. Sem código. Sem git commit.

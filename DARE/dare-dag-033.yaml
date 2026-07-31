@@ -1,0 +1,62 @@
+title: "Microplano 033 — Refine e sub-DAG"
+version: "1.0.0"
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor: { HIGH: gpt-5.3-codex, MED: composer-2, LOW: auto-low }
+
+tasks:
+  - id: mp033-001
+    title: "subdag: score + propose_split"
+    depends_on: []
+    complexity: HIGH
+    spec_file: EXECUTION-033/mp033-001.md
+    subtask_prompt: |
+      Implement crates/dare-dag/src/subdag.rs: RefineLevel, ComplexitySignals/Report,
+      assess_complexity thresholds, collect_signals from EXECUTION spec + DagTask,
+      propose_split for HIGH/CRITICAL. Export from lib.rs. Unit tests for thresholds
+      and proposal ids. Do not wire CLI yet.
+
+  - id: mp033-002
+    title: "spliceSubDag + depth/cycle/state"
+    depends_on: [mp033-001]
+    complexity: HIGH
+    spec_file: EXECUTION-033/mp033-002.md
+    subtask_prompt: |
+      Implement splice_sub_dag, task_depth, MaxDepth/Cycle errors, apply_refine
+      persisting DARE/dare-dag.yaml and .dare/state.json (parentId, dependsOn, SPLIT).
+      Unit tests: rewire, max depth, cycle, parentId preserve.
+
+  - id: mp033-003
+    title: "CLI dare refine + smokes"
+    depends_on: [mp033-002]
+    complexity: MED
+    spec_file: EXECUTION-033/mp033-003.md
+    subtask_prompt: |
+      Add commands/refine.rs and Commands::Refine in main.rs (additive only).
+      Flags --split --apply --strict --format. Exit 2 on strict HIGH/CRITICAL.
+      cli_smoke: happy apply, strict exit 2, no-op LOW.
+
+  - id: mp033-004
+    title: "Capability + docs + DEC-040 + matriz"
+    depends_on: [mp033-003]
+    complexity: MED
+    spec_file: EXECUTION-033/mp033-004.md
+    subtask_prompt: |
+      assets/capabilities/dare-refine/README.md; capability-matrix cli_commands refine;
+      docs/compatibility/cli-refine.md; append DEC-040 only in DECISION-LOG;
+      mark 033 Concluído in 000A-MATRIZ-DE-STATUS.md.
+
+  - id: mp033-005
+    title: "Ralph Loop dare-dag + dare-cli"
+    depends_on: [mp033-004]
+    complexity: LOW
+    spec_file: EXECUTION-033/mp033-005.md
+    subtask_prompt: |
+      cargo fmt --check; cargo clippy -p dare-dag -p dare-cli -- -D warnings;
+      cargo test -p dare-dag; cargo test -p dare-cli --test cli_smoke -- refine_.
+      Fix failures. Mark all TASKS-033 DONE.

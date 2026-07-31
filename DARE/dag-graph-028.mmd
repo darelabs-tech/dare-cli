@@ -1,0 +1,27 @@
+flowchart TB
+  subgraph rank_0["Rank 0"]
+    mp028_001["mp028-001<br/>Verificar docker-compose.ci.yml"]
+    mp028_002["mp028-002<br/>execution core (ready/compose/snapshot)"]
+  end
+  subgraph rank_1["Rank 1"]
+    mp028_003["mp028-003<br/>CLI --status + --next + smokes"]
+  end
+  subgraph rank_2["Rank 2"]
+    mp028_004["mp028-004<br/>CLI --watch + read-only guarantee"]
+  end
+  subgraph rank_3["Rank 3"]
+    mp028_005["mp028-005<br/>Capability + cli-execute-status.md + DE…"]
+  end
+  subgraph rank_4["Rank 4"]
+    mp028_006["mp028-006<br/>Auditoria Ralph (fmt/clippy/test/audit)"]
+  end
+  subgraph rank_5["Rank 5"]
+    mp028_007["mp028-007<br/>Fechamento TASKS/matriz/Blueprint"]
+  end
+  mp028_001 --> mp028_006
+  mp028_002 --> mp028_003
+  mp028_003 --> mp028_004
+  mp028_004 --> mp028_005
+  mp028_004 --> mp028_006
+  mp028_005 --> mp028_006
+  mp028_006 --> mp028_007

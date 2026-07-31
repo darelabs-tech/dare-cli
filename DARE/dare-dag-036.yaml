@@ -1,0 +1,93 @@
+title: "Reverse (036) - Development Tasks"
+version: "1.0.0"
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp036-001
+    title: "Domain types + module scan"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION-036/mp036-001.md
+    subtask_prompt: |
+      Microplano 036 — BLUEPRINT-036 T-01 T-04 T-05 §2.
+      Criar crates/dare-project/src/reverse.rs (+ types).
+      ReverseOptions, ModuleFact, ReverseFacts, ReverseReport.
+      analyze_modules: crates/* | src | top-level; skip dirs; sort lex; --modules filter.
+      Dep: dare-ast no Cargo.toml de dare-project.
+      Gate: cargo test -p dare-project
+
+  - id: mp036-002
+    title: "Artefatos IDEIA/module/facts + --check"
+    depends_on: [mp036-001]
+    complexity: HIGH
+    spec_file: EXECUTION-036/mp036-002.md
+    subtask_prompt: |
+      render IDEIA.md (mapa + AGENT markers), module-*.md, reverse-facts.json.
+      reverse() orchestrator; check=true zero writes via ProjectRoot atomic_write.
+      Gate: cargo test -p dare-project
+
+  - id: mp036-003
+    title: "--deep / excalidraw / --report"
+    depends_on: [mp036-002]
+    complexity: MED
+    spec_file: EXECUTION-036/mp036-003.md
+    subtask_prompt: |
+      deep stubs; modules.excalidraw; confidence-report.md.
+      Gate: cargo test -p dare-project
+
+  - id: mp036-004
+    title: "--ast merge estável"
+    depends_on: [mp036-002]
+    complexity: MED
+    spec_file: EXECUTION-036/mp036-004.md
+    subtask_prompt: |
+      Cap files/bytes; dare_ast::analyze_source; merge sort determinístico.
+      Gate: cargo test -p dare-project
+
+  - id: mp036-005
+    title: "CLI reverse + enrichment soft-fail"
+    depends_on: [mp036-003, mp036-004]
+    complexity: HIGH
+    spec_file: EXECUTION-036/mp036-005.md
+    subtask_prompt: |
+      commands/reverse.rs + main.rs Commands::Reverse.
+      Flags: -d --check --deep --modules --ast --no-excalidraw --report --ai --provider.
+      Soft-fail AI como blueprint.
+      Gate: cargo test -p dare-cli --test cli_smoke reverse
+
+  - id: mp036-006
+    title: "Capability + docs + DEC-038"
+    depends_on: [mp036-005]
+    complexity: LOW
+    spec_file: EXECUTION-036/mp036-006.md
+    subtask_prompt: |
+      assets/capabilities/dare-reverse/README.md;
+      capability-matrix.yml cli_commands: ["reverse"];
+      docs/compatibility/cli-reverse.md; DEC-038 em DECISION-LOG.md.
+
+  - id: mp036-007
+    title: "Smokes + Ralph Loop"
+    depends_on: [mp036-006]
+    complexity: MED
+    spec_file: EXECUTION-036/mp036-007.md
+    subtask_prompt: |
+      cli_smoke: happy path, --check no-write, bad input exit 3/4.
+      cargo fmt; clippy -p dare-project -p dare-cli --all-targets -- -D warnings;
+      cargo test -p dare-project; relevant cli_smoke.
+
+  - id: mp036-008
+    title: "Fechamento TASKS/matriz/Blueprint"
+    depends_on: [mp036-007]
+    complexity: LOW
+    spec_file: EXECUTION-036/mp036-008.md
+    subtask_prompt: |
+      Marcar tasks DONE; matriz 036 Concluído; Blueprint progresso 8/8.

@@ -1,0 +1,24 @@
+```mermaid
+flowchart TD
+  subgraph rank0 [Rank 0]
+    A[mp049-001 reports+ftp+AT]
+    B[mp049-002 FixRate+fixtures]
+  end
+  subgraph rank1 [Rank 1]
+    C[mp049-003 mutation]
+    D[mp049-004 formal+repair]
+    G[mp049-007 CLI bench]
+  end
+  E[mp049-005 advanced+flags]
+  F[mp049-006 bestof+decay]
+  H[mp049-008 docs+DEC-050]
+  A --> C
+  A --> D
+  B --> G
+  C --> E
+  D --> E
+  E --> F
+  E --> H
+  F --> H
+  G --> H
+```

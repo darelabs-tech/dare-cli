@@ -1,0 +1,54 @@
+title: "MP-044 Skills registry modelo e resolução"
+version: "2.1"
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+models:
+  runner:
+    HIGH: default
+    MED: default
+    LOW: default
+tasks:
+  - id: mp044-001
+    title: "Scaffold dare-skills + workspace wire"
+    depends_on: []
+    complexity: LOW
+    subtask_prompt: |
+      Criar crates/dare-skills (Cargo.toml + lib.rs stub), adicionar ao workspace
+      members e workspace.dependencies. Sem ciclo com dare-cli.
+    spec_file: DARE/EXECUTION-044/mp044-001.md
+  - id: mp044-002
+    title: "model.rs + mock JSON + classify"
+    depends_on: [mp044-001]
+    complexity: MED
+    subtask_prompt: |
+      Implementar RegistrySkill, SkillManifest, SkillKind, SkillSource,
+      GENERIC_SKILL_IDS, classify_skill, validate_skill_id, MockRegistry
+      com data/registry-mock.json (7 skills).
+    spec_file: DARE/EXECUTION-044/mp044-002.md
+  - id: mp044-003
+    title: "Registries local/remote/composite + resolve"
+    depends_on: [mp044-002]
+    complexity: HIGH
+    subtask_prompt: |
+      LocalRegistry (path-safe), RemoteRegistry (ureq 3s soft-fail),
+      CompositeRegistry prioridade remote>local>mock, resolve_dependencies
+      com detecção de ciclo. load_project_skills via dare-contracts.
+    spec_file: DARE/EXECUTION-044/mp044-003.md
+  - id: mp044-004
+    title: "CLI dare skill list|info"
+    depends_on: [mp044-003]
+    complexity: MED
+    subtask_prompt: |
+      commands/skill.rs + Commands::Skill em main.rs (mínimo).
+      Smokes list/info/--json/not-found. Sem add/publish.
+    spec_file: DARE/EXECUTION-044/mp044-004.md
+  - id: mp044-005
+    title: "Docs DEC-033 + matriz status"
+    depends_on: [mp044-004]
+    complexity: LOW
+    subtask_prompt: |
+      docs/compatibility/cli-skill.md, DEC-033 no DECISION-LOG,
+      marcar 044 Concluído na matriz de status. Ralph final.
+    spec_file: DARE/EXECUTION-044/mp044-005.md

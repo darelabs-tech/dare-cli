@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "created_at": "2026-07-21T05:22:17Z",
+  "updated_at": "2026-07-21T05:23:40Z",
+  "microplanos_dir": "C:\\projetos-dewtech\\identidade visual\\dare-labs\\dare-cli\\DARE-RUST-MICRO-PLANOS\\DARE-RUST-MICRO-PLANOS",
+  "push": true,
+  "dry_run": false,
+  "cleanup": true,
+  "range": {
+    "start": 8,
+    "end": 10,
+    "total": 3
+  },
+  "index": 0,
+  "phase": "blueprint",
+  "queue": [
+    {
+      "number": 8,
+      "slug": "configuracao-e-migrations",
+      "path": "C:\\projetos-dewtech\\identidade visual\\dare-labs\\dare-cli\\DARE-RUST-MICRO-PLANOS\\DARE-RUST-MICRO-PLANOS\\008-configuracao-e-migrations.md"
+    },
+    {
+      "number": 9,
+      "slug": "inventario-e-empacotamento-de-assets",
+      "path": "C:\\projetos-dewtech\\identidade visual\\dare-labs\\dare-cli\\DARE-RUST-MICRO-PLANOS\\DARE-RUST-MICRO-PLANOS\\009-inventario-e-empacotamento-de-assets.md"
+    },
+    {
+      "number": 10,
+      "slug": "modelo-canonico-de-capabilities",
+      "path": "C:\\projetos-dewtech\\identidade visual\\dare-labs\\dare-cli\\DARE-RUST-MICRO-PLANOS\\DARE-RUST-MICRO-PLANOS\\010-modelo-canonico-de-capabilities.md"
+    }
+  ],
+  "history": [
+    {
+      "at": "2026-07-21T05:23:40Z",
+      "microplano": "008-configuracao-e-migrations",
+      "phase": "design",
+      "result": "ok"
+    }
+  ],
+  "method": "slash-commands-ide-session",
+  "note": "Sem CURSOR_API_KEY. Agente da IDE executa /dare-* ; este script só orquestra."
+}

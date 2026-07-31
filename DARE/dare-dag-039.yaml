@@ -1,0 +1,139 @@
+title: "Microplano 039 — Migrate (plano + Gherkin skeletons)"
+version: "1.0.0"
+microplano: "039"
+name: migrate
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor: { HIGH: gpt-5.3-codex, MED: composer-2, LOW: auto-low }
+  claude: { HIGH: claude-sonnet-4-5, MED: claude-haiku-4, LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro, MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp039-001
+    title: "Domain: types + allowlist + compare + phases/gaps"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION-039/mp039-001.md
+    subtask_prompt: |
+      Create crates/dare-project/src/migrate.rs and `pub mod migrate` in lib.rs.
+
+      Constants/types (exact):
+      - MIGRATE_SCHEMA_VERSION: u32 = 1
+      - MigrateOptions { to_stack: String, check: bool, ai: bool }
+      - BlockingGap { id, severity, evidence, detail } serde camelCase
+      - MigrationPhase { id, title, modules, evidence } serde camelCase
+      - MigrateReport { schema_version, mode, from_stacks, to_stack, to_family,
+        comparison, phases, blocking_gaps, module_ids, written, warnings }
+
+      Allowlist --to (exact ids): node-nestjs, python-fastapi, php-laravel, go-gin,
+      go-stdlib, rails, rust-axum, rust, rust-leptos, rust-leptos-csr, react, vue,
+      mcp-node-ts. fn validate_migrate_target(to: &str) -> CoreResult<()>;
+      empty/unknown → InvalidInput containing "unknown migrate target" or "not in allowlist".
+
+      Family map + compare → comparison: same_family | cross_stack | unknown_origin.
+      Build phases foundations|modules|cutover; blockingGaps sorted
+      (blocking before warning, then id asc). Gap ids: gap-unknown-origin, gap-stack-conflict,
+      plus DNA/patterns missing as warning severity.
+
+      Unit tests: allowlist accept/reject; comparison matrix; phases order; gap sort.
+      Do NOT implement run_migrate FS write yet (mp039-003). No CLI yet.
+
+  - id: mp039-002
+    title: "Capability README + matrix row (assets)"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION-039/mp039-002.md
+    subtask_prompt: |
+      Create assets/capabilities/dare-migrate/README.md describing dare migrate --to,
+      --check, --ai, outputs under DARE/MIGRATION/**, no destructive rewrite.
+      Add capability-matrix.yml row: id dare-migrate, cli_commands: [migrate],
+      status planned/partial OK until mp039-005 finalizes.
+      Do not edit DECISION-LOG or matriz microplano yet (mp039-005).
+      Do not touch Rust domain/CLI.
+
+  - id: mp039-003
+    title: "render + run_migrate check/write + path safety"
+    depends_on: [mp039-001]
+    complexity: HIGH
+    spec_file: EXECUTION-039/mp039-003.md
+    subtask_prompt: |
+      In crates/dare-project/src/migrate.rs implement:
+
+      pub fn run_migrate(root: &Path, opts: &MigrateOptions) -> CoreResult<MigrateReport>;
+      pub fn format_migrate_human(r: &MigrateReport) -> String;
+      pub fn migrate_report_to_json(r: &MigrateReport) -> CoreResult<String>;
+
+      Pré: find_project_root; validate_migrate_target; require DARE/IDEIA.md file;
+      load module ids from reverse-facts.json modules[].id OR glob REVERSE/module-*.md;
+      empty modules → InvalidInput "run dare reverse first: no modules";
+      missing IDEIA → InvalidInput "run dare reverse first: missing DARE/IDEIA.md".
+
+      detect_stacks → from_stacks; compare families; build phases/gaps; redact evidence/detail.
+
+      check=true: mode=check, written=[], ZERO filesystem writes under DARE/MIGRATION.
+      check=false: atomic_write only:
+        DARE/MIGRATION/MIGRATION.md (sections + AGENT markers paradigm/strategy/
+        risk-register/target-architecture/cutover-rollback empty bodies),
+        DARE/MIGRATION/migration-facts.json schemaVersion=1 camelCase,
+        DARE/MIGRATION/parity/{moduleId}.feature EXACT skeleton from BLUEPRINT-039 §3.5
+        (no invented business Gherkin). written paths relative, sorted lex.
+
+      Path jail: writes only under DARE/MIGRATION/**; traversal → InvalidInput.
+      Domain ignores opts.ai (CLI owns enrich).
+
+      Tests: check no-write; write creates 3 artifact types; missing IDEIA; empty modules;
+      bad target; feature skeleton shape; human stdout contains mode/fromStacks/toStack.
+
+  - id: mp039-004
+    title: "CLI dare migrate + main.rs + AI soft-fail"
+    depends_on: [mp039-003]
+    complexity: MED
+    spec_file: EXECUTION-039/mp039-004.md
+    subtask_prompt: |
+      Add crates/dare-cli/src/commands/migrate.rs; export in commands/mod.rs;
+      Commands::Migrate additive in main.rs (do not reorder unrelated variants).
+
+      Flags: --to <stack> REQUIRED; --check; -d/--dir; --ai; --provider; --json; --no-color.
+      Wire run_migrate; map CoreError → exit codes (InvalidInput→4, NotFound→3, Usage→2).
+      Human stdout via format_migrate_human; --json via migrate_report_to_json envelope.
+
+      --ai: after successful write, Soft-fail enrich MIGRATION.md via SafeCommand providers
+      (same pattern as reverse/blueprint); on provider fail: exit 0 + warning; do not corrupt
+      facts. Domain crate must not call AI.
+
+      Help text must show --to required. No secrets in logs.
+
+  - id: mp039-005
+    title: "Docs DEC-044 + cli-migrate + matriz finalize"
+    depends_on: [mp039-002, mp039-004]
+    complexity: LOW
+    spec_file: EXECUTION-039/mp039-005.md
+    subtask_prompt: |
+      Create docs/compatibility/cli-migrate.md (flags, artifacts, vs config migrate,
+      vs graph migrate, Gherkin skeleton-only).
+      Append DEC-044 ONLY to docs/DECISION-LOG.md (next free after prior closes;
+      allowlist, non-destructive, soft-fail --ai).
+      Mark microplano 039 Concluído in
+      DARE-RUST-MICRO-PLANOS/DARE-RUST-MICRO-PLANOS/000A-MATRIZ-DE-STATUS.md.
+      Finalize capability-matrix.yml dare-migrate status to match shipped CLI.
+      Update TASKS-039 statuses only when parent execute marks DONE — here leave docs accurate.
+
+  - id: mp039-006
+    title: "Smokes migrate_* + Ralph close"
+    depends_on: [mp039-005]
+    complexity: MED
+    spec_file: EXECUTION-039/mp039-006.md
+    subtask_prompt: |
+      Add cli_smoke tests in crates/dare-cli/tests/cli_smoke.rs:
+      migrate_help_requires_to; migrate_write_success (tempdir Cargo.toml+src + IDEIA +
+      reverse-facts 1 module); migrate_check_no_write; migrate_bad_target_exit_4;
+      migrate_missing_reverse_exit_4.
+
+      Ralph: cargo fmt --check; cargo clippy -p dare-project -p dare-cli --all-targets -- -D warnings;
+      cargo test -p dare-project -- migrate; cargo test -p dare-cli --test cli_smoke -- migrate_;
+      cargo audit (no new HIGH/CRITICAL). Fix failures. Mark TASKS-039 all DONE when gates pass.

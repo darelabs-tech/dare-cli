@@ -1,0 +1,121 @@
+title: "Validate — validação do DAG (020) - Development Tasks"
+version: "1.0.0"
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp020-001
+    title: "Verificar docker-compose.ci.yml"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION-020/mp020-001.md
+    subtask_prompt: |
+      Microplano 020 Fase 1 — BLUEPRINT-020 §6 Fase 1 T-17.
+      Validar: `docker compose -f docker-compose.ci.yml config` exit 0.
+      Se Docker ausente: confirmar YAML + Dockerfile.rust existem; waiver para
+      docs/compatibility/cli-validate.md § Local verify (mp020-005).
+      Sem nova imagem. Sem git commit. NÃO implementar dare-dag nem CLI validate.
+
+  - id: mp020-002
+    title: "Scaffold crate dare-dag + ValidationReport schema 1"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION-020/mp020-002.md
+    subtask_prompt: |
+      Microplano 020 Fase 2 — BLUEPRINT-020 §2–4 T-01 T-08.
+      1) Cargo.toml workspace: add member `crates/dare-dag`; workspace.dependencies
+         dare-dag = { path = "crates/dare-dag" }. NÃO [build] target global.
+      2) crates/dare-dag/Cargo.toml: version 0.1.0-alpha.0; deps dare-core, dare-contracts,
+         serde, serde_json. NÃO dare-cli / dare-project / dare-harness / dare-assets.
+      3) src/lib.rs + report.rs:
+         VALIDATION_SCHEMA_VERSION=1; MSG_MAX=200; DEFAULT_DAG_REL="DARE/dare-dag.yaml";
+         COMPLEXITY_ALLOWED=["LOW","MED","HIGH"];
+         IssueSeverity { Error, Warning } JSON lowercase;
+         ValidationIssue { severity, code, task_id→taskId, message, path? };
+         ValidationReport schema 1 camelCase (schemaVersion, mode, ok, dagPath, format,
+         taskCount, errorCount, warningCount, strict, issues);
+         ValidateOptions { strict: bool }.
+      4) Teste MUST: report_schema_version_1 (serde roundtrip JSON keys camelCase).
+      Gate: cargo test -p dare-dag. Sem git commit. NÃO validate.rs regras (mp020-003).
+      NÃO CLI (mp020-004).
+
+  - id: mp020-003
+    title: "Regras validate + ciclo + fixtures"
+    depends_on: [mp020-002]
+    complexity: HIGH
+    spec_file: EXECUTION-020/mp020-003.md
+    subtask_prompt: |
+      Microplano 020 Fase 3 — BLUEPRINT-020 §4.7–4.8 §5.1–5.5 §5.9 T-07 T-08 T-12..T-15.
+      Em dare-dag: validate.rs + format.rs.
+      API:
+        validate_dag(doc, opts, ctx: &ValidateFsContext) -> ValidationReport;
+        validate_path(root, rel, opts) -> CoreResult<ValidationReport> via load_dag;
+        format_human; report_to_json; is_kebab_id (sem crate regex — scan ASCII).
+      Regras: invalid_id, duplicate_id, missing_dependency, self_dependency, cycle
+      (path canónico: rotacionar ao menor id lexico; fechar com start), empty_title,
+      invalid_complexity (case-sensitive LOW|MED|HIGH), missing_prompt_or_spec (V21 only),
+      missing_spec_file warning (resolve {root}/DARE/+spec_file), invalid_limits warning.
+      Legacy: skip prompt/spec rules. Sort RF-18. ok = T-08.
+      Fixtures em tests/fixtures/dag/: valid.v21, valid.legacy, cycle, missing-dep,
+      bad-id, empty-prompt, warning-missing-spec.
+      Testes MUST §5.9 todos excepto CLI. Zero writes em validate_path.
+      Gate: cargo test -p dare-dag. Sem git commit. NÃO CLI.
+
+  - id: mp020-004
+    title: "CLI dare validate + smokes"
+    depends_on: [mp020-003]
+    complexity: MED
+    spec_file: EXECUTION-020/mp020-004.md
+    subtask_prompt: |
+      Microplano 020 Fase 4 — BLUEPRINT-020 §5.6–5.7 §5.10 T-02 T-03 T-05 T-06 T-09 T-20.
+      dare-cli: Commands::Validate { dag: Option<PathBuf>, strict: bool };
+      commands/validate.rs: find_project_root (dare_project) → ProjectRoot;
+      resolve DEFAULT_DAG_REL ou --dag (rel/abs jail); validate_path;
+      imprimir human/JSON com envelope ok=report.ok; ExitCode 0/1.
+      Parse/NotFound/InvalidInput → write_error (3/4/5).
+      Smokes MUST: validate_ok_fixture; validate_cycle_exit_1; validate_strict_warning;
+      validate_warning_without_strict; validate_missing_dag_not_found; validate_json_schema;
+      validate_json_failure_has_issues; validate_zero_writes.
+      Gate: cargo test -p dare-cli --test cli_smoke -- validate. Sem git commit.
+
+  - id: mp020-005
+    title: "Docs cli-validate.md + DEC-021"
+    depends_on: [mp020-002]
+    complexity: LOW
+    spec_file: EXECUTION-020/mp020-005.md
+    subtask_prompt: |
+      Microplano 020 Fase 5 — BLUEPRINT-020 §5.11 T-18.
+      CRIAR docs/compatibility/cli-validate.md: flags; regras; issue codes; exit codes
+      (report fail=1 vs Config=4); ValidationReport schema 1; strict; zero writes;
+      spec_file base DARE/; diff vs TS 3.18.1 + classification; Local verify compose.
+      ADD DEC-021 em docs/DECISION-LOG.md.
+      Sem git commit. Sem código Rust obrigatório (alinhar docs se CLI já existir).
+
+  - id: mp020-006
+    title: "Auditoria Ralph"
+    depends_on: [mp020-001, mp020-004, mp020-005]
+    complexity: MED
+    spec_file: EXECUTION-020/mp020-006.md
+    subtask_prompt: |
+      Microplano 020 Fase 6 — BLUEPRINT-020 §6 Fase 6 §7.
+      cargo fmt --check; cargo clippy --workspace --all-features -- -D warnings;
+      cargo test --workspace; cargo audit; cargo deny check.
+      Reportar exit codes. Sem git commit.
+
+  - id: mp020-007
+    title: "Fechamento microplano 020"
+    depends_on: [mp020-006]
+    complexity: LOW
+    spec_file: EXECUTION-020/mp020-007.md
+    subtask_prompt: |
+      Microplano 020 Fase 7 — BLUEPRINT-020 §6 Fase 7.
+      TASKS-020 7/7 DONE; canvas/próximo → 021-update-planejamento-e-manifest.
+      Opcional marcar DESIGN/BLUEPRINT-020 APPROVED. Sem código. Sem git commit.

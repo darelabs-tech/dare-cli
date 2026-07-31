@@ -1,0 +1,131 @@
+title: "Comando dare blueprint (025) - Development Tasks"
+version: "1.0.0"
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp025-001
+    title: "Verificar docker-compose.ci.yml"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION-025/mp025-001.md
+    subtask_prompt: |
+      Microplano 025 Fase 1 — BLUEPRINT-025 §6 Fase 1 T-14.
+      Validar: `docker compose -f docker-compose.ci.yml config` exit 0.
+      Se Docker ausente: confirmar YAML + Dockerfile.rust; waiver docs (mp025-006).
+      Sem nova imagem. Sem git commit. NÃO implementar blueprint.rs.
+
+  - id: mp025-002
+    title: "generate_bundle + heurística Design→tasks"
+    depends_on: []
+    complexity: HIGH
+    spec_file: EXECUTION-025/mp025-002.md
+    subtask_prompt: |
+      Microplano 025 Fase 2 — BLUEPRINT-025 §4–5.4 T-01 T-02 T-08 T-10 T-15 T-16.
+      CRIAR crates/dare-cli/src/commands/blueprint.rs (+ mod.rs export).
+      Constantes: DEFAULT_DESIGN_REL, OUT_*, BLUEPRINT_SCHEMA_VERSION=1,
+      DESIGN_READ_CAP=262144, ARTIFACT_WRITE_CAP=1048576, MANAGED_MD/YAML,
+      BP_ENRICHABLE 4 ids.
+      Fns: is_managed_markdown/yaml; parse_design_title; extract_must_requirements
+      (RF MUST max 8); generate_bundle(design,title)->GeneratedBundle.
+      Heurística §5.4: task-001 container [] LOW; task-002 core [] MED;
+      RF-MUST → task-003+ deps [task-002]; task-audit; task-close.
+      BLUEPRINT.md com MANAGED_MD + markers BP_ENRICHABLE; TASKS.md; dare-dag.yaml
+      (# dare:managed + limits/models T-15/16); EXECUTION/{id}.md specs mínimas.
+      Fixtures tests/fixtures/blueprint/sample-design.md (+ golden fragments opcional).
+      Testes MUST: parse_design_title; extract_must_requirements_stable;
+      generate_bundle_has_managed_markers; generate_bundle_rank0_at_least_2;
+      is_managed_detects_marker; report_schema_version_1 (tipos report stub OK).
+      NÃO stage/promote/CLI clap (mp025-003/004). Gate: cargo test -p dare-cli -- blueprint.
+      Sem git commit.
+
+  - id: mp025-003
+    title: "Staging + validate_dag + promote keep/force"
+    depends_on: [mp025-002]
+    complexity: HIGH
+    spec_file: EXECUTION-025/mp025-003.md
+    subtask_prompt: |
+      Microplano 025 Fase 3 — BLUEPRINT-025 §5.5 T-05 T-06 T-07 RS-03.
+      stage_and_validate: escrever bundle em .dare/blueprint-stage-{pid}/;
+      parse YAML → dare_dag::validate_dag; !ok → Err sem promote; purge stage.
+      promote(root, bundle, force): por ficheiro OUT_*; se !force && exists &&
+      !managed → kept+skip; senão atomic_write → written; purge stage.
+      Testes MUST: promote_keeps_unmanaged_without_force;
+      promote_overwrites_managed_without_force; promote_force_overwrites_unmanaged;
+      validate_rejects_bad_bundle.
+      Gate: cargo test -p dare-cli -- blueprint. Sem clap smokes. Sem git commit.
+
+  - id: mp025-004
+    title: "CLI dare blueprint + AI soft + smokes"
+    depends_on: [mp025-003]
+    complexity: MED
+    spec_file: EXECUTION-025/mp025-004.md
+    subtask_prompt: |
+      Microplano 025 Fase 4 — BLUEPRINT-025 §5.1 §5.6–5.9 T-03 T-09.
+      main.rs Commands::Blueprint { design, force, ai, provider }.
+      Usage se provider sem --ai. Design missing → NotFound exit 3.
+      run_blueprint: read Design cap; generate_bundle; se ai → enrich soft-fail
+      (dare-ai parse_and_validate_sections_with + inject_sections para BP_ENRICHABLE;
+      se APIs with-ids não existem, ADICIONAR em dare-ai); stage_and_validate;
+      promote; BlueprintReport schema 1; human/JSON.
+      Soft-fail AI: warning + enriched=false; ainda promove determinístico.
+      Smokes MUST §5.9: blueprint_creates_artifacts; blueprint_json_schema;
+      blueprint_missing_design_not_found; blueprint_keep_custom_without_force;
+      blueprint_force_overwrites; blueprint_provider_without_ai_usage;
+      blueprint_ai_mock_soft_or_enrich.
+      Gate: cargo test -p dare-cli --test cli_smoke -- blueprint.
+      Sem git commit. Sem execute/viz.
+
+  - id: mp025-005
+    title: "Capability matrix cli_commands blueprint"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION-025/mp025-005.md
+    subtask_prompt: |
+      Microplano 025 Fase 5 — BLUEPRINT-025 §5 T-13 RF-14/15.
+      assets/capability-matrix.yml dare-blueprint: cli_commands: ["blueprint"].
+      Se assets/capabilities/dare-blueprint/ vazio: README en-US com output paths.
+      Atualizar hashes manifest.yml (+ update-manifest.v2.json se necessário).
+      cargo test -p dare-assets matrix. Sem git commit. NÃO alterar blueprint.rs.
+
+  - id: mp025-006
+    title: "Docs cli-blueprint.md + DEC-026"
+    depends_on: [mp025-002]
+    complexity: LOW
+    spec_file: EXECUTION-025/mp025-006.md
+    subtask_prompt: |
+      Microplano 025 Fase 6 — BLUEPRINT-025 §5.10 T-12.
+      CRIAR docs/compatibility/cli-blueprint.md: flags; paths canónicos; managed marker;
+      staging; heurística; soft-fail AI; exit codes; BlueprintReport schema 1;
+      fora 026+; Local verify compose; vs TS.
+      ADD DEC-026 em docs/DECISION-LOG.md.
+      Sem git commit. Sem código Rust obrigatório.
+
+  - id: mp025-007
+    title: "Auditoria Ralph"
+    depends_on: [mp025-001, mp025-004, mp025-005, mp025-006]
+    complexity: MED
+    spec_file: EXECUTION-025/mp025-007.md
+    subtask_prompt: |
+      Microplano 025 Fase 7 — BLUEPRINT-025 §6 Fase 7 §7 RS-04.
+      cargo fmt --check; cargo clippy --workspace --all-features -- -D warnings;
+      cargo test --workspace; cargo audit; cargo deny check.
+      Reportar exit codes. Sem git commit.
+
+  - id: mp025-008
+    title: "Fechamento microplano 025"
+    depends_on: [mp025-007]
+    complexity: LOW
+    spec_file: EXECUTION-025/mp025-008.md
+    subtask_prompt: |
+      Microplano 025 Fase 8 — BLUEPRINT-025 §6 Fase 8.
+      TASKS-025 8/8 DONE; próximo → 026-dag-parser-ranks-e-state-store.
+      DESIGN/BLUEPRINT-025 APPROVED; matriz 000A 025 concluido. Sem código. Sem git commit.

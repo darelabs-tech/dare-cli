@@ -1,0 +1,148 @@
+title: "Microplano 042 — GraphRAG semântico opcional"
+version: "1.0.0"
+microplano: "042"
+name: graphrag-semantic
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor: { HIGH: gpt-5.3-codex, MED: composer-2, LOW: auto-low }
+  claude: { HIGH: claude-sonnet-4-5, MED: claude-haiku-4, LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro, MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp042-001
+    title: "cosine + SearchOptions.no_semantic + hybrid_query_with_warnings"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION-042/mp042-001.md
+    subtask_prompt: |
+      In crates/dare-graph/src/search.rs (and lib.rs exports):
+
+      1) pub fn cosine_similarity(a: &[f32], b: &[f32]) -> f64;
+         - equal len, finite: dot/(|a|*|b|); zero-norm OR len mismatch → 0.0; never NaN.
+
+      2) Extend SearchOptions with pub no_semantic: bool (default false).
+         Keep clamped() for limit/max_hops/fanout as today.
+
+      3) pub fn hybrid_query_with_warnings(graph, query, opts)
+           -> CoreResult<(Vec<RankedHit>, Vec<String>)>;
+         - Empty query trim → InvalidInput "query must not be empty"
+         - When no_semantic OR semantic unavailable: behavior MUST match existing
+           hybrid_query 041 (2-list RRF k=60); warnings may include
+           "semantic unavailable: …" only when attempt skipped for cause
+         - Keep hybrid_query as thin wrapper calling with_warnings and dropping warnings
+           (or same 2-list path) so existing golden tests still pass.
+
+      4) Unit tests: cosine_zero_norm; cosine_len_mismatch; cosine_orthogonal_ish;
+         hybrid_no_semantic_matches_041_golden; existing RRF/hybrid tests green.
+
+      Do NOT add fastembed yet (mp042-002). Do NOT wire real vector embed (mp042-003).
+      Optional: internal hook/test-only vector ranking injection for 3-list unit test
+      without network — if added, gate behind cfg(test).
+
+  - id: mp042-002
+    title: "semantic.rs fastembed + cache + ensure_model + doctor types"
+    depends_on: []
+    complexity: HIGH
+    spec_file: EXECUTION-042/mp042-002.md
+    subtask_prompt: |
+      Add Cargo feature semantic = ["dep:fastembed"] to dare-graph (NOT default).
+      Pin fastembed exact (prefer =4.9.1; if resolve fails use latest 4.x + note).
+      Wire dare-cli feature semantic = ["dare-graph/semantic"] NOT default.
+
+      Create crates/dare-graph/src/semantic.rs + cfg mod in lib.rs.
+
+      Constants from BLUEPRINT-042 §0.1: SEMANTIC_MODEL_ID dir all-minilm-l6-v2,
+      EMBED_DIM=384, MAX_CANDIDATES=512, MAX_QUERY_CHARS=8192, MAX_PASSAGE_CHARS=2048,
+      EXPECTED_MODEL_BYTES=22_000_000, allowlist hosts huggingface.co + cdn-lfs*.
+
+      Implement (cfg semantic): models_cache_dir, model_is_cached, SemanticOptions,
+      ModelHandle, ensure_model (confirm TTY y/N OR opts.yes OR env DARE_GRAPH_SEMANTIC_YES=1;
+      set FASTEMBED_CACHE_PATH; init AllMiniLML6V2 / quantized if API allows),
+      embed_texts → Vec<Vec<f32>> dim 384.
+
+      Always (no feature): semantic_doctor() -> SemanticDoctorReport camelCase
+      (semantic_compiled false when cfg off).
+
+      Path jail under {home}/.dare/models. No graph.db schema changes.
+      Unit tests without network: cache path; doctor compiled flag; reject ".." paths.
+      ensure_model network test #[ignore] optional.
+
+      Do NOT wire hybrid 3-list yet (mp042-003). No CLI doctor/enable yet (mp042-004).
+
+  - id: mp042-003
+    title: "Wire vector_rank + 3-list RRF + fallback warnings"
+    depends_on: [mp042-001, mp042-002]
+    complexity: HIGH
+    spec_file: EXECUTION-042/mp042-003.md
+    subtask_prompt: |
+      Implement vector_rank(handle, query, candidates: &[(id, passage)]) -> Vec<String>
+      per BLUEPRINT §5 (cosine, sort score DESC id ASC). Cap candidates at 512.
+
+      In hybrid_query_with_warnings when feature semantic && !no_semantic:
+      - try ensure_model soft OR model_is_cached + open; on any Err/absent:
+        fallback 2-list + warning "semantic unavailable: …" (redact); exit path CoreResult Ok
+      - else: build candidate set = keyword ids ∪ bfs ids (id ASC), take 512;
+        passages = label + " " + description truncated 2048;
+        vector_ids = vector_rank(...);
+        rrf_fuse([kw, bfs, vector], 60); materialize RankedHit ≤ limit.
+
+      Tests: 3-list fuse order with fixture vectors/mock; fallback when no model;
+      no_semantic ignores cached model. cargo test -p dare-graph and --features semantic.
+
+  - id: mp042-004
+    title: "CLI --no-semantic + doctor + enable + smokes"
+    depends_on: [mp042-003]
+    complexity: MED
+    spec_file: EXECUTION-042/mp042-004.md
+    subtask_prompt: |
+      Extend crates/dare-cli/src/commands/graph.rs + main.rs additive:
+      - GraphAction::Query { …, no_semantic: bool }
+      - GraphAction::Doctor { dir }
+      - GraphAction::Enable { dir, yes: bool }
+
+      Flags: dare graph query … --no-semantic
+      dare graph doctor [--json]
+      dare graph enable [--yes]
+
+      enable without feature → InvalidInput exit 4 "semantic feature not compiled…"
+      enable cancel (N) → exit 0 "download cancelled"
+      query uses hybrid_query_with_warnings; print warnings to stderr/human.
+
+      Smokes in cli_smoke.rs (NO network download):
+      graph_doctor_reports_compiled;
+      graph_query_no_semantic_ok;
+      graph_enable_without_feature_exit_4 (default binary without --features semantic).
+
+  - id: mp042-005
+    title: "Docs graphrag-semantic + DEC-045 + matriz 042"
+    depends_on: [mp042-004]
+    complexity: LOW
+    spec_file: EXECUTION-042/mp042-005.md
+    subtask_prompt: |
+      Create docs/compatibility/graphrag-semantic.md (feature, cache, flags, fallback,
+      vs 041, allowlist, Classe B vs TS).
+      Append DEC-045 ONLY to docs/DECISION-LOG.md.
+      Mark 042 Concluído in 000A-MATRIZ-DE-STATUS.md.
+      One-line pointer in graphrag-ingest.md → semantic doc.
+      Do not invent other DECs.
+
+  - id: mp042-006
+    title: "Ralph dual-feature + audit close"
+    depends_on: [mp042-005]
+    complexity: MED
+    spec_file: EXECUTION-042/mp042-006.md
+    subtask_prompt: |
+      Run and fix until green:
+      cargo test -p dare-graph
+      cargo test -p dare-graph --features semantic
+      cargo clippy -p dare-graph -p dare-cli --all-targets -- -D warnings
+      cargo clippy -p dare-graph -p dare-cli --all-targets --features semantic -- -D warnings
+      cargo test -p dare-cli --test cli_smoke -- graph_
+      cargo audit
+      Update TASKS-042 to 6/6 DONE when gates pass.
+      No mass CRLF fmt on unrelated files.

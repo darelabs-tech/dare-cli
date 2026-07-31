@@ -1,0 +1,114 @@
+title: "Microplano 047 — Init e bootstrap greenfield"
+version: "1.0.0"
+microplano: "047"
+name: init-e-bootstrap
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor: { HIGH: gpt-5.3-codex, MED: composer-2, LOW: auto-low }
+  claude: { HIGH: claude-sonnet-4-5, MED: claude-haiku-4, LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro, MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp047-001
+    title: "clap + resolve flags (init/bootstrap)"
+    depends_on: []
+    complexity: HIGH
+    spec_file: EXECUTION-047/mp047-001.md
+    subtask_prompt: |
+      Wire CLI Commands::Init and Commands::Bootstrap in dare-cli (BLUEPRINT-047 §5).
+      Pin dialoguer = "=0.11.0" in workspace Cargo.toml (used later by 004).
+      Implement resolve helpers (pure, unit-tested): rails→ruby-rails-8; --mcp map
+        §0.2; --fullstack react|vue; mutual exclusion --stack/--mcp → Usage exit 2;
+        --non-interactive requires name + (--stack|--mcp); backend+transport →
+        InvalidInput MSG_TRANSPORT_BACKEND; fullstack+mcp rejected.
+      Types InitRequest/BootstrapRequest/InitReport/BootstrapReport schemaVersion 1
+        camelCase (may live in commands or small module).
+      Stubs run_init/run_bootstrap may return Internal "not implemented" ONLY if
+        clap parses and resolve_* tests pass — prefer Ok stubs that do not write FS.
+      Help en-US lists init/bootstrap. No scaffold ConflictPolicy yet (002).
+      Avoid mass CRLF.
+
+  - id: mp047-002
+    title: "ConflictPolicy + frontend unlock"
+    depends_on: []
+    complexity: HIGH
+    spec_file: EXECUTION-047/mp047-002.md
+    subtask_prompt: |
+      Per BLUEPRINT-047 §0.4–0.5: add ConflictPolicy { FailFast, SkipExisting } to
+        ScaffoldRequest (default FailFast). SkipExisting: existing path → Skip;
+        missing → Create; force=true → Replace.
+      Unlock frontend Some(React|Vue): remove "frontend composition reserved for 047".
+      Add assets/stacks/_frontend/react|vue (package.json.tpl, main.tsx|main.ts,
+        README.md.tpl) → plan paths under frontend/; update manifest hashes.
+      Tests: conflict_skip.rs; frontend_compose.rs; secret scan on frontend tpl.
+      No CLI. Can run parallel with mp047-001. Avoid mass CRLF.
+
+  - id: mp047-003
+    title: "run_init pipeline + rollback"
+    depends_on: [mp047-001, mp047-002]
+    complexity: HIGH
+    spec_file: EXECUTION-047/mp047-003.md
+    subtask_prompt: |
+      Implement run_init per BLUEPRINT §5.1: validate → create_dir → run_scaffold
+        (FailFast/force) → atomic dare.config.json §0.6 → install 4 harnesses
+        (claude/cursor/codex/antigravity) → validate_stack_output ok.
+      --check: zero writes; created=[]; harnessesInstalled=[].
+      Target exists !force → InvalidInput MSG_TARGET_EXISTS.
+      On error after create_dir: rollback scaffold + remove_dir_all target.
+      Wire clap Init to run_init. Integration tempdir non-interactive rust-axum.
+      Avoid mass CRLF.
+
+  - id: mp047-004
+    title: "interactive dialoguer"
+    depends_on: [mp047-003]
+    complexity: MED
+    spec_file: EXECUTION-047/mp047-004.md
+    subtask_prompt: |
+      Interactive init with dialoguer 0.11: prompt name if missing; Select stack
+        from list_stack_ids ASC; conditional fullstack/transport/toolchain prompts.
+      Non-TTY without --non-interactive → InvalidInput
+        "interactive mode requires a TTY (use --non-interactive)".
+      Ctrl+C / cancel → no orphan target dir. --non-interactive never reads stdin.
+      Unit/integration with mocked or feature notes. Avoid mass CRLF.
+
+  - id: mp047-005
+    title: "run_bootstrap + idempotência"
+    depends_on: [mp047-001, mp047-002]
+    complexity: HIGH
+    spec_file: EXECUTION-047/mp047-005.md
+    subtask_prompt: |
+      Implement run_bootstrap §5.2: load dare.config.json; missing → NotFound
+        MSG_MISSING_CONFIG; missing stack → InvalidInput MSG_MISSING_STACK_FIELD.
+      !force → ConflictPolicy::SkipExisting; --force → force=true Replace.
+      --toolchain override persists to config (preserve extras). No harness reinstall.
+      --check zero writes. Test bootstrap ×2 created=[]; --force replaces.
+      Wire clap Bootstrap. Can parallel with mp047-003. Avoid mass CRLF.
+
+  - id: mp047-006
+    title: "golden trees + CLI integration"
+    depends_on: [mp047-003, mp047-004, mp047-005]
+    complexity: HIGH
+    spec_file: EXECUTION-047/mp047-006.md
+    subtask_prompt: |
+      fixtures/golden/init/*.paths.txt for ≥3 stacks (rust-axum, node-nestjs,
+        mcp-node-ts); assert after init --non-interactive.
+      crates/dare-cli/tests/init_bootstrap_cli.rs: help contains init/bootstrap;
+        --json schemaVersion=1; fullstack creates frontend/; bootstrap idempotent.
+      Document path to 11-stack closeout or matrix. Avoid mass CRLF.
+
+  - id: mp047-007
+    title: "Docs DEC-048 + capabilities + Ralph"
+    depends_on: [mp047-006]
+    complexity: MED
+    spec_file: EXECUTION-047/mp047-007.md
+    subtask_prompt: |
+      docs/compatibility/cli-init-bootstrap.md; pointer in scaffold-contracts.md;
+        DEC-048 ONLY in DECISION-LOG; matriz 047 Concluído; capability-matrix
+        dare-init/dare-bootstrap cli_commands; TASKS-047 → 7/7 DONE.
+      Ralph: cargo test -p dare-cli -p dare-scaffold; clippy both -D warnings;
+        cargo audit (no new HIGH/CRITICAL). No hooks CLI. Avoid mass CRLF.

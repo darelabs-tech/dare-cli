@@ -1,0 +1,93 @@
+title: "Adapter Codex (013) - Development Tasks"
+version: "1.0.0"
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp013-001
+    title: "Verificar docker-compose.ci.yml"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION-013/mp013-001.md
+    subtask_prompt: |
+      Microplano 013 Fase 1 — containerização.
+      Validar: `docker compose -f docker-compose.ci.yml config` exit 0.
+      Se Docker ausente: YAML parseável documentado. Sem git commit.
+
+  - id: mp013-002
+    title: "Congelar detect + AGENTS.md + policies"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION-013/mp013-002.md
+    subtask_prompt: |
+      Microplano 013 Fase 2 — BLUEPRINT-013 §5.1–5.2 T-06/T-11.
+      Congelar em crates/dare-harness/src/codex.rs:
+      - detect_codex; generate_agents_md com $skill-name; preserve unmanaged AGENTS.md
+      - UPDATE_HARNESS_IDES inclui codex; update_policies_include_codex() == true
+      Testes: detect empty; generate contains $dare-design; preserve AGENTS.md; policies.
+      Gate: cargo test -p dare-harness -- codex::
+      Sem git commit. NÃO implementar adapter Antigravity.
+
+  - id: mp013-003
+    title: "install_codex_skills + validate + coexistência"
+    depends_on: [mp013-002]
+    complexity: MED
+    spec_file: EXECUTION-013/mp013-003.md
+    subtask_prompt: |
+      Microplano 013 Fase 3 — BLUEPRINT-013 §5.3–5.4 T-05.
+      install_codex_skills: outputs.codex + .agents/skills/{id}/SKILL.md; force→49; preserve shared unmanaged.
+      validate: AGENTS.md + 49 paths; missing amostra ≤5.
+      Testes: roundtrip 49; coexistence_reuses; shared file exists.
+      Gate: cargo test -p dare-harness -- codex::
+      Sem git commit.
+
+  - id: mp013-004
+    title: "CLI help --force + install pipeline"
+    depends_on: [mp013-002]
+    complexity: LOW
+    spec_file: EXECUTION-013/mp013-004.md
+    subtask_prompt: |
+      Microplano 013 Fase 4 — §5.6 T-09 RS-07.
+      CodexCmd::Install: clap --force docstring overwrite unmanaged.
+      Ordem: generate_agents_md → install_codex_skills.
+      Gate: cargo build -p dare-cli
+      Sem git commit.
+
+  - id: mp013-005
+    title: "CLI smoke + docs DEC-014 + exception"
+    depends_on: [mp013-003, mp013-004]
+    complexity: MED
+    spec_file: EXECUTION-013/mp013-005.md
+    subtask_prompt: |
+      Microplano 013 Fase 5.
+      cli_smoke: tempdir → dare harness codex install --force --root … → validate ok 49; detect agents_md=true.
+      EXPANDIR docs/compatibility/harness-codex.md: CLI, $skill-name, share .agents, T-01..T-14, RS, SoT 49 vs 48 exception, UPDATE_HARNESS_IDES, DEC-014.
+      NÃO remover agent-skills-full-parity. NÃO Antigravity adapter.
+      Gate: cargo test -p dare-cli --test cli_smoke
+      Sem git commit.
+
+  - id: mp013-006
+    title: "Auditoria Ralph"
+    depends_on: [mp013-001, mp013-005]
+    complexity: MED
+    spec_file: EXECUTION-013/mp013-006.md
+    subtask_prompt: |
+      Microplano 013 Fase 6.
+      cargo test --workspace; clippy -D warnings; cargo audit; cargo deny check.
+      Output exit codes. Sem git commit.
+
+  - id: mp013-007
+    title: "Fechamento microplano 013"
+    depends_on: [mp013-006]
+    complexity: LOW
+    spec_file: EXECUTION-013/mp013-007.md
+    subtask_prompt: |
+      Atualizar TASKS-013: 7/7 DONE. Próximo: 014-adapter-antigravity. Sem código. Sem git commit.

@@ -1,0 +1,111 @@
+title: "Discover detecção brownfield (018) - Development Tasks"
+version: "1.0.0"
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp018-001
+    title: "Verificar docker-compose.ci.yml"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION-018/mp018-001.md
+    subtask_prompt: |
+      Microplano 018 Fase 1 — BLUEPRINT-018 §6 Fase 1 T-14.
+      Validar: `docker compose -f docker-compose.ci.yml config` exit 0.
+      Se Docker ausente: YAML + Dockerfile.rust; waiver para cli-discover-check.md § Local verify (mp018-005).
+      Sem nova imagem. Sem git commit. NÃO criar dare-project.
+
+  - id: mp018-002
+    title: "Crate dare-project + report + root + stacks + conflicts"
+    depends_on: []
+    complexity: HIGH
+    spec_file: EXECUTION-018/mp018-002.md
+    subtask_prompt: |
+      Microplano 018 Fase 2 — BLUEPRINT-018 §3–§5.1–5.3 T-01 T-03 T-06 T-08 T-09 T-12.
+      1) Criar crates/dare-project (workspace member 0.1.0-alpha.0): deps dare-core, serde, serde_json.
+         NÃO depend de dare-cli. NÃO [build] target global.
+      2) report.rs: DetectionReport/StackHit/StackConflict/HarnessHit camelCase; DETECTION_SCHEMA_VERSION=1;
+         MANIFEST_READ_CAP=262144; MONOREPO_MAX_DEPTH=3; MONOREPO_MAX_ENTRIES=64.
+      3) root.rs: find_project_root(start) — markers: dare.config.json|DARE/|package.json|Cargo.toml|pyproject.toml|requirements.txt|setup.py
+      4) stacks.rs: detect_stacks — node/rust/python MUST; conflicts um StackConflict se ≥2 famílias; stacks+evidence sorted.
+      5) Testes: find_root_walks_up_to_package_json; find_root_none_on_empty; detect_node/rust/python (tempdir);
+         detect_conflict_node_rust; report_schema_version_1; stacks_and_evidence_sorted.
+      Gate: cargo test -p dare-project
+      Sem git commit. NÃO git/monorepo/harness/CLI (mp018-003/004). NÃO install 019.
+
+  - id: mp018-003
+    title: "Git + monorepo + harnesses + detect() + read-only"
+    depends_on: [mp018-002]
+    complexity: HIGH
+    spec_file: EXECUTION-018/mp018-003.md
+    subtask_prompt: |
+      Microplano 018 Fase 3 — BLUEPRINT-018 §5.2 §5.4–5.8 T-07 T-10 T-11.
+      Em dare-project:
+      - find_git_root: walk .git; opcional SafeCommand git rev-parse --show-toplevel timeout 5s; degradar None
+      - detect_monorepo: pnpm-workspace|lerna|nx|[workspace]; filhos depth≤3 max 64; skip node_modules/target/.git
+      - harnesses.rs: deps dare-harness; 4 HarnessHit sorted; present OR flags §4.4
+      - detect(start): NotFound se missing; orquestra root/git/stacks/mono/harness; mode=check; zero writes
+      - format_human + report_to_json; linha final "mode: check (zero mutations)"
+      Testes: detect_monorepo_pnpm_workspace; detect_not_monorepo_single_package; detect_harnesses_sorted_four;
+         detect_is_read_only; git_root_dot_git_dir; git_missing_degrades_to_null.
+      Gate: cargo test -p dare-project
+      Sem git commit. NÃO CLI (mp018-004).
+
+  - id: mp018-004
+    title: "CLI discover --check + fixtures + smoke"
+    depends_on: [mp018-003]
+    complexity: MED
+    spec_file: EXECUTION-018/mp018-004.md
+    subtask_prompt: |
+      Microplano 018 Fase 4 — BLUEPRINT-018 §5.9 §5.13 T-05 T-17.
+      1) Fixtures em tests/fixtures/: existing-node-project/package.json; existing-rust-project/Cargo.toml;
+         existing-python-project/pyproject.toml; monorepo/pnpm-workspace.yaml + package.json + packages/a|b/package.json
+      2) dare-cli: dep dare-project; commands/discover.rs thin; main Commands::Discover { dir short d, check }
+      3) Sem --check → CoreError::internal(...019...) exit 1; zero writes
+      4) Com --check → detect → (format_human, report_to_json) → renderer
+      Smoke cli_smoke: discover_check_human_node; discover_check_json_schema; discover_without_check_exits_1;
+         discover_dir_missing_exits_3
+      Gate: cargo test -p dare-cli --test cli_smoke -- discover
+      Sem git commit. NÃO install files (019).
+
+  - id: mp018-005
+    title: "Docs cli-discover-check.md + DEC-019"
+    depends_on: [mp018-002]
+    complexity: LOW
+    spec_file: EXECUTION-018/mp018-005.md
+    subtask_prompt: |
+      Microplano 018 Fase 5 — BLUEPRINT-018 §5.14 T-15 T-04.
+      CRIAR docs/compatibility/cli-discover-check.md: flags; exit codes mapa 004 (nota vs Design Apêndice D);
+      schema 1; markers/stacks/mono/conflicts; harness map; zero mutations; diff TS; Local verify; DEC-019.
+      Adicionar DEC-019 em docs/DECISION-LOG.md (tabela + nota).
+      Sem git commit. Sem código Rust obrigatório.
+
+  - id: mp018-006
+    title: "Auditoria Ralph"
+    depends_on: [mp018-001, mp018-004, mp018-005]
+    complexity: MED
+    spec_file: EXECUTION-018/mp018-006.md
+    subtask_prompt: |
+      Microplano 018 Fase 6.
+      cargo fmt --check; cargo clippy --workspace --all-features -- -D warnings;
+      cargo test --workspace; cargo audit; cargo deny check.
+      Reportar exit codes. Sem git commit.
+
+  - id: mp018-007
+    title: "Fechamento microplano 018"
+    depends_on: [mp018-006]
+    complexity: LOW
+    spec_file: EXECUTION-018/mp018-007.md
+    subtask_prompt: |
+      Microplano 018 Fase 7.
+      Atualizar DARE/TASKS-018-discover-deteccao-brownfield.md: 7/7 DONE; próximo 019-discover-instalacao-do-dare.
+      Opcional: Status APPROVED em DESIGN-018 e BLUEPRINT-018.
+      Sem código funcional. Sem git commit.

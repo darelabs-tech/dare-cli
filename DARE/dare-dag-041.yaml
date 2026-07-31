@@ -1,0 +1,52 @@
+version: "2.1"
+title: "Microplano 041 — GraphRAG ingest, keyword, BFS e RRF"
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+models:
+  runner:
+    HIGH: default
+    MED: default
+    LOW: default
+tasks:
+  - id: mp041-001
+    title: "ingest.rs contentHash + símbolos regex"
+    depends_on: []
+    complexity: HIGH
+    spec_file: DARE/EXECUTION-041/mp041-001.md
+    subtask_prompt: |
+      Implementar crates/dare-graph/src/ingest.rs: walk fontes, sha256 contentHash,
+      upsert file nodes, símbolos regex + edges contains; incremental skip.
+  - id: mp041-002
+    title: "search.rs keyword/BFS/RRF + golden"
+    depends_on: [mp041-001]
+    complexity: HIGH
+    spec_file: DARE/EXECUTION-041/mp041-002.md
+    subtask_prompt: |
+      Implementar search.rs: keyword LIKE (+ FTS5 opcional SQLite), BFS caps,
+      RRF k=60, hybrid_query sem semantic; testes golden rankings.
+  - id: mp041-003
+    title: "CLI dare graph + smokes"
+    depends_on: [mp041-002]
+    complexity: HIGH
+    spec_file: DARE/EXECUTION-041/mp041-003.md
+    subtask_prompt: |
+      commands/graph.rs + Commands::Graph additive em main.rs;
+      ingest|query|stats|viz; smokes em cli_smoke.rs; dep dare-graph no dare-cli.
+  - id: mp041-004
+    title: "Docs + DEC-042 + matriz"
+    depends_on: [mp041-003]
+    complexity: MED
+    spec_file: DARE/EXECUTION-041/mp041-004.md
+    subtask_prompt: |
+      docs/compatibility/graphrag-ingest.md; DEC-042; matriz 041 Concluído;
+      capability dare-graph cli_commands graph.
+  - id: mp041-005
+    title: "Ralph Loop + fechamento"
+    depends_on: [mp041-004]
+    complexity: MED
+    spec_file: DARE/EXECUTION-041/mp041-005.md
+    subtask_prompt: |
+      cargo fmt --check && clippy -D warnings && test -p dare-graph -p dare-cli;
+      marcar tasks DONE.

@@ -1,0 +1,146 @@
+title: "Update — planejamento e manifest (021) - Development Tasks"
+version: "1.0.0"
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp021-001
+    title: "Verificar docker-compose.ci.yml"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION-021/mp021-001.md
+    subtask_prompt: |
+      Microplano 021 Fase 1 — BLUEPRINT-021 §6 Fase 1 T-20.
+      Validar: `docker compose -f docker-compose.ci.yml config` exit 0.
+      Se Docker ausente: confirmar YAML + Dockerfile.rust existem; waiver para
+      docs/compatibility/cli-update-plan.md § Local verify (mp021-006).
+      Sem nova imagem. Sem git commit. NÃO implementar dare-update nem CLI update.
+
+  - id: mp021-002
+    title: "Scaffold dare-update + content_is_managed"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION-021/mp021-002.md
+    subtask_prompt: |
+      Microplano 021 Fase 2 — BLUEPRINT-021 §2–4 T-01 T-08 T-24.
+      1) Cargo.toml workspace: add member `crates/dare-update`; workspace.dependencies
+         dare-update = { path = "crates/dare-update" }. NÃO [build] target global.
+      2) crates/dare-update/Cargo.toml: version 0.1.0-alpha.0; deps dare-core, dare-contracts,
+         dare-assets, dare-harness, serde, serde_json. NÃO dare-cli / dare-project / dare-config / dare-dag.
+      3) dare-harness: CRIAR src/managed.rs com `pub fn content_is_managed(bytes: &[u8]) -> bool`
+         (1ª linha trim_start: starts_with "<!-- dare:managed" OR "---"); re-export em lib.rs;
+         adapters claude/cursor/codex/antigravity DEVEM chamar content_is_managed (remover is_managed privado).
+      4) dare-update src/lib.rs + tipos mínimos: UPDATE_PLAN_SCHEMA_VERSION=1; UPDATE_MANIFEST_V2_SCHEMA=2;
+         AssetUpdateStatus { Identical, Missing, Apply, Customized } JSON lowercase;
+         HarnessTarget enum + parse_harness_target + expanded_ids (T-10);
+         UpdatePlanOptions { target: Option<HarnessTarget>, cli_version: String }.
+         Stub modules plan/classify/manifest_v2/format podem ser vazios de lógica ainda — tipos + re-exports ok.
+      5) Testes MUST: content_is_managed_markers (harness); parse_target_rejects_semver ("3.2.0"→InvalidInput);
+         AssetUpdateStatus serde roundtrip lowercase.
+      Gate: cargo test -p dare-update -p dare-harness. Sem git commit.
+      NÃO update-manifest.v2.json (mp021-003). NÃO classify/plan completo (mp021-004). NÃO CLI (mp021-005).
+
+  - id: mp021-003
+    title: "Manifest V2 embed + load/validate"
+    depends_on: [mp021-002]
+    complexity: MED
+    spec_file: EXECUTION-021/mp021-003.md
+    subtask_prompt: |
+      Microplano 021 Fase 3 — BLUEPRINT-021 §4.4 §5.1 §5.9 T-03 T-04 T-15 T-16.
+      1) CRIAR assets/update-manifest.v2.json schemaVersion=2; cliVersion=0.1.0-alpha.0;
+         releases inclui 0.1.0-alpha.0; assets[] MUST: AGENTS.md appliesTo=["codex"];
+         ≥1 path cada claude-code/cursor/antigravity (ou *); ≥1 path appliesTo=["*"];
+         sha256 hex 64 lower; paths SafeRelativePath-safe.
+      2) Se assets/manifest.yml lista assets: adicionar update-manifest.v2.json + hash se o verify exigir.
+      3) dare-update manifest_v2.rs: UpdateManifestV2 + ReleaseEntry + DesiredAsset (camelCase);
+         load_desired_manifest_v2_from_str; load_desired_manifest_v2_embedded via EmbeddedAssets::get("update-manifest.v2.json");
+         rejeitar schema≠2 com "unsupported update manifest schemaVersion";
+         rejeitar path inseguro / sha inválido / appliesTo vazio / assets vazio;
+         MUST exigir AGENTS.md+codex (v2_requires_codex_agents).
+      4) Testes MUST: v2_rejects_schema_1; v2_requires_codex_agents; v2_rejects_bad_path;
+         legacy_v1_still_loads (dare_contracts::update_manifest_from_str schema 1).
+      Gate: cargo test -p dare-update. Sem git commit. NÃO plan_update (mp021-004).
+
+  - id: mp021-004
+    title: "Classify + plan_update + fixtures"
+    depends_on: [mp021-003]
+    complexity: HIGH
+    spec_file: EXECUTION-021/mp021-004.md
+    subtask_prompt: |
+      Microplano 021 Fase 4 — BLUEPRINT-021 §4.6–4.10 §5.1–5.5 §5.10 T-07 T-11 T-17.
+      Implementar classify.rs + plan.rs + format.rs.
+      API:
+        classify_path(root, rel, expected_sha) -> CoreResult<AssetUpdateStatus>;
+        plan_update(root, manifest, opts) -> CoreResult<UpdatePlan>;
+        format_human; plan_to_json.
+      Algoritmo classify: !is_file→Missing; read_limited+sha256_hex; ==expected→Identical;
+        content_is_managed→Apply; else Customized.
+      plan_update: filter appliesTo (*|intersect expanded target); sort path; counts; mode="dry-run";
+        schemaVersion=1; sem timestamps; zero writes.
+      UpdatePlan/UpdateItem/UpdateCounts camelCase §4.7–4.8.
+      Fixtures tests/fixtures/update/: empty-managed, customized-assets, missing-assets, mixed
+      (project roots mínimos com markers DARE find_project_root se CLI precisar depois).
+      Testes MUST §5.10 restantes: classify_*; plan_sorts_by_path; plan_filter_target_codex;
+        plan_includes_codex_paths; plan_no_target_includes_all_harnesses; plan_zero_writes;
+        plan_counts_coherent.
+      Gate: cargo test -p dare-update. Sem git commit. NÃO CLI.
+
+  - id: mp021-005
+    title: "CLI dare update --dry-run + smokes"
+    depends_on: [mp021-004]
+    complexity: MED
+    spec_file: EXECUTION-021/mp021-005.md
+    subtask_prompt: |
+      Microplano 021 Fase 5 — BLUEPRINT-021 §5.6–5.7 §5.11 T-02 T-09 T-12 T-13.
+      dare-cli: Commands::Update { dry_run: bool, target: Option<String>, dir: Option<PathBuf> (-d/--dir) };
+      commands/update.rs:
+        !dry_run → CoreError::internal("dare update apply is not implemented; use --dry-run (see microplano 022)") exit 1;
+        find_project_root(dir|cwd) → None InvalidInput "project root not found" exit 4;
+        parse_harness_target; load_desired_manifest_v2_embedded; plan_update;
+        cli_version=env!("CARGO_PKG_VERSION"); human/JSON envelope ok=true; exit 0.
+      Smokes MUST §5.11: update_requires_dry_run_stub; update_dry_run_ok; update_dry_run_json_schema;
+        update_target_codex; update_invalid_target; update_customized_detected; update_zero_writes; update_no_root.
+      Gate: cargo test -p dare-cli --test cli_smoke -- update. Sem git commit.
+
+  - id: mp021-006
+    title: "Docs cli-update-plan.md + DEC-022 + skill"
+    depends_on: [mp021-002]
+    complexity: LOW
+    spec_file: EXECUTION-021/mp021-006.md
+    subtask_prompt: |
+      Microplano 021 Fase 6 — BLUEPRINT-021 §5.12 T-19.
+      CRIAR docs/compatibility/cli-update-plan.md: flags; classificação; UpdatePlan schema 1;
+        UpdateManifestV2; --target harness (NÃO semver); stub apply→022; Codex Classe C;
+        releases sem buraco; exit codes; zero writes; Local verify compose; DEC-022; nota skill IDE.
+      ADD DEC-022 em docs/DECISION-LOG.md (NÃO reusar DEC-021 — validate).
+      CORRIGIR .claude/skills/dare-update/SKILL.md e/ou commands: --target <harness> não 3.2.0.
+      Sem git commit. Sem código Rust obrigatório.
+
+  - id: mp021-007
+    title: "Auditoria Ralph"
+    depends_on: [mp021-001, mp021-005, mp021-006]
+    complexity: MED
+    spec_file: EXECUTION-021/mp021-007.md
+    subtask_prompt: |
+      Microplano 021 Fase 7 — BLUEPRINT-021 §6 Fase 7 §7.
+      cargo fmt --check; cargo clippy --workspace --all-features -- -D warnings;
+      cargo test --workspace; cargo audit; cargo deny check.
+      Reportar exit codes. Sem git commit.
+
+  - id: mp021-008
+    title: "Fechamento microplano 021"
+    depends_on: [mp021-007]
+    complexity: LOW
+    spec_file: EXECUTION-021/mp021-008.md
+    subtask_prompt: |
+      Microplano 021 Fase 8 — BLUEPRINT-021 §6 Fase 8.
+      TASKS-021 8/8 DONE; canvas/próximo → 022-update-aplicacao-backup-e-migrations.
+      Opcional marcar DESIGN/BLUEPRINT-021 APPROVED. Sem código. Sem git commit.

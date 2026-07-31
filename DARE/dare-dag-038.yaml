@@ -1,0 +1,72 @@
+version: "1.0"
+microplano: "038"
+name: patterns
+tasks:
+  - id: mp038-001
+    title: Domínio patterns types + mine kinds/freq
+    depends_on: []
+    complexity: MED
+    acceptance:
+      - DiscoveredPattern + kinds fechados
+      - frequency/score estáveis
+    files:
+      - crates/dare-project/src/patterns.rs
+
+  - id: mp038-002
+    title: Cooccur + render PATTERNS.md/facts + check/inject
+    depends_on: [mp038-001]
+    complexity: MED
+    acceptance:
+      - PATTERNS.md + patterns-facts.json
+      - --check zero-write
+      - --inject preserva AGENT bodies
+    files:
+      - crates/dare-project/src/patterns.rs
+
+  - id: mp038-003
+    title: AST opt-in + graph soft + --modules
+    depends_on: [mp038-001]
+    complexity: MED
+    acceptance:
+      - --ast call-idiom caps
+      - --modules filter InvalidInput
+      - graph soft Pattern nodes
+    files:
+      - crates/dare-project/src/patterns.rs
+
+  - id: mp038-004
+    title: CLI dare patterns + main.rs
+    depends_on: [mp038-002, mp038-003]
+    complexity: MED
+    acceptance:
+      - Commands::Patterns aditivo
+      - help flags --check --modules --inject --ast -d
+    files:
+      - crates/dare-cli/src/commands/patterns.rs
+      - crates/dare-cli/src/commands/mod.rs
+      - crates/dare-cli/src/main.rs
+
+  - id: mp038-005
+    title: Capability + docs DEC-041 + matriz
+    depends_on: [mp038-004]
+    complexity: LOW
+    acceptance:
+      - dare-patterns cli_commands patterns
+      - cli-patterns.md + DEC-041 append
+      - matriz 038 Concluído
+    files:
+      - assets/capabilities/dare-patterns/README.md
+      - assets/capability-matrix.yml
+      - docs/compatibility/cli-patterns.md
+      - docs/DECISION-LOG.md
+      - DARE-RUST-MICRO-PLANOS/DARE-RUST-MICRO-PLANOS/000A-MATRIZ-DE-STATUS.md
+
+  - id: mp038-006
+    title: Smokes + Ralph close
+    depends_on: [mp038-005]
+    complexity: MED
+    acceptance:
+      - smoke write / check / help
+      - cargo fmt clippy test -p dare-project -p dare-cli
+    files:
+      - crates/dare-cli/tests/cli_smoke.rs

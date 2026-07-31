@@ -1,0 +1,126 @@
+title: "Microplano 052 — MCP real como transporte separado"
+version: "1.0.0"
+microplano: "052"
+name: mcp-real-como-transporte-separado
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor: { HIGH: gpt-5.3-codex, MED: composer-2, LOW: auto-low }
+  claude: { HIGH: claude-sonnet-4-5, MED: claude-haiku-4, LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro, MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp052-001
+    title: "Services layer + REST delegation"
+    depends_on: []
+    complexity: HIGH
+    spec_file: EXECUTION-052/mp052-001.md
+    subtask_prompt: |
+      BLUEPRINT-052 Fase A / §4.2: extract crates/dare-server/src/services/.
+      Create ServiceCtx { root: ProjectRoot }.
+      project.rs: project_snapshot, read_blueprint (>2MiB invalid_input),
+        context_query(kind architecture|task|dependency, query 1..=512).
+      dag.rs: dag_load_json via load_dag DAG_REL.
+      task.rs: task_get/task_put wrapping tasks_md (same id regex/emoji).
+      graph.rs: graph_locate/traverse/map_requirement (same as routes/graph).
+      steering.rs: steering_show via dare_steering::show_steering.
+      Refactor routes/{project,context,blueprint,dag,tasks,graph,steering}.rs
+        to DELEGATE only — HTTP wire JSON Class A unchanged.
+      Unit tests for services; cargo test -p dare-server must keep 051 suite green.
+      NO rmcp/mcp module. Avoid mass CRLF.
+
+  - id: mp052-002
+    title: "Workspace rmcp pins + feature mcp scaffold"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION-052/mp052-002.md
+    subtask_prompt: |
+      BLUEPRINT-052 §0.2 / T-01/T-02: workspace Cargo.toml pin rmcp=3.0.1
+        (default-features=false) + rmcp-macros=3.0.1 + schemars pin compatible.
+      dare-server: feature default=["mcp"]; mcp = dep:rmcp + macros + schemars;
+        features server,macros,transport-io,transport-streamable-http-server,schemars.
+      Add src/mcp/mod.rs behind cfg(feature="mcp") with pub fn mcp_feature_ok()->bool
+        {true} stub ONLY — no tools yet (mp052-003). Export from lib.rs under cfg.
+      cargo check -p dare-server --all-features and --no-default-features must work.
+      Parallel with mp052-001 — do NOT touch services/ or routes/. Avoid mass CRLF.
+
+  - id: mp052-003
+    title: "MCP handler + 10 tools + error_map"
+    depends_on: [mp052-001, mp052-002]
+    complexity: HIGH
+    spec_file: EXECUTION-052/mp052-003.md
+    subtask_prompt: |
+      BLUEPRINT-052 §0.4–0.5 / §5.4–5.5 / Fase B with rmcp 3.0.1:
+      mcp/error_map.rs: CoreError -> rmcp ErrorData (invalid_params -32602,
+        internal_error -32603, graph_unavailable application).
+      mcp/tools.rs: 10 tools frozen order: project, blueprint, dag, task_get,
+        task_put, context_query, graph_locate, graph_traverse,
+        graph_map_requirement, steering_show — schemars input schemas §4.3.
+      mcp/handler.rs: ServerHandler dispatching to services; tool result =
+        TextContent JSON {schemaVersion:1, ok:true, tool, data}.
+      tests/mcp_tools.rs in-process: list_order_10; call_project_ok;
+        context_bad_type_invalid_params; task_get_path_escape.
+      NO CLI yet. Avoid mass CRLF.
+
+  - id: mp052-004
+    title: "stdio + CLI dare mcp serve"
+    depends_on: [mp052-003]
+    complexity: HIGH
+    spec_file: EXECUTION-052/mp052-004.md
+    subtask_prompt: |
+      BLUEPRINT §5.1–5.2 / Fase C: mcp/serve_stdio(ctx) using rmcp stdin/stdout.
+      commands/mcp.rs: dare mcp serve [--transport stdio|streamable-http]
+        [-d] ; default transport stdio; unknown -> exit 2 MSG_UNKNOWN_TRANSPORT.
+      Exits: 0/2/3/4/5 per §5.1. Wire Commands::Mcp in main.rs.
+      tests/mcp_cli.rs: help_lists_mcp; bad_transport_exit_2.
+      streamable-http flag may return exit 4 "not implemented" ONLY if 005
+        not merged yet — prefer stub that errors clearly; 005 owns HTTP serve.
+      Avoid mass CRLF.
+
+  - id: mp052-005
+    title: "streamable-http serve (port 3100)"
+    depends_on: [mp052-003]
+    complexity: HIGH
+    spec_file: EXECUTION-052/mp052-005.md
+    subtask_prompt: |
+      BLUEPRINT §5.3 / Fase D: serve_streamable_http(ctx, bind, port, token,
+        force_auth) default 127.0.0.1:3100; env DARE_MCP_HTTP_BIND/PORT.
+      Auth parity 051: loopback exempt; force_auth/non-loopback Bearer -> 401.
+      Body limit >= 1MiB; graceful shutdown. Wire CLI when --transport
+        streamable-http (coordinate with 004 — if conflict on mcp.rs, export
+        serve_streamable_http from dare-server and call from commands/mcp.rs).
+      Test: http_force_auth_401 or documented Class B if rmcp limits middleware.
+      Parallel with mp052-004. Avoid mass CRLF.
+
+  - id: mp052-006
+    title: "Alias bin dare-mcp-server (REST + deprecation)"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION-052/mp052-006.md
+    subtask_prompt: |
+      BLUEPRINT §0.3 / RF-21: [[bin]] name=dare-mcp-server in dare-cli.
+      src/bin/dare_mcp_server.rs: ALWAYS print MSG_ALIAS_DEPRECATED to stderr;
+        then run REST AppMode::Rest (same as dare server --protocol rest).
+      NEVER start MCP/JSON-RPC. Args: --bind --port -d like server command.
+      Test: assert_cmd stderr contains "deprecated" and "REST" or message const.
+      Do NOT modify dare-server mcp modules. Parallel rank 0. Avoid mass CRLF.
+
+  - id: mp052-007
+    title: "Docs DEC-053 + capability + Ralph"
+    depends_on: [mp052-004, mp052-005, mp052-006]
+    complexity: MED
+    spec_file: EXECUTION-052/mp052-007.md
+    subtask_prompt: |
+      docs/compatibility/cli-mcp.md (CLI, 10 tools, stdio/http:3100, ADR-004,
+        alias REST+deprecation, Class A/B/C). Append DEC-053 ONLY to
+        DECISION-LOG (do not edit DEC-052). Add capability dare-mcp
+        cli_commands:["mcp"] + manifest hash (capability-matrix ONLY hash).
+      Matriz 000A: 052 Concluído. TASKS-052 -> 7/7 DONE.
+      Ralph: cargo test -p dare-server; --test mcp_cli; --test dashboard_cli;
+        clippy -p dare-server -p dare-cli --all-features --all-targets -D warnings;
+        cargo audit. If assets_verify_ok fails: cargo clean -p dare-assets.
+      Avoid mass CRLF.
