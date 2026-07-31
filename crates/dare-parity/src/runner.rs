@@ -168,8 +168,8 @@ fn run_case_with_timeout(
                     &spec.id,
                 )?;
                 let expected_raw = read_utf8_lossy(&expected_path)?;
-                let expected = normalize_text(&scrub_cli_name(&expected_raw), &norm_ctx);
-                let actual = normalize_text(&scrub_cli_name(&output.stdout), &norm_ctx);
+                let expected = normalize_text(&scrub_text(&expected_raw), &norm_ctx);
+                let actual = normalize_text(&scrub_text(&output.stdout), &norm_ctx);
                 if actual != expected {
                     failed.push(CompareAxis::Stdout);
                     messages.push(format!("stdout mismatch for {}", spec.id));
@@ -183,8 +183,8 @@ fn run_case_with_timeout(
                     &spec.id,
                 )?;
                 let expected_raw = read_utf8_lossy(&expected_path)?;
-                let expected = normalize_text(&scrub_cli_name(&expected_raw), &norm_ctx);
-                let actual = normalize_text(&scrub_cli_name(&output.stderr), &norm_ctx);
+                let expected = normalize_text(&scrub_text(&expected_raw), &norm_ctx);
+                let actual = normalize_text(&scrub_text(&output.stderr), &norm_ctx);
                 if actual != expected {
                     failed.push(CompareAxis::Stderr);
                     messages.push(format!("stderr mismatch for {}", spec.id));
@@ -412,9 +412,11 @@ fn read_utf8_lossy(path: &Path) -> CoreResult<String> {
     Ok(String::from_utf8_lossy(&bytes).into_owned())
 }
 
-/// Cross-platform scrub: clap prints `dare.exe` on Windows.
-fn scrub_cli_name(s: &str) -> String {
+/// Cross-platform scrub: clap prints `dare.exe` on Windows; normalize newlines.
+fn scrub_text(s: &str) -> String {
     s.replace("dare.exe", "dare")
+        .replace("\r\n", "\n")
+        .replace('\r', "\n")
 }
 
 fn spawn_dare(

@@ -1,0 +1,2 @@
+# Golden snapshots must stay LF so parity compares match process stdout on all OS.
+tests/golden/** text eol=lf
