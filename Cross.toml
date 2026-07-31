@@ -1,7 +1,0 @@
-# cross-rs config for ADR-008 linux aarch64 release builds.
-# native-tls → openssl-sys needs target OpenSSL headers/libs inside the cross image.
-[target.aarch64-unknown-linux-gnu]
-pre-build = [
-    "dpkg --add-architecture $CROSS_DEB_ARCH",
-    "apt-get update && apt-get install --assume-yes --no-install-recommends libssl-dev:$CROSS_DEB_ARCH",
-]

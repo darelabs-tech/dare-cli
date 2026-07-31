@@ -1,11 +1,12 @@
 # Stable smoke — Windows
 
-- **Stable tag / core:** `v4.0.0` / `4.0.0` (intended; **GitHub Release not published**)
+- **Stable tag / core:** `v4.0.0` / `4.0.0`
 - **Host OS:** Windows (win32)
 - **Date:** 2026-07-31
-- **Binary source:** `scripts/smoke-release-install.ps1` (`DARE_SMOKE_VERSION=v4.0.0`, `CARGO_TARGET_DIR=target-mp056-003`)
-- **Artifact name:** `dare-v4.0.0-x86_64-pc-windows-gnu.zip` (host `rustc` triple; CI Windows target remains `x86_64-pc-windows-msvc`)
-- **Install prefix:** `dist/smoke/prefix` (ephemeral; not committed)
+- **Binary source:** GitHub Release asset `dare-v4.0.0-x86_64-pc-windows-msvc.zip`
+- **Download URL:** https://github.com/darelabs-tech/dare-cli/releases/download/v4.0.0/dare-v4.0.0-x86_64-pc-windows-msvc.zip
+- **CI run (artifact origin):** https://github.com/darelabs-tech/dare-cli/actions/runs/30662777245
+- **Install prefix:** ephemeral `dist-smoke/` (not committed)
 - **Paths:** redacted worktree root as `$WORKTREE`
 
 ## Results
@@ -33,11 +34,11 @@ DARE info (schema 1)
   project:    $WORKTREE
   assets:     FAIL (asset hash mismatch: templates/DESIGN-template.md)
   config:     yes
-  DARE/:      yes
+  DARE/:      no
   .dare/state: no
   graph:      (absent)
   backend/ide: cursor
-  tasks:      (see local DARE/TASKS.md)
+  tasks:      done=0 pending=0 (no TASKS.md)
   mode:       read-only (zero mutations)
 ```
 
@@ -64,8 +65,8 @@ Options:
 
 (Full help listing truncated in this log; exit code 0 confirmed.)
 
-## Packaging meta (local)
+## Packaging meta
 
-- `SHA256SUMS` produced for the local zip
-- `SHA256SUMS.sig` = `signing skipped — local smoke` (not a CI cosign blob)
-- No public download URL — GitHub Release `v4.0.0` absent (`blocked:actions_billing`)
+- Public Release: https://github.com/darelabs-tech/dare-cli/releases/tag/v4.0.0 (`isPrerelease=false`)
+- `SHA256SUMS` / `SHA256SUMS.sig` published on the Release
+- Note: archive inner directory may still carry the CI branch staging name (`dare-mp056-003-publish-…`); binary identity is `dare 4.0.0`

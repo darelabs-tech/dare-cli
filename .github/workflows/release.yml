@@ -34,11 +34,11 @@ jobs:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
             archive: tar.gz
+          # ADR-008: native ARM runner (cross + openssl-sys fails for ureq/native-tls)
           - target: aarch64-unknown-linux-gnu
-            os: ubuntu-latest
+            os: ubuntu-24.04-arm
             archive: tar.gz
-            cross: true
-          # macos-14 (arm) can cross-compile x86_64; macos-13 queues are often stuck.
+          # macos-14 can cross-compile x86_64; macos-13 queues often stall
           - target: x86_64-apple-darwin
             os: macos-14
             archive: tar.gz
@@ -70,7 +70,6 @@ jobs:
         run: |
           set -euo pipefail
           if [[ "${{ matrix.cross }}" == "true" ]]; then
-            export OPENSSL_STATIC=1
             cross build -p dare-cli --release --target ${{ matrix.target }}
           else
             cargo build -p dare-cli --release --target ${{ matrix.target }}
@@ -137,7 +136,7 @@ jobs:
           done
           VERSION="${GITHUB_REF_NAME:-dev}"
           CREATED="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          printf '%s\n' "{\"spdxVersion\":\"SPDX-2.3\",\"dataLicense\":\"CC0-1.0\",\"SPDXID\":\"SPDXRef-DOCUMENT\",\"name\":\"dare-cli-${VERSION}\",\"documentNamespace\":\"https://github.com/dewtech/dare-cli/spdx/${VERSION}\",\"creationInfo\":{\"created\":\"${CREATED}\",\"creators\":[\"Tool: dare-release-alpha\"]},\"packages\":[{\"name\":\"dare\",\"SPDXID\":\"SPDXRef-Package-dare\",\"downloadLocation\":\"NOASSERTION\",\"filesAnalyzed\":false,\"versionInfo\":\"${VERSION}\"}]}" > SBOM.spdx.json
+          printf '%s\n' "{\"spdxVersion\":\"SPDX-2.3\",\"dataLicense\":\"CC0-1.0\",\"SPDXID\":\"SPDXRef-DOCUMENT\",\"name\":\"dare-cli-${VERSION}\",\"documentNamespace\":\"https://github.com/darelabs-tech/dare-cli/spdx/${VERSION}\",\"creationInfo\":{\"created\":\"${CREATED}\",\"creators\":[\"Tool: dare-release-alpha\"]},\"packages\":[{\"name\":\"dare\",\"SPDXID\":\"SPDXRef-Package-dare\",\"downloadLocation\":\"NOASSERTION\",\"filesAnalyzed\":false,\"versionInfo\":\"${VERSION}\"}]}" > SBOM.spdx.json
           cp ../installers/install.sh .
           cp ../installers/install.ps1 .
 

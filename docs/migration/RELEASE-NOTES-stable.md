@@ -5,7 +5,8 @@
 > **Core / product version:** `4.0.0`  
 > **Channel:** GitHub **stable** (non-prerelease)  
 > **Microplano:** 056  
-> **Date:** 2026-07-31
+> **Date:** 2026-07-31  
+> **Release:** https://github.com/darelabs-tech/dare-cli/releases/tag/v4.0.0
 
 ## This is stable v4.0.0 — not RC
 
@@ -21,14 +22,22 @@ Follow [`install-rust.md`](install-rust.md). Summary:
 
 | Path | Command / action |
 |------|------------------|
-| GitHub Release | Download `v4.0.0` assets (+ `SHA256SUMS` / `.sig`) — URLs **TBD** (`publish_ready=false`, `blocked:actions_billing` after dry_run probe [`30645155764`](https://github.com/darelabs-tech/dare-cli/actions/runs/30645155764); see [`publish-stable-checklist.md`](publish-stable-checklist.md)) |
+| GitHub Release | https://github.com/darelabs-tech/dare-cli/releases/tag/v4.0.0 (+ `SHA256SUMS` / `.sig`) |
+| Linux x86_64 | https://github.com/darelabs-tech/dare-cli/releases/download/v4.0.0/dare-v4.0.0-x86_64-unknown-linux-gnu.tar.gz |
+| Linux aarch64 | https://github.com/darelabs-tech/dare-cli/releases/download/v4.0.0/dare-v4.0.0-aarch64-unknown-linux-gnu.tar.gz |
+| macOS aarch64 | https://github.com/darelabs-tech/dare-cli/releases/download/v4.0.0/dare-v4.0.0-aarch64-apple-darwin.tar.gz |
+| Windows x86_64 | https://github.com/darelabs-tech/dare-cli/releases/download/v4.0.0/dare-v4.0.0-x86_64-pc-windows-msvc.zip |
+| Checksums | https://github.com/darelabs-tech/dare-cli/releases/download/v4.0.0/SHA256SUMS |
+| Signature | https://github.com/darelabs-tech/dare-cli/releases/download/v4.0.0/SHA256SUMS.sig |
+| Installer (Unix) | https://github.com/darelabs-tech/dare-cli/releases/download/v4.0.0/install.sh |
+| Installer (Windows) | https://github.com/darelabs-tech/dare-cli/releases/download/v4.0.0/install.ps1 |
 | Homebrew | Formula under `packaging/homebrew/dare.rb` |
 | WinGet | Manifest `DareLabs.DareCli` under `packaging/winget/` |
 | Self-update | `dare self update --channel stable --yes` (after Release exists) |
 
 **Node / npm is not required** for the recommended path.
 
-Local Windows smoke (not a published Release): [`stable-smoke/`](stable-smoke/).
+Smoke evidence: [`stable-smoke/`](stable-smoke/).
 
 ### Channel defaults (unchanged)
 
@@ -41,7 +50,7 @@ There is **no** silent redirect from `stable` → `beta`.
 
 ## Known issues
 
-- **Download URLs:** public asset URLs remain **TBD** — no GitHub Release `v4.0.0` yet (`blocked:actions_billing`; RC https://github.com/darelabs-tech/dare-cli/actions/runs/30636494439; retry dry_run https://github.com/darelabs-tech/dare-cli/actions/runs/30645155764). Do not invent URLs.
+- **`x86_64-apple-darwin` GAP:** Intel macOS archive was not published in this cut — macos-13 runner stayed queued. Owner: Tech Lead DARE CLI. Use aarch64 macOS asset on Apple Silicon, or build from source until the gap is filled.
 - **Cosign / `dare self update`:** fail-closed on missing cosign or a `SHA256SUMS.sig` that starts with `signing skipped` (exit **6**). Prefer installers when signature soft-fail applies; see [`../compatibility/cli-self-update.md`](../compatibility/cli-self-update.md).
 - **Asset hash in `dare info`:** dirty / worktree checkouts may report `assets: FAIL` — expected for non-release trees; not a stable install blocker once Release assets match.
 - **Pilot leftovers (from RC):** fixture density and synthetic multi-OS notes remain documented under [`../pilot/incidents.md`](../pilot/incidents.md) — not blockers for the stable product identity.
