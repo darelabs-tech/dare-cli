@@ -48,6 +48,11 @@ Microplano **001** (governança, baseline e ADRs prioritárias) concluído em 20
 | [`parity-diff-log.md`](parity-diff-log.md) | Diffs classificados TS↔Rust (`PD-*`) para golden Class C (054 / DEC-055) | — |
 | [`../release-candidate/typescript-freeze.md`](../release-candidate/typescript-freeze.md) | Freeze TS `@dewtech/dare-cli`: security fixes only from RC `v4.0.0-rc1` (055) | — |
 | [`../release-candidate/contract-freeze.md`](../release-candidate/contract-freeze.md) | Freeze contrato Classe A no RC: ADR Accepted + matrix + DECISION-LOG (055) | — |
+| [`../migration/install-rust.md`](../migration/install-rust.md) | Install Rust-first stable `v4.0.0` (Download / Homebrew / WinGet / `dare self`) (056) | — |
+| [`../migration/npm-legacy-policy.md`](../migration/npm-legacy-policy.md) | npm `@dewtech/dare-cli` status `legacy` + security window (056) | — |
+| [`../migration/RELEASE-NOTES-stable.md`](../migration/RELEASE-NOTES-stable.md) | Stable release notes `v4.0.0` ≠ RC (056) | — |
+| [`../support/legacy-support-window.md`](../support/legacy-support-window.md) | Janela suporte legado security-only (056) | — |
+| [`../support/incident-response.md`](../support/incident-response.md) | Incident response P0–P3 + ack SLA pós-cutover (056) | — |
 
 ## Relacionamentos
 
