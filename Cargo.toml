@@ -92,6 +92,7 @@ dare-server = { path = "crates/dare-server" }
 dare-self = { path = "crates/dare-self" }
 dare-parity = { path = "crates/dare-parity" }
 ureq = { version = "=2.12.1", default-features = false, features = ["native-tls"] }
+native-tls = "=0.2.18"
 rusqlite = { version = "=0.32.1", features = ["bundled"] }
 fastembed = { version = "=4.9.1", default-features = false }
 tar = "=0.4.45"

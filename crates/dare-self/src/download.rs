@@ -2,6 +2,7 @@
 
 use std::io::Read;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use dare_core::{CoreError, CoreResult};
 
@@ -59,7 +60,10 @@ fn write_file(path: &Path, bytes: &[u8]) -> CoreResult<()> {
     std::fs::write(path, bytes).map_err(|e| CoreError::io(format!("write {}: {e}", path.display())))
 }
 
-/// Production HTTPS client via `ureq` (optional for later apply path).
+/// Production HTTPS client via `ureq` + `native-tls`.
+///
+/// Workspace `ureq` is `default-features = false` with only `native-tls`; that
+/// backend is **not** auto-selected — AgentBuilder must attach a connector.
 #[derive(Debug, Default, Clone)]
 pub struct RealHttpClient {
     timeout_secs: u64,
@@ -78,7 +82,10 @@ impl HttpClient for RealHttpClient {
                 "download URL must be https (or http://127.0.0.1 for tests)",
             ));
         }
+        let tls = native_tls::TlsConnector::new()
+            .map_err(|e| CoreError::io(format!("tls connector init failed: {e}")))?;
         let resp = ureq::AgentBuilder::new()
+            .tls_connector(Arc::new(tls))
             .timeout(std::time::Duration::from_secs(self.timeout_secs))
             .user_agent(GITHUB_UA)
             .build()

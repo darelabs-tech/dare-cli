@@ -39,7 +39,7 @@ fn bad_channel_exit_2() {
 
 #[test]
 fn dry_run_ok() {
-    // `--version` plans offline (no GitHub); channel-only resolve is not wired yet.
+    // `--version` plans offline (no GitHub); channel resolve uses Releases API (see dare-self resolve).
     let assert = Command::new(cargo_bin("dare"))
         .args([
             "self",

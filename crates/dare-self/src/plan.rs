@@ -3,12 +3,21 @@
 use dare_core::{CoreError, CoreResult};
 
 use crate::channel::Channel;
+use crate::download::{HttpClient, RealHttpClient};
+use crate::resolve::resolve_channel_tag;
+use crate::verify::timeout_from_env;
 
 /// Default GitHub `owner/repo` for release downloads (override via [`ENV_RELEASE_REPO`]).
-pub const DEFAULT_RELEASE_REPO: &str = "dewtech/dare-cli";
+pub const DEFAULT_RELEASE_REPO: &str = "darelabs-tech/dare-cli";
 
-/// Env override for the GitHub `owner/repo` used in asset URLs.
+/// Env override for the GitHub `owner/repo` used in asset URLs / API.
 pub const ENV_RELEASE_REPO: &str = "DARE_SELF_RELEASE_REPO";
+
+/// Default GitHub API base (override via [`ENV_RELEASE_API`]).
+pub const DEFAULT_RELEASE_API: &str = "https://api.github.com";
+
+/// Env override for the GitHub API base URL (no trailing slash).
+pub const ENV_RELEASE_API: &str = "DARE_SELF_RELEASE_API";
 
 /// Stable action list for human / JSON dry-run (BLUEPRINT-053).
 pub const PLAN_ACTIONS: &[&str] = &[
@@ -49,11 +58,17 @@ pub struct UpdatePlan {
     pub actions: Vec<String>,
 }
 
-/// Build an [`UpdatePlan`] from options (no network).
+/// Build an [`UpdatePlan`] from options.
 ///
-/// Channel-only planning (GitHub Releases API resolve) is not wired in this phase —
-/// callers must pass [`UpdateOpts::version`] with the target tag.
+/// Channel selection resolves the latest matching GitHub Release via HTTPS
+/// ([`RealHttpClient`]). Pin with [`UpdateOpts::version`] for offline planning.
 pub fn plan_update(opts: UpdateOpts) -> CoreResult<UpdatePlan> {
+    let client = RealHttpClient::new(timeout_from_env().as_secs());
+    plan_update_with(opts, &client)
+}
+
+/// Like [`plan_update`], but uses a caller-supplied [`HttpClient`] (tests / mocks).
+pub fn plan_update_with(opts: UpdateOpts, client: &dyn HttpClient) -> CoreResult<UpdatePlan> {
     let (channel_label, tag_raw) = match (&opts.channel, &opts.version) {
         (Some(_), Some(_)) => {
             return Err(CoreError::usage(
@@ -61,23 +76,17 @@ pub fn plan_update(opts: UpdateOpts) -> CoreResult<UpdatePlan> {
             ));
         }
         (None, None) => {
-            return Err(CoreError::usage(
-                "provide --channel or --version",
-            ));
+            return Err(CoreError::usage("provide --channel or --version"));
         }
         (None, Some(ver)) => ("version".to_string(), ver.clone()),
-        (Some(_ch), None) => {
-            return Err(CoreError::invalid_input(
-                "channel release resolution requires a target tag; pass version until GitHub resolve is wired",
-            ));
+        (Some(ch), None) => {
+            let tag = resolve_channel_tag(*ch, client)?;
+            (ch.as_str().to_string(), tag)
         }
     };
 
     let target_tag = normalize_tag(&tag_raw)?;
-    let target_triple = opts
-        .triple
-        .clone()
-        .unwrap_or_else(host_target_triple);
+    let target_triple = opts.triple.clone().unwrap_or_else(host_target_triple);
     if target_triple.trim().is_empty() {
         return Err(CoreError::invalid_input("target triple must not be empty"));
     }
@@ -129,10 +138,19 @@ fn normalize_tag(raw: &str) -> CoreResult<String> {
     }
 }
 
-fn release_repo() -> String {
+/// GitHub `owner/repo` for downloads / Releases API.
+pub fn release_repo() -> String {
     match std::env::var(ENV_RELEASE_REPO) {
         Ok(v) if !v.trim().is_empty() => v.trim().to_string(),
         _ => DEFAULT_RELEASE_REPO.to_string(),
+    }
+}
+
+/// GitHub API base URL (no trailing slash).
+pub fn release_api_base() -> String {
+    match std::env::var(ENV_RELEASE_API) {
+        Ok(v) if !v.trim().is_empty() => v.trim().trim_end_matches('/').to_string(),
+        _ => DEFAULT_RELEASE_API.to_string(),
     }
 }
 
@@ -161,16 +179,17 @@ pub fn host_target_triple() -> String {
     {
         return "aarch64-apple-darwin".to_string();
     }
-    #[cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
+    // ADR-008 Windows asset is always the MSVC triple (gnu hosts still download it).
+    #[cfg(all(target_arch = "x86_64", target_os = "windows"))]
     {
-        return "x86_64-pc-windows-msvc".to_string();
+        "x86_64-pc-windows-msvc".to_string()
     }
     #[cfg(not(any(
         all(target_arch = "x86_64", target_os = "linux", target_env = "gnu"),
         all(target_arch = "aarch64", target_os = "linux", target_env = "gnu"),
         all(target_arch = "x86_64", target_os = "macos"),
         all(target_arch = "aarch64", target_os = "macos"),
-        all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"),
+        all(target_arch = "x86_64", target_os = "windows"),
     )))]
     {
         format!(
@@ -185,6 +204,8 @@ pub fn host_target_triple() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::download::MockHttpClient;
+    use crate::resolve::MSG_STABLE_UNAVAILABLE;
 
     #[test]
     fn plan_asset_name_windows_zip() {
@@ -243,14 +264,52 @@ mod tests {
     }
 
     #[test]
-    fn plan_rejects_channel_without_tag() {
-        let err = plan_update(UpdateOpts {
-            channel: Some(Channel::Stable),
-            version: None,
-            current_version: None,
-            triple: Some("x86_64-unknown-linux-gnu".into()),
-        })
+    fn plan_stable_channel_via_mock() {
+        let mut mock = MockHttpClient::new();
+        let url =
+            format!("{DEFAULT_RELEASE_API}/repos/{DEFAULT_RELEASE_REPO}/releases/latest");
+        mock.insert(
+            url,
+            br#"{"tag_name":"v4.0.0","prerelease":false,"draft":false}"#.as_slice(),
+        );
+        let plan = plan_update_with(
+            UpdateOpts {
+                channel: Some(Channel::Stable),
+                version: None,
+                current_version: Some("4.0.0".into()),
+                triple: Some("x86_64-pc-windows-msvc".into()),
+            },
+            &mock,
+        )
+        .unwrap();
+        assert_eq!(plan.channel, "stable");
+        assert_eq!(plan.target_tag, "v4.0.0");
+        assert_eq!(
+            plan.asset_name,
+            "dare-v4.0.0-x86_64-pc-windows-msvc.zip"
+        );
+        assert!(plan.asset_url.contains(DEFAULT_RELEASE_REPO));
+    }
+
+    #[test]
+    fn plan_stable_empty_exit_invalid_input() {
+        struct Status404;
+        impl HttpClient for Status404 {
+            fn get_bytes(&self, _url: &str) -> CoreResult<Vec<u8>> {
+                Err(CoreError::io("http status 404 for download"))
+            }
+        }
+        let err = plan_update_with(
+            UpdateOpts {
+                channel: Some(Channel::Stable),
+                version: None,
+                current_version: None,
+                triple: Some("x86_64-unknown-linux-gnu".into()),
+            },
+            &Status404,
+        )
         .unwrap_err();
         assert_eq!(err.kind(), dare_core::ErrorKind::InvalidInput);
+        assert!(err.message().contains(MSG_STABLE_UNAVAILABLE));
     }
 }

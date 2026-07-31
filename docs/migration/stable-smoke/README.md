@@ -31,4 +31,12 @@ gh release view v4.0.0 --json isPrerelease,tagName,assets,url
 # Expected: isPrerelease=false, assets non-empty, url https://github.com/darelabs-tech/dare-cli/releases/tag/v4.0.0
 ```
 
+## Self channel (mp056-004)
+
+| Check | Status | Evidence |
+|-------|--------|----------|
+| `dare self update --channel stable --dry-run` → `v4.0.0` | **PASS** | [`self-channel-stable.md`](self-channel-stable.md) |
+| Default `dare self` channel | **`beta`** (unchanged) | `DEFAULT_CHANNEL` in `dare-self` |
+| Homebrew / WinGet manifests | **filled** (no `REPLACE_ME`) | [`../../../packaging/README.md`](../../../packaging/README.md) |
+
 See [`../publish-stable-checklist.md`](../publish-stable-checklist.md).

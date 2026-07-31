@@ -9,6 +9,7 @@ mod download;
 mod lock;
 mod paths;
 mod plan;
+mod resolve;
 mod rollback;
 mod uninstall;
 mod verify;
@@ -30,8 +31,12 @@ pub use paths::{
     TMP_DIR_NAME,
 };
 pub use plan::{
-    asset_name_for, host_target_triple, plan_update, UpdateOpts, UpdatePlan, DEFAULT_RELEASE_REPO,
-    ENV_RELEASE_REPO, PLAN_ACTIONS,
+    asset_name_for, host_target_triple, plan_update, plan_update_with, release_api_base,
+    release_repo, UpdateOpts, UpdatePlan, DEFAULT_RELEASE_API, DEFAULT_RELEASE_REPO,
+    ENV_RELEASE_API, ENV_RELEASE_REPO, PLAN_ACTIONS,
+};
+pub use resolve::{
+    resolve_channel_tag, resolve_channel_tag_http, MSG_BETA_UNAVAILABLE, MSG_STABLE_UNAVAILABLE,
 };
 pub use rollback::{rollback, RollbackOpts, RollbackReport, MSG_NO_BACKUP};
 pub use uninstall::{uninstall, UninstallOpts, UninstallReport};

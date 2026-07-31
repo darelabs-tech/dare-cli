@@ -50,8 +50,10 @@ Exit **6** aligns semantically with `dare guard` (integrity / verify).
 | Channel | Resolution |
 |---------|------------|
 | **`beta`** (default) | Latest GitHub Release with `prerelease: true` (alpha/beta product track) |
-| **`stable`** | Latest non-prerelease; if none → exit **4** (`stable channel has no non-prerelease GitHub Release`) — no silent redirect to beta |
+| **`stable`** | Latest non-prerelease (`/releases/latest`); if none → exit **4** (`stable channel has no non-prerelease GitHub Release`) — no silent redirect to beta |
 | `--version <tag>` | Exact tag match (`X` or `vX`) |
+
+Default download / API repo: `darelabs-tech/dare-cli` (`DARE_SELF_RELEASE_REPO` / `DARE_SELF_RELEASE_API` overrides).
 
 ## Cosign: fail-closed (≠ ADR-008 installers)
 
