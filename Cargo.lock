@@ -927,6 +927,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "dare-parity"
+version = "0.1.0-alpha.0"
+dependencies = [
+ "dare-core",
+ "regex",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.12",
+ "yaml_serde",
+]
+
+[[package]]
 name = "dare-project"
 version = "0.1.0-alpha.0"
 dependencies = [
