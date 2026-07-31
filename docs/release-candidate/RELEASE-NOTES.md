@@ -20,7 +20,7 @@ Install **one** of the following ways:
 
 ### A — Download GitHub Release assets (ADR-008)
 
-1. Open the prerelease: `https://github.com/darelabs-tech/dare-cli/releases/tag/v4.0.0-rc1`
+1. Open the prerelease for tag `v4.0.0-rc1` on `darelabs-tech/dare-cli` (create/publish per [`publish-checklist.md`](publish-checklist.md) if the Release is not yet visible).
 2. Download the archive for your target (`dare-v4.0.0-rc1-<TARGET>.tar.gz` or `.zip`), plus `SHA256SUMS` and `SHA256SUMS.sig`.
 3. Verify checksums; use `installers/install.sh` or `installers/install.ps1` with `DARE_VERSION=v4.0.0-rc1` (or `DARE_LOCAL_ARCHIVE`).
 
