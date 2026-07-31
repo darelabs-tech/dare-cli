@@ -9,7 +9,7 @@ fn version_prints_semver() {
         .arg("--version")
         .assert()
         .success()
-        .stdout(predicate::str::is_match(r"^dare 0\.1\.0-alpha\.0\s*$").unwrap());
+        .stdout(predicate::str::is_match(r"^dare 4\.0\.0\s*$").unwrap());
 }
 
 #[test]
