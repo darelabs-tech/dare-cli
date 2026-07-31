@@ -21,7 +21,7 @@ Follow [`install-rust.md`](install-rust.md). Summary:
 
 | Path | Command / action |
 |------|------------------|
-| GitHub Release | Download `v4.0.0` assets (+ `SHA256SUMS` / `.sig`) — URLs **TBD** (`publish_ready=false`, `blocked:actions_billing`; see [`publish-stable-checklist.md`](publish-stable-checklist.md)) |
+| GitHub Release | Download `v4.0.0` assets (+ `SHA256SUMS` / `.sig`) — URLs **TBD** (`publish_ready=false`, `blocked:actions_billing` after dry_run probe [`30645155764`](https://github.com/darelabs-tech/dare-cli/actions/runs/30645155764); see [`publish-stable-checklist.md`](publish-stable-checklist.md)) |
 | Homebrew | Formula under `packaging/homebrew/dare.rb` |
 | WinGet | Manifest `DareLabs.DareCli` under `packaging/winget/` |
 | Self-update | `dare self update --channel stable --yes` (after Release exists) |
@@ -41,7 +41,7 @@ There is **no** silent redirect from `stable` → `beta`.
 
 ## Known issues
 
-- **Download URLs:** public asset URLs remain **TBD** — no GitHub Release `v4.0.0` yet (`blocked:actions_billing`; RC run https://github.com/darelabs-tech/dare-cli/actions/runs/30636494439). Do not invent URLs.
+- **Download URLs:** public asset URLs remain **TBD** — no GitHub Release `v4.0.0` yet (`blocked:actions_billing`; RC https://github.com/darelabs-tech/dare-cli/actions/runs/30636494439; retry dry_run https://github.com/darelabs-tech/dare-cli/actions/runs/30645155764). Do not invent URLs.
 - **Cosign / `dare self update`:** fail-closed on missing cosign or a `SHA256SUMS.sig` that starts with `signing skipped` (exit **6**). Prefer installers when signature soft-fail applies; see [`../compatibility/cli-self-update.md`](../compatibility/cli-self-update.md).
 - **Asset hash in `dare info`:** dirty / worktree checkouts may report `assets: FAIL` — expected for non-release trees; not a stable install blocker once Release assets match.
 - **Pilot leftovers (from RC):** fixture density and synthetic multi-OS notes remain documented under [`../pilot/incidents.md`](../pilot/incidents.md) — not blockers for the stable product identity.

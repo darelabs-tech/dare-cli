@@ -5,7 +5,8 @@
 > **Operator:** Wanderson Leandro de Oliveira (`wleandrooliveira`)  
 > **Date:** 2026-07-31  
 > **STABLE_TAG:** `v4.0.0`  
-> **Microplano:** 056 · mp056-003
+> **Microplano:** 056 · mp056-003  
+> **Retry:** 2026-07-31 (post-FAIL) — billing still blocked
 
 ## Verdict
 
@@ -26,6 +27,16 @@ so **`v4.0.0` is not a prerelease**.
 | RC Actions run `30636494439` (`v4.0.0-rc1`) | Jobs fail / stuck: *account payments have failed or spending limit needs to be increased* |
 | `gh run rerun 30636494439 --failed` | Rejected: *workflow is already running* (queued job never starts under billing) |
 | Local Windows packaging smoke | **PASS** (host-only; not ADR-008 multi-target) — see [`stable-smoke/`](stable-smoke/) |
+
+**mp056-003 RETRY (2026-07-31):**
+
+| Check | Result |
+|-------|--------|
+| `gh run view 30636494439` | Still **queued**/billing-blocked; cancelled (`gh run cancel 30636494439`) |
+| Billing probe `gh workflow run release.yml -f dry_run=true` | Run [`30645155764`](https://github.com/darelabs-tech/dare-cli/actions/runs/30645155764) — jobs **did not start**; same annotation: *account payments have failed or spending limit needs to be increased*; cancelled after probe |
+| `gh release view v4.0.0` | Still **release not found** |
+| Remote tag `refs/tags/v4.0.0` | Still **absent** (not created — Actions cannot build ADR-008 assets) |
+| Manual multi-OS signed publish | **Not viable** on a single Windows host (cannot produce Linux + macOS + Windows-msvc matrix alone) |
 
 Full ADR-008 multi-target assets for stable **cannot** be produced yet. There is **no** GitHub Release download URL for `v4.0.0` — do not invent one.
 
@@ -64,8 +75,10 @@ gh run watch
 gh release view v4.0.0 --json url,isPrerelease,tagName,assets
 ```
 
-Evidence of the billing failure (RC, still blocking the same org):  
-https://github.com/darelabs-tech/dare-cli/actions/runs/30636494439
+Evidence of the billing failure (same org `darelabs-tech`):
+
+- RC (cancelled after stuck queue): https://github.com/darelabs-tech/dare-cli/actions/runs/30636494439
+- Retry dry_run probe (cancelled after billing fail): https://github.com/darelabs-tech/dare-cli/actions/runs/30645155764
 
 ## Manual publish path (only after real multi-target artifacts exist)
 

@@ -1,7 +1,7 @@
 # Stable smoke matrix — v4.0.0
 
 > Microplano **056** · mp056-003 · Product tag **`v4.0.0`** / core **`4.0.0`**  
-> **GitHub Release published:** `false` (`blocked:actions_billing`)
+> **GitHub Release published:** `false` (`blocked:actions_billing`; retry dry_run [`30645155764`](https://github.com/darelabs-tech/dare-cli/actions/runs/30645155764) still billing-blocked)
 
 ## Commands (MUST)
 
