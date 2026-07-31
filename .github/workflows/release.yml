@@ -5,6 +5,8 @@ on:
     tags:
       - "v*-alpha*"
       - "v*-alpha.*"
+      - "v*-rc*"
+      - "v*-rc.*"
   workflow_dispatch:
     inputs:
       dry_run:
