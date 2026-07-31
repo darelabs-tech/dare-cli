@@ -17,9 +17,10 @@ yarn-error.log*
 !.env.governance.example
 !.env.rust.example
 
-# --- DARE CLI local runtime ---
+# --- DARE CLI local runtime + methodology artifacts (keep local only; repo is public) ---
 .dare/
-DARE/.canvas.md
+/DARE/
+/DARE-RUST-MICRO-PLANOS/
 
 # --- Golden parity report (SHOULD overwrite; do not commit) ---
 tests/golden/last-report.json
