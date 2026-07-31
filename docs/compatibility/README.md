@@ -46,6 +46,8 @@ Microplano **001** (governança, baseline e ADRs prioritárias) concluído em 20
 | [`cli-self-update.md`](cli-self-update.md) | CLI `dare self` update/rollback/uninstall + packaging (053 / DEC-054) | — |
 | [`parity-hardening.md`](parity-hardening.md) | Harness `dare-parity`: golden/security/xplat, N-01..N-08, gate 15% (054 / DEC-055) | — |
 | [`parity-diff-log.md`](parity-diff-log.md) | Diffs classificados TS↔Rust (`PD-*`) para golden Class C (054 / DEC-055) | — |
+| [`../release-candidate/typescript-freeze.md`](../release-candidate/typescript-freeze.md) | Freeze TS `@dewtech/dare-cli`: security fixes only from RC `v4.0.0-rc1` (055) | — |
+| [`../release-candidate/contract-freeze.md`](../release-candidate/contract-freeze.md) | Freeze contrato Classe A no RC: ADR Accepted + matrix + DECISION-LOG (055) | — |
 
 ## Relacionamentos
 
