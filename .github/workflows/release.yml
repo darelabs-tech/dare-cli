@@ -38,8 +38,9 @@ jobs:
             os: ubuntu-latest
             archive: tar.gz
             cross: true
+          # macos-14 (arm) can cross-compile x86_64; macos-13 queues are often stuck.
           - target: x86_64-apple-darwin
-            os: macos-13
+            os: macos-14
             archive: tar.gz
           - target: aarch64-apple-darwin
             os: macos-14
@@ -69,6 +70,7 @@ jobs:
         run: |
           set -euo pipefail
           if [[ "${{ matrix.cross }}" == "true" ]]; then
+            export OPENSSL_STATIC=1
             cross build -p dare-cli --release --target ${{ matrix.target }}
           else
             cargo build -p dare-cli --release --target ${{ matrix.target }}
@@ -112,6 +114,8 @@ jobs:
 
   checksums-sbom:
     needs: build
+    # Matrix uses fail-fast:false — publish whatever targets succeeded (document GAPs).
+    if: ${{ always() && !cancelled() }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4.2.2
@@ -171,7 +175,11 @@ jobs:
 
   publish:
     needs: [build, checksums-sbom]
-    if: startsWith(github.ref, 'refs/tags/') && (github.event_name != 'workflow_dispatch' || inputs.dry_run == false)
+    if: >
+      always() && !cancelled() &&
+      needs.checksums-sbom.result == 'success' &&
+      startsWith(github.ref, 'refs/tags/') &&
+      (github.event_name != 'workflow_dispatch' || inputs.dry_run == false)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4.1.8
