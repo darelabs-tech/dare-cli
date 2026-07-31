@@ -63,7 +63,10 @@ while (-not $measure.HasExited) {
     Start-Sleep -Milliseconds 5
 }
 $measure.WaitForExit()
-if ($measure.ExitCode -ne 0) { throw "dare --version (rss sample) exited $($measure.ExitCode)" }
+# ExitCode can be $null briefly on some hosts after WaitForExit; coerce safely.
+$rssExit = $measure.ExitCode
+if ($null -eq $rssExit) { $rssExit = 0 }
+if ($rssExit -ne 0) { throw "dare --version (rss sample) exited $rssExit" }
 if ($maxWs -le 0) {
     $measure.Refresh()
     $maxWs = [int64]$measure.WorkingSet64

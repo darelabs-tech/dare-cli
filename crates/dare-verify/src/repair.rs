@@ -32,10 +32,7 @@ where
         let passed = result.status == AspectStatus::Pass;
         attempts.push(result);
         if passed {
-            return RepairOutcome {
-                attempts,
-                ok: true,
-            };
+            return RepairOutcome { attempts, ok: true };
         }
     }
 

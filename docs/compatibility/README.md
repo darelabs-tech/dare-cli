@@ -44,6 +44,8 @@ Microplano **001** (governança, baseline e ADRs prioritárias) concluído em 20
 | [`cli-dashboard-rest.md`](cli-dashboard-rest.md) | CLI `dare dashboard` / `dare server --protocol rest`: Axum shared app, auth, REST legado (051 / DEC-052) | — |
 | [`cli-mcp.md`](cli-mcp.md) | CLI `dare mcp serve`: MCP real stdio/streamable-http (052 / DEC-053) | — |
 | [`cli-self-update.md`](cli-self-update.md) | CLI `dare self` update/rollback/uninstall + packaging (053 / DEC-054) | — |
+| [`parity-hardening.md`](parity-hardening.md) | Harness `dare-parity`: golden/security/xplat, N-01..N-08, gate 15% (054 / DEC-055) | — |
+| [`parity-diff-log.md`](parity-diff-log.md) | Diffs classificados TS↔Rust (`PD-*`) para golden Class C (054 / DEC-055) | — |
 
 ## Relacionamentos
 

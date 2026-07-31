@@ -9,6 +9,9 @@ on:
       - "rust-toolchain.toml"
       - "rustfmt.toml"
       - "deny.toml"
+      - "tests/**"
+      - "scripts/measure-perf.*"
+      - "docs/perf/**"
       - ".github/workflows/ci.yml"
   push:
     paths:
@@ -18,6 +21,9 @@ on:
       - "rust-toolchain.toml"
       - "rustfmt.toml"
       - "deny.toml"
+      - "tests/**"
+      - "scripts/measure-perf.*"
+      - "docs/perf/**"
       - ".github/workflows/ci.yml"
 
 permissions:
