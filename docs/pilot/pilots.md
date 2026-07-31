@@ -47,7 +47,7 @@ os: linux
 owner: DARE Labs
 source: fixture:empty-project
 consent: true
-shadow_cycles_done: 0
+shadow_cycles_done: 3
 flows:
   - id: smoke-help
     must: true
@@ -66,7 +66,8 @@ flows:
     command: ["dare", "discover"]
 ```
 
-Fixture path: `tests/fixtures/empty-project/` (greenfield stub).
+Fixture path: `tests/fixtures/empty-project/` (greenfield stub).  
+Shadow source (mp055-003): `tests/fixtures/monorepo/` (≥3 files for fingerprint; see `incidents.md` INC-001).
 
 ---
 
@@ -80,7 +81,7 @@ os: macos
 owner: DARE Labs
 source: fixture:existing-node-project
 consent: true
-shadow_cycles_done: 0
+shadow_cycles_done: 3
 flows:
   - id: smoke-help
     must: true
@@ -102,7 +103,8 @@ flows:
     command: ["dare", "capabilities"]
 ```
 
-Fixture path: `tests/fixtures/existing-node-project/` (`package.json` private stub).
+Fixture path: `tests/fixtures/existing-node-project/` (`package.json` private stub).  
+Shadow source (mp055-003): `tests/fixtures/monorepo/` (≥3 files for fingerprint; see `incidents.md` INC-001).
 
 ---
 
@@ -116,7 +118,7 @@ os: windows
 owner: DARE Labs
 source: fixture:existing-rust-project
 consent: true
-shadow_cycles_done: 0
+shadow_cycles_done: 3
 flows:
   - id: smoke-help
     must: true
@@ -147,7 +149,8 @@ flows:
     command: ["dare", "harness", "--help"]
 ```
 
-Fixture path: `tests/fixtures/existing-rust-project/` (minimal `Cargo.toml` package).
+Fixture path: `tests/fixtures/existing-rust-project/` (minimal `Cargo.toml` package).  
+Shadow source (mp055-003): `tests/fixtures/monorepo/` (≥3 files for fingerprint; see `incidents.md` INC-001).
 
 ---
 
@@ -163,6 +166,6 @@ Fixture path: `tests/fixtures/existing-rust-project/` (minimal `Cargo.toml` pack
 
 ## Notes
 
-- `shadow_cycles_done` starts at `0`; close gate requires ≥ `MIN_SHADOW_CYCLES` (3) per Blueprint-055.
+- `shadow_cycles_done` is `3` for each seed pilot after mp055-003 (≥ `MIN_SHADOW_CYCLES`).
 - Do not commit secrets, tokens, or personally identifying paths from real pilots.
-- Shadow scripts and freeze docs are out of scope for mp055-001.
+- Shadow evidence: `docs/pilot/results/<pilot_id>/cycle-{1,2,3}.md`; incidents: `docs/pilot/incidents.md`.
