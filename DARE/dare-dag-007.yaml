@@ -1,0 +1,140 @@
+title: "Contratos persistidos (Microplano 007) - Development Tasks"
+version: "1.0.0"
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 900
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp007-001
+    title: "Verificar docker-compose.ci.yml (Fase 1)"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION-007/mp007-001.md
+    subtask_prompt: |
+      Microplano 007. BLUEPRINT-007 Fase 1.
+      Confirmar docker-compose.ci.yml; rodar docker compose -f docker-compose.ci.yml config.
+      DONE: exit 0. Sem novo Dockerfile. Sem git commit.
+      TASKS-007 → mp007-001 DONE.
+
+  - id: mp007-002
+    title: "Dep yaml_serde 0.10.4 as serde_yaml"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION-007/mp007-002.md
+    subtask_prompt: |
+      Microplano 007. BLUEPRINT-007 §2 Fase 2 T-02.
+      Workspace pin EXATO:
+        serde_yaml = { package = "yaml_serde", version = "=0.10.4" }
+      dare-contracts: serde, serde_json, serde_yaml, dare-core (workspace).
+      cargo check -p dare-contracts. Atualizar Cargo.lock.
+      Sem implementar tipos ainda. Sem git commit. TASKS-007 → mp007-002 DONE.
+
+  - id: mp007-003
+    title: "io.rs + CONTRACTS_SCHEMA_VERSION + cap 2MiB"
+    depends_on: [mp007-002]
+    complexity: HIGH
+    spec_file: EXECUTION-007/mp007-003.md
+    subtask_prompt: |
+      Microplano 007. BLUEPRINT-007 §4.0 §5.1 Fase 3 T-04/T-05/T-06/T-10.
+      CRIAR crates/dare-contracts/src/io.rs: read_limited, write_json_atomic, write_yaml_atomic,
+      from_json_slice, from_yaml_str. MAX_CONTRACT_BYTES=2MiB. Erros CoreError::config.
+      CONTRACTS_SCHEMA_VERSION="0.1.0-contracts" em lib.rs. Usar ProjectRoot+SafeRelativePath+atomic_write.
+      Testes: read_limited_rejects_oversize; json write keys lex. cargo test -p dare-contracts.
+      Sem git commit. TASKS-007 → mp007-003 DONE.
+
+  - id: mp007-004
+    title: "DareConfig load/save + flatten"
+    depends_on: [mp007-003]
+    complexity: HIGH
+    spec_file: EXECUTION-007/mp007-004.md
+    subtask_prompt: |
+      Microplano 007. BLUEPRINT-007 §4.1 §5.2 Fase 4 T-01.
+      CRIAR config.rs: DareConfig, ConfigObject, load_dare_config, save_dare_config.
+      Flatten extra Map na raiz e em blocos. Testes: config_preserves_unknown_root_keys;
+      config_preserves_nested_block_extras. Export lib. cargo test -p dare-contracts.
+      Sem git commit. TASKS-007 → mp007-004 DONE.
+
+  - id: mp007-005
+    title: "DagV21 + LegacyDag + parse_dag"
+    depends_on: [mp007-003]
+    complexity: HIGH
+    spec_file: EXECUTION-007/mp007-005.md
+    subtask_prompt: |
+      Microplano 007. BLUEPRINT-007 §4.2 §5.3 Fase 5 T-07.
+      CRIAR dag.rs: DagV21, DagLimits, DagTask, LegacyDag, LegacyTask, DagDocument,
+      parse_dag_yaml, load_dag, save_dag. Detector: tasks Sequence→V21 else Legacy.
+      Fixture mínima inline ou tests/fixtures. Teste parse_dag_v21_and_legacy.
+      cargo test -p dare-contracts. Sem git commit. TASKS-007 → mp007-005 DONE.
+
+  - id: mp007-006
+    title: "RuntimeState + Verification + Telemetry"
+    depends_on: [mp007-003]
+    complexity: HIGH
+    spec_file: EXECUTION-007/mp007-006.md
+    subtask_prompt: |
+      Microplano 007. BLUEPRINT-007 §4.3 §4.6 §4.8 Fase 6.
+      CRIAR state.rs, verification.rs, telemetry.rs com load/save/from_str.
+      RuntimeStateV1 version must be 1 (else unsupported state version).
+      Campos camelCase updatedAt/failureSignature. Testes version reject + parse.
+      cargo test -p dare-contracts. Sem git commit. TASKS-007 → mp007-006 DONE.
+
+  - id: mp007-007
+    title: "Graph + Skills + UpdateManifest"
+    depends_on: [mp007-003]
+    complexity: HIGH
+    spec_file: EXECUTION-007/mp007-007.md
+    subtask_prompt: |
+      Microplano 007. BLUEPRINT-007 §4.4 §4.5 §4.7 Fase 7.
+      CRIAR graph.rs (GraphDocument, Node, Edge, canonical_*_id helpers),
+      skills.rs, update_manifest.rs. UpdateManifest load rejeita schemaVersion≠1.
+      Teste canonical_edge_id_format; update_manifest_rejects_schema_0.
+      cargo test -p dare-contracts. Sem git commit. TASKS-007 → mp007-007 DONE.
+
+  - id: mp007-008
+    title: "Fixtures + tests/roundtrip.rs"
+    depends_on: [mp007-004, mp007-005, mp007-006, mp007-007]
+    complexity: MED
+    spec_file: EXECUTION-007/mp007-008.md
+    subtask_prompt: |
+      Microplano 007. BLUEPRINT-007 Fase 8.
+      CRIAR tests/fixtures/ (≥1 por artefato MUST) + tests/roundtrip.rs sob ProjectRoot tempdir.
+      Sem secrets reais. cargo test -p dare-contracts. Sem git commit.
+      TASKS-007 → mp007-008 DONE.
+
+  - id: mp007-009
+    title: "Docs persisted-contracts + DEC-008"
+    depends_on: [mp007-008]
+    complexity: MED
+    spec_file: EXECUTION-007/mp007-009.md
+    subtask_prompt: |
+      Microplano 007. BLUEPRINT-007 Fase 9.
+      CRIAR docs/compatibility/persisted-contracts.md (tipos↔paths, flatten, 2MiB, yaml_serde).
+      APPEND DEC-008 em docs/DECISION-LOG.md (T-01..T-10). Sem git commit.
+      TASKS-007 → mp007-009 DONE.
+
+  - id: mp007-010
+    title: "Auditoria RS-* + audit/deny"
+    depends_on: [mp007-008, mp007-009]
+    complexity: HIGH
+    spec_file: EXECUTION-007/mp007-010.md
+    subtask_prompt: |
+      Microplano 007. BLUEPRINT-007 Fase 10.
+      cargo test --workspace; clippy -D warnings; cargo audit; cargo deny check — exit 0.
+      Completar RS-01..RS-09 na doc. Sem git commit. TASKS-007 → mp007-010 DONE.
+
+  - id: mp007-011
+    title: "Fechamento microplano 007"
+    depends_on: [mp007-001, mp007-009, mp007-010]
+    complexity: LOW
+    spec_file: EXECUTION-007/mp007-011.md
+    subtask_prompt: |
+      Microplano 007. BLUEPRINT-007 Fase 11.
+      TASKS-007 → 11/11 DONE 100%. Microplano 008 desbloqueado. Sem git commit.
+      Return closeout summary.

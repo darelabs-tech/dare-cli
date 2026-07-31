@@ -1,0 +1,10 @@
+﻿mp031-001 compose validation evidence
+date: 2026-07-23T10:56:40.9921850-03:00
+worktree: C:\Users\wande\.cursor\worktrees\mp031-001-1b3a92ef
+branch: feature/mp031-001-compose
+command: docker compose -f docker-compose.ci.yml config
+exit_code: 0
+docker: Docker version 29.6.1, build 8900f1d
+compose: Docker Compose version v5.3.0
+dockerfile.rust: present
+resolved_service: dare-ci-smoke (build Dockerfile.rust, command --version)

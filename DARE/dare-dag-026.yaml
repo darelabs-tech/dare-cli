@@ -1,0 +1,170 @@
+title: "DAG parser ranks e state store (026) - Development Tasks"
+version: "1.0.0"
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp026-001
+    title: "Verificar docker-compose.ci.yml"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION-026/mp026-001.md
+    subtask_prompt: |
+      Microplano 026 Fase 1 — BLUEPRINT-026 §6 Fase 1 T-25.
+      Validar: `docker compose -f docker-compose.ci.yml config` exit 0.
+      Se Docker ausente: confirmar YAML + Dockerfile.rust existem; waiver em
+      docs/compatibility/dag-runtime.md (escrito em mp026-008).
+      Sem nova imagem. Sem git commit.
+      NÃO implementar graph/state/canvas.
+
+  - id: mp026-002
+    title: "graph ranks + find_cycle_path + fixtures"
+    depends_on: []
+    complexity: HIGH
+    spec_file: EXECUTION-026/mp026-002.md
+    subtask_prompt: |
+      Microplano 026 Fase 2 — BLUEPRINT-026 §5.1–5.5 §0 T-05 T-06 T-07 T-28.
+      CRIAR crates/dare-dag/src/graph.rs (+ mod em lib.rs).
+      Extrair em validate.rs: pub(crate) fn find_cycle_path(doc) -> Option<Vec<String>>
+      (reusar DFS canónico 020; path rota para menor id lexico + fecho).
+      pub struct TaskView { id, title, depends_on: Vec<String> }
+      pub fn iter_task_views(doc: &DagDocument) -> Vec<TaskView>  # v2.1 + Legacy
+      pub enum DagGraphError { Cycle{path}, MissingDependency{task_id,missing}, InvalidDag{message} }
+      impl From<DagGraphError> for CoreError → invalid_input.
+      pub fn compute_ranks(doc) -> Result<BTreeMap<String,u32>, DagGraphError>
+        roots depends_on=[] → rank 0; else 1+max(deps); memo DFS; Cycle se back-edge;
+        MissingDependency se dep id ausente após cycle check.
+      pub fn tasks_by_rank(ranks) -> BTreeMap<u32, Vec<String>>  # Vec sorted lexico
+      Fixtures MUST sob tests/fixtures/dag/:
+        ranks-chain.v21.yaml + ranks-chain.ranks.json
+        ranks-diamond.v21.yaml + ranks-diamond.ranks.json
+        ranks-fanout.v21.yaml + ranks-fanout.ranks.json
+      Testes MUST: compute_ranks_chain/diamond/fanout match golden;
+        compute_ranks_cycle_errors; tasks_by_rank_sorted; iter_task_views_legacy.
+      Gate: cargo test -p dare-dag -- graph
+      Sem state/canvas/CLI. Sem git commit.
+
+  - id: mp026-003
+    title: "TaskStatus + cascading skip"
+    depends_on: [mp026-002]
+    complexity: MED
+    spec_file: EXECUTION-026/mp026-003.md
+    subtask_prompt: |
+      Microplano 026 Fase 3 — BLUEPRINT-026 §5.6–5.7 T-09 T-10 T-11.
+      CRIAR crates/dare-dag/src/status.rs (ou state prelude) + apply_cascading_skip
+      em state.rs (módulo pode começar só com skip puro).
+      TaskStatus: Pending/Running/Done/Failed/Skipped; as_str wire exact
+      PENDING|RUNNING|DONE|FAILED|SKIPPED; parse unknown → invalid_input.
+      pub fn apply_cascading_skip(state: &mut RuntimeStateV1, doc: &DagDocument) -> usize
+        Fixpoint: só PENDING → SKIPPED se ∃ dep status ∈ {FAILED,SKIPPED};
+        RUNNING nunca auto-skip; DONE/FAILED/SKIPPED intocados;
+        varredura por id lexico; retorno = n mudadas; 2ª chamada → 0.
+      Dep ausente no state = não FAILED/SKIPPED.
+      Fixture tests/fixtures/dag/skip-cascade.v21.yaml (+ state fixture inline no teste).
+      Testes MUST: skip_marks_pending_children; skip_idempotent; skip_ignores_running;
+        task_status_roundtrip.
+      Gate: cargo test -p dare-dag -- skip
+      Sem FileLock/transition ainda (mp026-004). Sem git commit.
+
+  - id: mp026-004
+    title: "State store ensure/transition + FileLock"
+    depends_on: [mp026-003]
+    complexity: HIGH
+    spec_file: EXECUTION-026/mp026-004.md
+    subtask_prompt: |
+      Microplano 026 Fase 4 — BLUEPRINT-026 §5.8–5.9 T-03 T-04 T-12–T-16 T-19 T-20.
+      Completar crates/dare-dag/src/state.rs.
+      const STATE_REL = ".dare/state.json"
+      trait Clock { fn now_rfc3339(&self) -> String }; SystemClock; FixedClock for tests.
+      enum Transition { Start, Complete{output}, Fail{error}, Reset, Skip }
+      enum RefreshCanvas { Yes, No }
+      Nesta task testar transition só com RefreshCanvas::No (canvas em mp026-005).
+      ensure_state(root, doc, clock): lock STATE_REL → load or empty v1 → merge PENDING
+        tasks do DAG + dependsOn → apply_cascading_skip → updated_at → save_runtime_state.
+        NÃO escreve canvas.
+      transition(root, doc, task_id, tr, clock, refresh): lock → load/merge → task∉DAG
+        NotFound → apply matriz §5.6 → skip → updated_at → save → optional canvas.
+      Matriz: Start PENDING→RUNNING; Complete/Fail RUNNING→DONE/FAILED (+ AttemptRecord);
+        Reset {DONE,FAILED,SKIPPED,RUNNING}→PENDING (mantém attempts; zera output+error);
+        Skip PENDING→SKIPPED; RUNNING auto-skip proibido.
+      Lock held → CoreError::io("file lock held").
+      Testes MUST: ensure_creates_pending; transition_start_complete; transition_fail_skip_cascade;
+        transition_invalid; lock_contention; version_2_rejected.
+      Gate: cargo test -p dare-dag -- state
+      Sem git commit. Sem CLI execute.
+
+  - id: mp026-005
+    title: "Canvas render/write + refresh"
+    depends_on: [mp026-004]
+    complexity: MED
+    spec_file: EXECUTION-026/mp026-005.md
+    subtask_prompt: |
+      Microplano 026 Fase 5 — BLUEPRINT-026 §4.4 §5.10 T-17 T-18 T-20.
+      CRIAR crates/dare-dag/src/canvas.rs.
+      const CANVAS_REL = "DARE/.canvas.md"
+      render(doc, state, ranks: Option<&BTreeMap>, clock) -> String per §4.4:
+        title from dag.title; Updated rfc3339; table ID|Title|Status|Duration|Tokens;
+        emoji status; Progress done/total (DONE only); bar 20 chars;
+        order: rank asc then id lexico (se ranks None → id only).
+      write(...): atomic_write UTF-8 bytes.
+      Wire transition(..., RefreshCanvas::Yes) → canvas::write após save.
+      Testes MUST: render_snapshot_fixed_clock; write_creates_file;
+        transition_yes_refreshes_canvas.
+      Gate: cargo test -p dare-dag -- canvas
+      Sem git commit. Sem viz Mermaid CLI (027).
+
+  - id: mp026-006
+    title: "next_executable + ranks_validated + proptest"
+    depends_on: [mp026-002, mp026-003]
+    complexity: MED
+    spec_file: EXECUTION-026/mp026-006.md
+    subtask_prompt: |
+      Microplano 026 Fase 6 — BLUEPRINT-026 §5.3–5.4 T-21 T-23 RF-20.
+      Em graph.rs:
+        compute_ranks_validated(doc, opts, ctx) — validate_dag; se Error severity →
+          DagGraphError::InvalidDag; warnings OK; senão compute_ranks.
+        next_executable(doc, state, ranks) -> Vec<String>:
+          PENDING ∧ deps all DONE; sort rank asc, id lexico.
+      Workspace Cargo.toml: proptest = "=1.36.0"; dare-dag Cargo.toml dev-dep.
+      Property tests MUST:
+        prop_ranks_gt_deps; prop_skip_idempotent.
+      Unit: next_executable_order; compute_ranks_validated_rejects_cycle.
+      Gate: cargo test -p dare-dag
+      Sem git commit.
+
+  - id: mp026-007
+    title: "Auditoria Ralph (fmt/clippy/test/audit)"
+    depends_on: [mp026-001, mp026-004, mp026-005, mp026-006]
+    complexity: MED
+    spec_file: EXECUTION-026/mp026-007.md
+    subtask_prompt: |
+      Microplano 026 Fase 7 — BLUEPRINT-026 §7–8 RS-04.
+      Rodar e corrigir até verde:
+        cargo fmt --check
+        cargo clippy -p dare-dag --all-targets -- -D warnings
+        cargo test -p dare-dag
+        cargo audit (e cargo deny check se o repo exigir)
+      CVE HIGH/CRITICAL em deps novas → FAILED até fix.
+      Sem git commit. NÃO implementar 027/028.
+
+  - id: mp026-008
+    title: "Docs dag-runtime.md + DEC-027 + fechamento"
+    depends_on: [mp026-007]
+    complexity: LOW
+    spec_file: EXECUTION-026/mp026-008.md
+    subtask_prompt: |
+      Microplano 026 Fase 8 — BLUEPRINT-026 T-24 RF-23.
+      CRIAR docs/compatibility/dag-runtime.md: ranks 0-based; skip só PENDING;
+        STATE_REL/CANVAS_REL; lock fail-fast; Clock; API pública; fora 027/028;
+        waiver compose se aplicável; local verify.
+      DEC-027 no docs/DECISION-LOG.md (active).
+      TASKS-026 → 8/8 DONE; 000A-MATRIZ linha 026 ✅; BLUEPRINT-026 APPROVED.
+      Sem git commit (humano). Gate: ficheiros + DEC-027 presentes.

@@ -1,0 +1,16 @@
+```mermaid
+flowchart TD
+  mp046-001[mp046-001 crate+registry]
+  mp046-002[mp046-002 templates+render]
+  mp046-003[mp046-003 AX generators]
+  mp046-004[mp046-004 plan/apply/rollback]
+  mp046-005[mp046-005 validate+fixtures]
+  mp046-006[mp046-006 docs+Ralph]
+
+  mp046-001 --> mp046-002
+  mp046-001 --> mp046-003
+  mp046-002 --> mp046-004
+  mp046-003 --> mp046-004
+  mp046-004 --> mp046-005
+  mp046-005 --> mp046-006
+```

@@ -1,0 +1,46 @@
+%% DARE DAG — Execução segura de processos (Microplano 006)
+graph LR
+  subgraph rank_0 ["Rank 0"]
+    direction TB
+    mp006_001["mp006-001\nVerificar docker-compose.ci.yml\n⏳ PENDING"]
+    mp006_002["mp006-002\nDep kill_tree 0.2.4\n⏳ PENDING"]
+  end
+  subgraph rank_1 ["Rank 1"]
+    direction TB
+    mp006_003["mp006-003\nSafeCommand + sanitize_env\n⏳ PENDING"]
+  end
+  subgraph rank_2 ["Rank 2"]
+    direction TB
+    mp006_004["mp006-004\nSystemProcessRunner spawn\n⏳ PENDING"]
+  end
+  subgraph rank_3 ["Rank 3"]
+    direction TB
+    mp006_005["mp006-005\nTimeout 124 + kill_tree\n⏳ PENDING"]
+    mp006_006["mp006-006\nCancel + Mock + missing\n⏳ PENDING"]
+  end
+  subgraph rank_4 ["Rank 4"]
+    direction TB
+    mp006_007["mp006-007\nDocs + DEC-007\n⏳ PENDING"]
+  end
+  subgraph rank_5 ["Rank 5"]
+    direction TB
+    mp006_008["mp006-008\nAuditoria RS-* + audit/deny\n⏳ PENDING"]
+  end
+  subgraph rank_6 ["Rank 6"]
+    direction TB
+    mp006_009["mp006-009\nFechamento microplano 006\n⏳ PENDING"]
+  end
+  mp006_002 --> mp006_003
+  mp006_003 --> mp006_004
+  mp006_004 --> mp006_005
+  mp006_004 --> mp006_006
+  mp006_005 --> mp006_007
+  mp006_006 --> mp006_007
+  mp006_005 --> mp006_008
+  mp006_006 --> mp006_008
+  mp006_007 --> mp006_008
+  mp006_001 --> mp006_009
+  mp006_007 --> mp006_009
+  mp006_008 --> mp006_009
+  classDef st_pending fill:#f3f4f6,stroke:#9ca3af,color:#374151;
+  class mp006_001,mp006_002,mp006_003,mp006_004,mp006_005,mp006_006,mp006_007,mp006_008,mp006_009 st_pending;

@@ -1,0 +1,144 @@
+title: "Microplano 049 — Verificação avançada e bench"
+version: "1.0.0"
+microplano: "049"
+name: verificacao-avancada-e-bench
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor: { HIGH: gpt-5.3-codex, MED: composer-2, LOW: auto-low }
+  claude: { HIGH: claude-sonnet-4-5, MED: claude-haiku-4, LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro, MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp049-001
+    title: "reports + fail-to-pass + anti-tamper"
+    depends_on: []
+    complexity: HIGH
+    spec_file: EXECUTION-049/mp049-001.md
+    subtask_prompt: |
+      In crates/dare-verify per BLUEPRINT-049 §0.1–0.3 / §0.9 / Fase A:
+      Add report.rs: AdvancedAspect, AspectStatus (pass|fail|skipped), AspectResult,
+        LoopVerdict schemaVersion 1 camelCase (fields §4.1 without bestOf required —
+        bestOf: Option). Constants MSG_* / MUTATION_THRESHOLD not required yet.
+      Do NOT change GateAspect Build|Test|Lint.
+      aspects/fail_to_pass.rs: given list of test ids + combined test stdout/stderr,
+        all ids must appear as passed (substring heuristics documented); missing list
+        → skipped no_ftp_list. Unit with sample outputs.
+      aspects/anti_tamper.rs: analyze unified diff text — fail removed_tests if net
+        removal of #[test] / assert! patterns per §0.9; unit fixtures.
+      Export from lib.rs. No mutation/formal/bench CLI/execute flags.
+      Tests: aspect_status_serde; ftp_all_pass; ftp_missing_skipped; anti_tamper_removed_tests.
+      Avoid mass CRLF.
+
+  - id: mp049-002
+    title: "bench FixRate + suite loader + fixtures"
+    depends_on: []
+    complexity: HIGH
+    spec_file: EXECUTION-049/mp049-002.md
+    subtask_prompt: |
+      In dare-verify bench/ per BLUEPRINT §0.4 / §4.2–4.4:
+      BenchReport + FixtureResult schemaVersion 1 camelCase.
+      Pure fn compute_fixture_fix_rate(ftp_total, ftp_passed, ptp_failed) -> f64
+        and suite means; ptp_failed>0 => 0.0; serialize round 4 dp helper ok.
+      suite.rs: load suite.json schemaVersion 1; validate case dirs have
+        patch.diff, fail_to_pass.txt, pass_to_pass.txt, repo/; invalid →
+        CoreError::usage(MSG_SUITE_INVALID).
+      Create fixtures/bench/suite.json + cases/sample-ok/ minimal rust repo stub
+        with fail_to_pass/pass_to_pass lists and empty or trivial patch.diff.
+      baseline.rs: parse baseline json; drop_pp formula.
+      Unit: fixrate_ptp_zero; fixrate_mean; suite_invalid_missing_file; baseline_drop.
+      No CLI. Parallel with mp049-001. Avoid mass CRLF.
+
+  - id: mp049-003
+    title: "mutation adapters + threshold 0.70"
+    depends_on: [mp049-001]
+    complexity: HIGH
+    spec_file: EXECUTION-049/mp049-003.md
+    subtask_prompt: |
+      BLUEPRINT §0.5: MUTATION_THRESHOLD=0.70. aspects/mutation/ with
+        cargo_mutants, stryker, mutmut, infection modules + mod.rs dispatcher
+        by stack family. SafeCommand only; parse score [0,1] best-effort from
+        stdout fixtures. Tool missing → AspectResult skipped tool_missing
+        UNLESS full_mutation=true → fail MUTATION_TOOL_MISSING.
+      score>=0.70 => pass else fail below_threshold.
+      Unit: threshold_boundary; missing_tool_skip; missing_tool_full_fail;
+        parse_score_sample (fake stdout). No formal/CLI. Avoid mass CRLF.
+
+  - id: mp049-004
+    title: "formal backends + repair loop"
+    depends_on: [mp049-001]
+    complexity: HIGH
+    spec_file: EXECUTION-049/mp049-004.md
+    subtask_prompt: |
+      BLUEPRINT §0.8–0.10: FormalBackend { Dafny, Verus, Lean } default Dafny.
+      Walk project (cap 2000, skip target/node_modules/.git) for "@dare-formal";
+        none → skipped no_targets. Tool missing → fail FORMAL_TOOL_MISSING.
+      Anti-bypass: fail if stdout/stderr contains FAKE_PROOF|BYPASS_FORMAL (ci).
+      repair.rs: loop counter max REPAIR_MAX=5; unit repair_stops_at_five.
+      Unit: formal_no_targets; formal_missing_tool; anti_bypass_marker.
+      Parallel with mp049-003. Avoid mass CRLF.
+
+  - id: mp049-005
+    title: "run_advanced_verify + execute flags"
+    depends_on: [mp049-003, mp049-004]
+    complexity: HIGH
+    spec_file: EXECUTION-049/mp049-005.md
+    subtask_prompt: |
+      advanced.rs: run_advanced_verify(root, cfg, req, runner) -> LoopVerdict
+        per §5.3; if !verify return ok skip aspects; else run ftp, anti-tamper,
+        mutation, formal(if req.formal); ok=false if any fail.
+      Wire clap on Execute: --verify/--no-verify, --full-mutation, --formal/
+        --no-formal, --formal-backend, --verdict-json (best-of/policy later).
+      On --complete after Ralph ok: call advanced; if !verdict.ok block DONE
+        (same as Ralph fail path). Persist aspects into verification json
+        (extend write or sidecar — document).
+      Unit/integration with fake ProcessRunner. Smoke: flag parse unknown
+        backend → exit 2/4. Avoid mass CRLF.
+
+  - id: mp049-006
+    title: "best-of-N + Pareto + decay policy"
+    depends_on: [mp049-005]
+    complexity: HIGH
+    spec_file: EXECUTION-049/mp049-006.md
+    subtask_prompt: |
+      BLUEPRINT §0.6–0.7: pareto_select unit-tested with domination cases.
+      best_of: N in 1..=8; worktrees under .dare/worktrees/cand-{n}/ via git
+        worktree SafeCommand (reuse dare-agent patterns); Cap BEST_OF_MAX.
+      --best-of on execute; fill LoopVerdict.bestOf.
+      decay.rs: apply_decay using failure_signature; matrix unit Continue/
+        FreshStart/Replan/Escalate/Stop. Wire --policy decay|fixed on --agent
+        (unknown → usage 2). Avoid mass CRLF.
+
+  - id: mp049-007
+    title: "CLI dare bench + smokes"
+    depends_on: [mp049-002]
+    complexity: MED
+    spec_file: EXECUTION-049/mp049-007.md
+    subtask_prompt: |
+      commands/bench.rs + main Commands::Bench. Flags §5.1. run_bench applies
+        patch in jail, runs tests via runner, builds BenchReport.
+      Exits: suite invalid 2; fail-on-regression without baseline 2; regression
+        drop_pp > N → exit 1; --json schemaVersion 1.
+      crates/dare-cli/tests/bench_cli.rs: suite_invalid_exit_2;
+        fail_on_regression_needs_baseline; json_schema_version;
+        regression_exit_1 (fixture crafted).
+      Can parallel with mutation/formal. Avoid mass CRLF.
+
+  - id: mp049-008
+    title: "Docs DEC-050 + capabilities + Ralph"
+    depends_on: [mp049-005, mp049-006, mp049-007]
+    complexity: MED
+    spec_file: EXECUTION-049/mp049-008.md
+    subtask_prompt: |
+      docs/compatibility/cli-verify-bench.md (aspects, FixRate, flags, exits).
+      Append DEC-050 ONLY to DECISION-LOG.md.
+      Matriz 049 Concluído; capability dare-bench cli_commands:["bench"];
+        update manifest hash if needed.
+      TASKS-049 → 8/8 DONE.
+      Ralph: cargo test -p dare-verify; cargo test -p dare-cli --test bench_cli;
+        clippy -p dare-verify -p dare-cli --all-targets -- -D warnings;
+        cargo audit. Avoid mass CRLF.

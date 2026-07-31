@@ -1,0 +1,21 @@
+```mermaid
+flowchart TD
+  subgraph rank0 [Rank 0]
+    A[mp052-001 services+REST]
+    B[mp052-002 rmcp feature]
+    F[mp052-006 alias REST bin]
+  end
+  C[mp052-003 MCP tools/handler]
+  subgraph rank2 [Rank 2]
+    D[mp052-004 stdio+CLI]
+    E[mp052-005 streamable-http]
+  end
+  G[mp052-007 docs+DEC-053]
+  A --> C
+  B --> C
+  C --> D
+  C --> E
+  D --> G
+  E --> G
+  F --> G
+```

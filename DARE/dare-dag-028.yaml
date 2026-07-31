@@ -1,0 +1,156 @@
+title: "Execute status next e watch (028) - Development Tasks"
+version: "1.0.0"
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp028-001
+    title: "Verificar docker-compose.ci.yml"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION-028/mp028-001.md
+    subtask_prompt: |
+      Microplano 028 Fase 1 — BLUEPRINT-028 §6 Fase 1 T-23.
+      Validar: `docker compose -f docker-compose.ci.yml config` exit 0.
+      Se Docker ausente: confirmar YAML + Dockerfile.rust existem; waiver em
+      docs/compatibility/cli-execute-status.md (escrito em mp028-005).
+      Sem nova imagem. Sem git commit.
+      NÃO implementar execution.rs / commands/execute.rs.
+
+  - id: mp028-002
+    title: "execution core (ready/compose/snapshot)"
+    depends_on: []
+    complexity: HIGH
+    spec_file: EXECUTION-028/mp028-002.md
+    subtask_prompt: |
+      Microplano 028 Fase 2 — BLUEPRINT-028 §4–5.5 T-01 T-09–T-16 T-25 T-29 T-30.
+      CRIAR crates/dare-dag/src/execution.rs (+ `pub mod execution` / pub use em lib.rs).
+      pub enum ExecuteOutcome { Status, NextReady, Resolved, Blocked, Empty, Waiting }
+        JSON wire via as_str: status|ready|resolved|blocked|empty|waiting
+      pub struct StatusCounts { done,running,pending,failed,skipped,total: u32 }
+      pub struct StatusTaskRow { id, title, status, rank, complexity }
+      pub struct StatusSnapshot { title, dag_rel, canvas_path, counts, tasks, outcome }
+      pub struct ReadyTask { id, title, rank, complexity, spec_file, prompt }
+      pub struct NextReport { rank: Option<u32>, ready: Vec<ReadyTask>, outcome }
+      pub fn parent_context_limit(doc: &DagDocument) -> usize
+        V21: limits.parent_context_chars as usize; Legacy: 2000
+      pub fn ready_at_min_rank(doc, state, ranks) -> Vec<String>
+        next_executable filtrado ao min rank; ids lexico
+      pub fn compose_task_prompt(doc, state, task_id) -> Result<String, DagGraphError>
+        base=subtask_prompt; deps DONE com output non-empty; ordem id lexico;
+        tail últimos parent_context_limit Unicode scalars;
+        se ≥1 pai: anexar "\n\n## Upstream context\n\n### From parent: {id} — {title}\n{tail}\n"
+        task ausente → InvalidDag "task not found: …"
+      pub fn build_status_snapshot(doc, state, ranks) -> StatusSnapshot
+        tasks rank↑ then id; counts por wire status; 0 tasks → outcome Empty else Status
+        dag_rel/canvas_path podem ser "" no domínio (CLI preenche)
+      pub fn classify_next_outcome(doc, state, ready: &[String]) -> ExecuteOutcome
+        empty tasks→Empty; ready non-empty→NextReady; running>0 && ready empty→Waiting;
+        ∃PENDING→Blocked; else Resolved
+      Constantes pub: MSG_RESOLVED="✅ All tasks resolved."; MSG_BLOCKED="Blocked — no executable tasks";
+        MSG_EMPTY="Empty DAG — no tasks.";
+      Fixtures MUST: tests/fixtures/dag/exec-empty.v21.yaml (tasks: []);
+        exec-blocked.v21.yaml (cadeia onde cascade deixa PENDING bloqueado — ou state inline no teste).
+      Testes MUST: ready_at_min_rank_filters; compose_tail_exact_chars; compose_omits_empty_parent;
+        classify_empty_blocked_resolved_waiting; parent_context_legacy_2000.
+      Gate: cargo test -p dare-dag -- execution
+      Sem CLI. Sem Start/transition. Sem git commit.
+
+  - id: mp028-003
+    title: "CLI --status + --next + smokes"
+    depends_on: [mp028-002]
+    complexity: HIGH
+    spec_file: EXECUTION-028/mp028-003.md
+    subtask_prompt: |
+      Microplano 028 Fase 3 — BLUEPRINT-028 §5.6–5.8 T-02–T-08 T-27 T-28 §0.1.
+      CRIAR crates/dare-cli/src/commands/execute.rs (+ pub mod execute).
+      Commands::Execute { status:bool, next:bool, watch:bool, dag:Option<PathBuf>,
+        interval:u64 default 2, max_ticks:Option<u64> } — ArgGroup exclusivo status|next|watch;
+        se todos false → Status. Flags 029+ AUSENTES.
+      pub fn run_execute(dag, action: ExecuteAction, renderer) -> ExitCode
+      ExecuteAction::{ Status, Next, Watch{interval_secs, max_ticks} }
+      Fluxo Status/Next: root→resolve_project_rel(DEFAULT_DAG_REL, must_exist)→load_dag→
+        ensure_state(SystemClock)→compute_ranks?→canvas::write→format.
+      NÃO transition(Start). JSON shapes §5.7 camelCase; outcome strings congeladas.
+      Human next ready: bloco por task id/title/complexity/rank/spec_file/prompt.
+      Human resolved: MSG_RESOLVED; blocked: MSG_BLOCKED…; empty: MSG_EMPTY.
+      Smokes MUST (cli_smoke filter execute): default status exit 0; --next ready;
+        resolved; blocked; empty; missing dag→3; --status --next →2; cycle dag→4;
+        --json status schema.
+      Gate: cargo test -p dare-cli --test cli_smoke -- execute
+      Sem watch completo ainda (mp028-004 pode stub Watch → Internal OU implementar mínimo
+        que falha teste — preferir Watch arm chama helper placeholder Err só se não usado;
+        se clap expõe --watch, smoke watch fica em 004; aqui --watch sem max_ticks pode
+        ser Usage ou defer: ACEITÁVEL retornar invalid_input("watch not implemented") exit 4
+        ATÉ mp028-004 — documentar no output).
+      Sem docs/DEC. Sem git commit. Sem Ralph.
+
+  - id: mp028-004
+    title: "CLI --watch + read-only guarantee"
+    depends_on: [mp028-003]
+    complexity: MED
+    spec_file: EXECUTION-028/mp028-004.md
+    subtask_prompt: |
+      Microplano 028 Fase 4 — BLUEPRINT-028 §5.6 watch T-17–T-20 RS-08.
+      Completar ExecuteAction::Watch: cada tick re-load_dag + load_runtime_state soft-fail
+        (empty v1 in-memory, SEM save) + compute_ranks + build_status_snapshot + print;
+        PROIBIDO ensure_state / save_runtime_state / canvas::write / transition.
+      --interval default 2; --max-ticks Some(n) para parar; smoke --watch --max-ticks 1.
+      Teste FS MUST: criar state.json; correr watch max-ticks 1; hash/bytes state idênticos;
+        canvas mtime/hash inalterado se existia.
+      Cancel Ctrl+C → exit 0 (se praticável em teste; senão doc + unit do loop break).
+      JSON: uma envelope por tick (action watch ou status).
+      Gate: cargo test -p dare-cli --test cli_smoke -- execute
+        + unit/integration watch_does_not_mutate_state
+      Sem git commit. Sem complete/fail.
+
+  - id: mp028-005
+    title: "Capability + cli-execute-status.md + DEC-029"
+    depends_on: [mp028-004]
+    complexity: MED
+    spec_file: EXECUTION-028/mp028-005.md
+    subtask_prompt: |
+      Microplano 028 Fase 5 — BLUEPRINT-028 T-21 T-22 RF-29 RF-30.
+      CRIAR docs/compatibility/cli-execute-status.md: superfície status/next/watch; flags;
+        strings MSG_*; outcomes; exit codes §0.1; ensure+canvas vs watch RO; no Start;
+        fora complete/Ralph; waiver compose se mp028-001; local verify.
+      DEC-029 em docs/DECISION-LOG.md (active): execute status/next/watch; no Start-on-next
+        Classe B/C vs TS; DEC-029.
+      Atualizar assets/capability-matrix.yml dare-execute cli_commands: ["execute"].
+      python scripts/regen-assets-manifest.py se hash mudar; assets verify ok.
+      Gate: ficheiros + matrix contém execute. Sem git commit. Sem closeout 000A (mp028-007).
+
+  - id: mp028-006
+    title: "Auditoria Ralph (fmt/clippy/test/audit)"
+    depends_on: [mp028-001, mp028-004, mp028-005]
+    complexity: MED
+    spec_file: EXECUTION-028/mp028-006.md
+    subtask_prompt: |
+      Microplano 028 Fase 6 — BLUEPRINT-028 §7 RS-04.
+      Rodar até verde:
+        cargo fmt --check
+        cargo clippy -p dare-dag -p dare-cli --all-targets -- -D warnings
+        cargo test -p dare-dag -- execution
+        cargo test -p dare-cli --test cli_smoke -- execute
+        cargo audit
+      CVE HIGH/CRITICAL → FAILED até fix.
+      Sem git commit. NÃO implementar 029+.
+
+  - id: mp028-007
+    title: "Fechamento TASKS/matriz/Blueprint"
+    depends_on: [mp028-006]
+    complexity: LOW
+    spec_file: EXECUTION-028/mp028-007.md
+    subtask_prompt: |
+      Microplano 028 Fase 7 — BLUEPRINT-028 §6 Fase 7.
+      TASKS-028 → 7/7 DONE 100%; 000A-MATRIZ linha 028 ✅;
+      BLUEPRINT-028 status APPROVED; opcional dag-graph-028.mmd via dare dag viz.
+      Sem git commit (humano). Gate: closeout ficheiros atualizados.

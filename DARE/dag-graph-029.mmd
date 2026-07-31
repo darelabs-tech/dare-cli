@@ -1,0 +1,31 @@
+flowchart TB
+  subgraph rank_0["Rank 0"]
+    mp029_001["mp029-001<br/>Verificar docker-compose.ci.yml"]
+    mp029_002["mp029-002<br/>Crate dare-verify (stacks + run_ralph)"]
+  end
+  subgraph rank_1["Rank 1"]
+    mp029_003["mp029-003<br/>Verification writer (.dare/verification)"]
+  end
+  subgraph rank_2["Rank 2"]
+    mp029_004["mp029-004<br/>CLI --complete + smokes Ralph mock"]
+  end
+  subgraph rank_3["Rank 3"]
+    mp029_005["mp029-005<br/>CLI --fail + --reset + smokes"]
+  end
+  subgraph rank_4["Rank 4"]
+    mp029_006["mp029-006<br/>Capability + cli-execute-mutations.md +…"]
+  end
+  subgraph rank_5["Rank 5"]
+    mp029_007["mp029-007<br/>Auditoria Ralph (fmt/clippy/test/audit)"]
+  end
+  subgraph rank_6["Rank 6"]
+    mp029_008["mp029-008<br/>Fechamento TASKS/matriz/Blueprint"]
+  end
+  mp029_001 --> mp029_007
+  mp029_002 --> mp029_003
+  mp029_003 --> mp029_004
+  mp029_004 --> mp029_005
+  mp029_005 --> mp029_006
+  mp029_005 --> mp029_007
+  mp029_006 --> mp029_007
+  mp029_007 --> mp029_008

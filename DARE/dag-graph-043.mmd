@@ -1,0 +1,18 @@
+flowchart TB
+  subgraph rank_0["Rank 0"]
+    mp043_001["mp043-001<br/>advanced locate + owners + tests"]
+    mp043_002["mp043-002<br/>advanced impact + trace + tests"]
+    mp043_003["mp043-003<br/>advanced drift + threshold helper"]
+    mp043_004["mp043-004<br/>neo4j feature + HTTP client + config"]
+  end
+  subgraph rank_1["Rank 1"]
+    mp043_005["mp043-005<br/>CLI advanced cmds + exit 7 smokes"]
+  end
+  subgraph rank_2["Rank 2"]
+    mp043_006["mp043-006<br/>Docs DEC-046 + matriz + Ralph close"]
+  end
+  mp043_001 --> mp043_005
+  mp043_002 --> mp043_005
+  mp043_003 --> mp043_005
+  mp043_004 --> mp043_006
+  mp043_005 --> mp043_006

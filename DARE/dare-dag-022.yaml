@@ -1,0 +1,154 @@
+title: "Update — aplicação, backup e migrations (022) - Development Tasks"
+version: "1.0.0"
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp022-001
+    title: "Verificar docker-compose.ci.yml"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION-022/mp022-001.md
+    subtask_prompt: |
+      Microplano 022 Fase 1 — BLUEPRINT-022 §6 Fase 1 T-17.
+      Validar: `docker compose -f docker-compose.ci.yml config` exit 0.
+      Se Docker ausente: confirmar YAML + Dockerfile.rust existem; waiver para
+      docs/compatibility/cli-update-apply.md § Local verify (mp022-006).
+      Sem nova imagem. Sem git commit. NÃO implementar apply/policy/CLI update.
+
+  - id: mp022-002
+    title: "Policy + session backup + journal/rollback"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION-022/mp022-002.md
+    subtask_prompt: |
+      Microplano 022 Fase 2 — BLUEPRINT-022 §4–5.4 T-02 T-03 T-04 T-05 T-06 T-07 T-10.
+      Pré-req: crate dare-update (021) existe. Se não, FAIL e reportar.
+      1) Cargo.toml dare-update: ADD dep dare-config (workspace). Manter sem dare-cli/dare-project/dare-dag.
+      2) CRIAR policy.rs:
+         pub enum ApplyAction { Keep, Replace }
+         pub struct AskContext { pub customized_paths: Vec<String> }
+         pub type AskFn = Box<dyn FnMut(&AskContext) -> bool + Send>;
+         pub struct ApplyOptions { yes: bool, force: bool, interactive: bool,
+           ask: Option<AskFn>, cli_version: String }
+         pub fn resolve_action(status: AssetUpdateStatus, opts: &ApplyOptions,
+           batch_replace_customized: bool) -> ApplyAction
+         — tabela BLUEPRINT §5.1 EXATA (identical→Keep; missing/apply→Replace;
+           customized+force→Replace; customized+yes→Keep; non-interactive→Keep;
+           interactive+batch true/false).
+      3) CRIAR session_backup.rs + tipos SessionJournal:
+         UPDATE_APPLY_SCHEMA_VERSION=1; APPLY_READ_CAP=262_144;
+         ensure_backup_root(root, cli_version) → `.dare/backup-{sanitized}` ou
+         `.dare/backup-{sanitized}-{utc}` se colisão (sanitize [A-Za-z0-9._-]);
+         session_backup_file; rollback_session (restore rev + delete created + rmdir empty;
+         NÃO apagar backup_root).
+      4) Re-export em lib.rs.
+      5) Testes MUST: resolve_action_matrix_all_rows; ensure_backup_root_creates_and_collides;
+         session_backup_and_rollback_restores; read_cap_rejects_huge_backup_source (InvalidInput).
+      Gate: cargo test -p dare-update. Sem git commit.
+      NÃO apply_update completo (mp022-003). NÃO CLI (mp022-005). NÃO docs.
+
+  - id: mp022-003
+    title: "apply_update assets + UpdateApplyReport"
+    depends_on: [mp022-002]
+    complexity: HIGH
+    spec_file: EXECUTION-022/mp022-003.md
+    subtask_prompt: |
+      Microplano 022 Fase 3 — BLUEPRINT-022 §4.5 §5.5–5.6 §5.10 T-11 T-12 T-13 T-14.
+      CRIAR apply.rs: UpdateApplyReport camelCase schema 1 (schemaVersion, mode="update",
+        cliVersion, projectRoot, backupRoot Option, target, force, yes, kept/created/replaced/
+        skipped/backedUp/migrated/warnings Vecs, rolledBack bool).
+      pub fn apply_update(root, plan: &UpdatePlan, opts: ApplyOptions) -> CoreResult<UpdateApplyReport>
+      Algoritmo §5.5 steps 1–7+9–10 (SEM migrate ainda — skip dare.config.json migrate; se item
+        path==dare.config.json e Replace, ainda pode escrever canonical bytes OU defer mp022-004;
+        PREFER: skip config items in loop with comment "migrated in mp022-004" OR write canonical
+        only — MUST document; migrate MUST in mp022-004).
+      canonical_bytes_for(item) via API 021/assets embed.
+      format_apply_human (MUST end with line `mode: update`); apply_report_to_json.
+      On Err mid-loop: rollback_session then return Err.
+      #[cfg(test)] failpoint OK to stub as no-op until mp022-004.
+      Testes MUST: apply_keeps_customized_with_yes; apply_force_replaces_customized;
+        apply_creates_missing; apply_identical_noop; report_schema_version_1_sorted_lists.
+      Gate: cargo test -p dare-update. Sem git commit. NÃO CLI. NÃO migrate (mp022-004).
+
+  - id: mp022-004
+    title: "Migrations config + failpoint rollback"
+    depends_on: [mp022-003]
+    complexity: HIGH
+    spec_file: EXECUTION-022/mp022-004.md
+    subtask_prompt: |
+      Microplano 022 Fase 4 — BLUEPRINT-022 §5.5 steps 8–9 T-08 T-09 T-10.
+      Integrar migrate em apply_update:
+        should_migrate; se customized config kept → NÃO migrar;
+        session_backup + plan_migrate + apply_plan_in_memory + save_dare_config
+        (MigrateOptions { write_schema_version: true, schema_version: 1 });
+        NÃO chamar apply_migrate nested (evita dual .dare/backups).
+        migrated.push("dare.config.json").
+      #[cfg(test)] pub(crate) apply_update_with_failpoint(root, plan, opts, after_n: usize)
+        — após N writes bem-sucedidos retorna Io err → rollback.
+      Testes MUST: apply_migrate_writes_schema_version; apply_migrate_kept_customized_config_skips;
+        apply_partial_failure_rolls_back (tree == before exceto backup dir).
+      Gate: cargo test -p dare-update. Sem git commit. NÃO CLI smokes (mp022-005).
+
+  - id: mp022-005
+    title: "CLI -y/--force + smokes apply"
+    depends_on: [mp022-004]
+    complexity: MED
+    spec_file: EXECUTION-022/mp022-005.md
+    subtask_prompt: |
+      Microplano 022 Fase 4/5 — BLUEPRINT-022 §5.7 §5.11 T-16.
+      MOD Commands::Update: add yes (-y/--yes), force (--force); keep dry_run, target, dir.
+      REMOVER stub Internal de apply (021): !dry_run → plan_update → ApplyOptions
+        { yes, force, interactive: stdout+stdin tty && !yes && !force,
+          ask: Some(stdin batch) se interactive else None,
+          cli_version: env!("CARGO_PKG_VERSION") } → apply_update → human/JSON UpdateApplyReport.
+      Stdin ask: stderr "Replace all N customized files? [y/N]: "; y/Y/yes→true; else/EOF→false.
+      --force + --dry-run: dry-run ignora force (zero writes).
+      Smokes MUST §5.11: update_dry_run_zero_write; update_yes_keeps_customized;
+        update_force_overwrites_customized; update_creates_missing; update_dir_missing_exit_3.
+      Preservar smokes dry-run 021. Sem git commit.
+      Gate: cargo test -p dare-cli --test cli_smoke -- update.
+
+  - id: mp022-006
+    title: "Docs cli-update-apply.md + DEC-023"
+    depends_on: [mp022-002]
+    complexity: LOW
+    spec_file: EXECUTION-022/mp022-006.md
+    subtask_prompt: |
+      Microplano 022 Fase 5 — BLUEPRINT-022 §5.12 T-18.
+      CRIAR docs/compatibility/cli-update-apply.md: flags; matriz §5.1; backup
+        `.dare/backup-<ver>/` vs `.dare/backups/` (005) Classe B; rollback; migrate;
+        UpdateApplyReport schema 1 + exemplos; exit codes 004; diff vs TS; Local verify;
+        DEC-023; -y ≠ --force.
+      ADD DEC-023 em docs/DECISION-LOG.md (NÃO reusar DEC-021/022).
+      Atualizar skill/commands dare-update: mencionar -y/--force e apply.
+      Sem git commit. Sem Rust obrigatório.
+
+  - id: mp022-007
+    title: "Auditoria Ralph"
+    depends_on: [mp022-001, mp022-005, mp022-006]
+    complexity: MED
+    spec_file: EXECUTION-022/mp022-007.md
+    subtask_prompt: |
+      Microplano 022 Fase 6 — BLUEPRINT-022 §6 Fase 6 §7.
+      cargo fmt --check; cargo clippy --workspace --all-features -- -D warnings;
+      cargo test --workspace; cargo audit; cargo deny check.
+      Reportar exit codes. Sem git commit.
+
+  - id: mp022-008
+    title: "Fechamento microplano 022"
+    depends_on: [mp022-007]
+    complexity: LOW
+    spec_file: EXECUTION-022/mp022-008.md
+    subtask_prompt: |
+      Microplano 022 Fase 7 — BLUEPRINT-022 §6 Fase 7.
+      TASKS-022 8/8 DONE; canvas/próximo → 023-design-deterministico.
+      Opcional marcar DESIGN/BLUEPRINT-022 APPROVED. Sem código. Sem git commit.

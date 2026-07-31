@@ -1,0 +1,101 @@
+title: "Microplano 055 — Pilotos, shadow tests e release candidate"
+version: "1.0.0"
+microplano: "055"
+name: pilotos-shadow-tests-e-release-candidate
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor: { HIGH: gpt-5.3-codex, MED: composer-2, LOW: auto-low }
+  claude: { HIGH: claude-sonnet-4-5, MED: claude-haiku-4, LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro, MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp055-001
+    title: "Pilot inventory + synthetic fixtures"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION-055/mp055-001.md
+    subtask_prompt: |
+      BLUEPRINT-055 Fase A / §0.3: create docs/pilot/pilots.md with ≥3 pilots
+        (seed: pilot-linux-empty, pilot-macos-node, pilot-windows-rust; synthetic:true OK).
+      Fields: pilot_id, synthetic, stack, os, owner, source, consent:true, flows, shadow_cycles_done:0.
+      Materialize tests/fixtures/{empty-project,existing-node-project,existing-rust-project}
+        enough for allowlist flows (package.json / Cargo.toml stubs OK).
+      Selection criteria section in pilots.md. No secrets/PII. Avoid mass CRLF.
+
+  - id: mp055-004
+    title: "TypeScript freeze + contract freeze docs"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION-055/mp055-004.md
+    subtask_prompt: |
+      BLUEPRINT-055 Fase D / §5.4–5.5: create docs/release-candidate/typescript-freeze.md
+        (TS line security-fixes-only from RC date; en-US policy quote).
+      Create docs/release-candidate/contract-freeze.md (Classe A → ADR Accepted checklist).
+      Link both from docs/compatibility/README.md. Do NOT edit DEC-055. Avoid mass CRLF.
+
+  - id: mp055-002
+    title: "Shadow playbook + pilot-shadow scripts"
+    depends_on: [mp055-001]
+    complexity: HIGH
+    spec_file: EXECUTION-055/mp055-002.md
+    subtask_prompt: |
+      BLUEPRINT-055 Fase B / §0.5: docs/pilot/shadow-playbook.md (copy-only; never write
+        original; allowlist cmds; 3 cycles). scripts/pilot-shadow.ps1 + .sh: copy to
+        $TMP/dare-pilot-<id>-<uuid>; fingerprint spot-check ≥3 files; argv-only dare;
+        exits 2/3/4/5/6; write docs/pilot/results/<id>/cycle-N.md redacted.
+      results/.gitkeep. Smoke: one dry run on synthetic fixture. Avoid mass CRLF.
+
+  - id: mp055-003
+    title: "Run ≥3 shadow cycles + incidents log"
+    depends_on: [mp055-002]
+    complexity: HIGH
+    spec_file: EXECUTION-055/mp055-003.md
+    subtask_prompt: |
+      BLUEPRINT-055 Fase C: for each pilot in pilots.md run ≥3 shadow cycles (script or
+        playbook). Fill docs/pilot/results/<id>/cycle-1.md..cycle-3.md. Create/update
+        docs/pilot/incidents.md table (sev P0–P3). MUST close or mitigate all P0/P1
+        (status!=open) before DONE. Update pilots.md shadow_cycles_done≥3. Update
+        parity-diff-log.md if Class C gaps. Avoid mass CRLF.
+
+  - id: mp055-005
+    title: "Publish RC v4.0.0-rc1 + notes + smoke"
+    depends_on: [mp055-003, mp055-004]
+    complexity: HIGH
+    spec_file: EXECUTION-055/mp055-005.md
+    subtask_prompt: |
+      BLUEPRINT-055 Fase E: docs/release-candidate/RELEASE-NOTES.md (en-US; not stable
+        cutover; install via download or dare self update --version 4.0.0-rc1;
+        channel beta default unchanged). Tag/publish GitHub prerelease v4.0.0-rc1
+        (assets+SHA256SUMS+.sig per ADR-008) via release.yml/gh if credentials allow;
+        else produce publish-checklist.md with exact commands + local release smoke.
+      Smoke: --version, info, --help on available OS; log under docs/pilot/results/rc-smoke/.
+      Avoid mass CRLF.
+
+  - id: mp055-006
+    title: "Rollback drill PASS"
+    depends_on: [mp055-005]
+    complexity: MED
+    spec_file: EXECUTION-055/mp055-006.md
+    subtask_prompt: |
+      BLUEPRINT-055 Fase F / §0.7: fill docs/release-candidate/rollback-drill.md with
+        operator, date, os, from_version=v4.0.0-rc1, to_version=prior, method_a
+        (dare self rollback), method_b (reinstall prior), post_smoke, result:PASS.
+      Execute drill against temp install if possible; document skip reasons only if
+        environment blocks AND method_b PASS. Avoid mass CRLF.
+
+  - id: mp055-007
+    title: "DEC-056 + matriz + Ralph close"
+    depends_on: [mp055-006]
+    complexity: MED
+    spec_file: EXECUTION-055/mp055-007.md
+    subtask_prompt: |
+      BLUEPRINT-055 Fase G: append DEC-056 ONLY (do not edit DEC-055). Matriz 000A:
+        055 Concluído. TASKS-055 → 7/7 DONE. Verify gate: ≥3 pilots, cycles≥3, 0 open
+        P0/P1, RC docs, rollback PASS. NO new capability (stay 51).
+      Ralph: fmt --check; test dare-parity; cli_smoke; clippy dare-parity+dare-cli;
+        cargo audit. Avoid mass CRLF.

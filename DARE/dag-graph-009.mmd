@@ -1,0 +1,22 @@
+```mermaid
+flowchart TB
+  subgraph rank0["Rank 0"]
+    mp009-001["mp009-001 compose"]
+    mp009-002["mp009-002 harden path"]
+  end
+  subgraph rank1["Rank 1"]
+    mp009-003["mp009-003 freshness"]
+    mp009-004["mp009-004 scripts"]
+  end
+  mp009-005["mp009-005 smoke+docs"]
+  mp009-006["mp009-006 audit"]
+  mp009-007["mp009-007 closeout"]
+
+  mp009-002 --> mp009-003
+  mp009-002 --> mp009-004
+  mp009-003 --> mp009-005
+  mp009-004 --> mp009-005
+  mp009-001 --> mp009-006
+  mp009-005 --> mp009-006
+  mp009-006 --> mp009-007
+```

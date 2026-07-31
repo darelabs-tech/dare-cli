@@ -1,0 +1,161 @@
+title: "DAG visualizacao dare dag viz (027) - Development Tasks"
+version: "1.0.0"
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp027-001
+    title: "Verificar docker-compose.ci.yml"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION-027/mp027-001.md
+    subtask_prompt: |
+      Microplano 027 Fase 1 — BLUEPRINT-027 §6 Fase 1 T-24.
+      Validar: `docker compose -f docker-compose.ci.yml config` exit 0.
+      Se Docker ausente: confirmar YAML + Dockerfile.rust existem; waiver em
+      docs/compatibility/cli-dag-viz.md (escrito em mp027-005).
+      Sem nova imagem. Sem git commit.
+      NÃO implementar viz.rs / commands/dag.rs.
+
+  - id: mp027-002
+    title: "viz Mermaid core + goldens"
+    depends_on: []
+    complexity: HIGH
+    spec_file: EXECUTION-027/mp027-002.md
+    subtask_prompt: |
+      Microplano 027 Fase 2 — BLUEPRINT-027 §4–5.2 T-01 T-07–T-10 T-13 T-14 T-25 T-27.
+      CRIAR crates/dare-dag/src/viz.rs (+ `mod viz;` e pub use em lib.rs).
+      pub enum VizFormat { Mermaid, Dot, Excalidraw }
+        as_str → "mermaid"|"dot"|"excalidraw"; parse exact lowercase only → Option.
+      pub struct VizOptions { title_max: usize /*default 40*/, state: Option<RuntimeStateV1> }
+      pub fn render(doc: &DagDocument, format: VizFormat, opts: &VizOptions)
+        -> Result<String, DagGraphError>
+      Nesta task: implementar APENAS VizFormat::Mermaid (Dot/Excalidraw → Err InvalidDag
+        "format not implemented" OU deixar match arms stub PROIBIDO — preferir
+        `unreachable!` NÃO; retornar InvalidDag com message clara se chamado cedo,
+        OU implementar só o arm Mermaid e testes só Mermaid).
+      Fluxo Mermaid:
+        compute_ranks(doc)?; Cycle/MissingDependency propagam.
+        Build VizGraph: nodes rank↑ then id lexico; edges (from,to) where from∈depends_on(to),
+          sort (from,to) lexico; seta dep --> dependent.
+        TITLE_MAX=40 Unicode chars; truncate + ellipsis `…`.
+        Sanitize id: `-`→`_`; se não match ^[a-zA-Z_][a-zA-Z0-9_]*$ → alias n_{sanitized}.
+        Emit: `flowchart TB` + `subgraph rank_{n}["Rank {n}"]` … `end` por rank crescente;
+          nó `alias["id<br/>title"]`; edges DEPOIS de todos subgraphs: `from --> to`.
+        NÃO incluir subtask_prompt no output (RS-02).
+      Fixture MUST: tests/fixtures/dag/viz/sample.v21.yaml (diamond ou chain 2–4 tasks)
+        + sample.mermaid.golden (EOL assert `.replace("\r\n","\n")`).
+      Testes MUST: render_mermaid_matches_golden; render_mermaid_cycle_errors;
+        render_title_truncates; render_sanitize_kebab_id.
+      Gate: cargo test -p dare-dag -- viz
+      Sem CLI. Sem DOT/Excalidraw completo. Sem git commit.
+
+  - id: mp027-003
+    title: "viz DOT + Excalidraw + cores + OUTPUT_CAP"
+    depends_on: [mp027-002]
+    complexity: HIGH
+    spec_file: EXECUTION-027/mp027-003.md
+    subtask_prompt: |
+      Microplano 027 Fase 3 — BLUEPRINT-027 §5.3–5.4 T-11 T-12 T-15–T-17 T-20 T-28 RS-07.
+      Completar render() para Dot e Excalidraw (mesma ordem nós/edges que Mermaid).
+      DOT: `digraph dare_dag { rankdir=TB; … }`; nó `alias [label="id\\ntitle"]`;
+        edge `from -> to`; escapar `"` e `\` em labels.
+      Excalidraw JSON: {type:"excalidraw", version:2, source:"dare-cli", elements:[…],
+        appState:{}}; rect EXCAL_W=120 EXCAL_H=60; x=40+rank*200; y=40+idx*100
+        (idx lexico no rank); ids estáveis `task-{id}`, `arrow-{from}-{to}`, `text-{id}`;
+        SEM updated/seed voláteis.
+      Cores complexity fills: LOW #e3f2fd, MED #fff3e0, HIGH #fce4ec, unknown #eeeeee.
+      Status (se opts.state Some): PENDING #9e9e9e; RUNNING #1976d2 dashed;
+        DONE #2e7d32; FAILED #c62828; SKIPPED #757575 dashed. State None → todos PENDING visuals.
+      OUTPUT_CAP=2_097_152: se body.len()>cap → Err DagGraphError::InvalidDag
+        { message: "viz output too large" }.
+      Goldens: sample.dot.golden + sample.excalidraw.golden; parse JSON excalidraw Ok.
+      Testes MUST: render_dot_matches_golden; render_excalidraw_matches_golden;
+        render_excalidraw_complexity_colors; render_status_soft_without_state;
+        render_output_cap_errors (inject/mock oversized ou opts forçado).
+      Gate: cargo test -p dare-dag -- viz
+      Sem CLI ainda. Sem git commit.
+
+  - id: mp027-004
+    title: "CLI dare dag viz + smokes"
+    depends_on: [mp027-003]
+    complexity: HIGH
+    spec_file: EXECUTION-027/mp027-004.md
+    subtask_prompt: |
+      Microplano 027 Fase 4 — BLUEPRINT-027 §5.5 §0.1 T-02–T-06 T-18 T-19 T-21 T-28.
+      CRIAR crates/dare-cli/src/commands/dag.rs (+ pub mod dag em commands/mod.rs).
+      Preferir helper partilhado resolve_project_rel com validate (extrair de
+        validate::resolve_dag_rel para path_resolve.rs OU duplicar mínimo — T-06).
+      clap: Commands::Dag { Viz { dag: Option<PathBuf>, format: VizFormat ValueEnum
+        exact lowercase mermaid|dot|excalidraw default mermaid, output: Option<-o> } }.
+      pub fn run_dag_viz(dag, format, output, renderer) -> ExitCode:
+        find_project_root → None = InvalidInput exit 4;
+        resolve dag rel DEFAULT_DAG_REL="DARE/dare-dag.yaml"; missing file → NotFound 3;
+        load_dag parse fail → Config/InvalidInput 4;
+        compute via viz::render; Cycle/Missing → 4 (msg en-US contém "cycle" se ciclo);
+        optional load_runtime_state(".dare/state.json") soft-fail → VizOptions.state=None;
+        se -o: jail + create_dir_all + atomic_write; senão stdout body / --json
+        data {format, dag, outputPath, body} (body null se escrito em ficheiro);
+        oversize → 4; Io → 5; clap bad format → 2.
+      ZERO writes em DAG/state sem -o.
+      Smokes MUST (cli_smoke ou equivalente): mermaid stdout exit 0; -o escreve ficheiro;
+        dag missing → 3; format inválido → 2; cycle fixture → 4; path -o fora root → 4.
+      Gate: cargo test -p dare-cli --test cli_smoke -- dag
+        + cargo build -p dare-cli
+      Sem docs/DEC ainda. Sem git commit. Sem execute 028.
+
+  - id: mp027-005
+    title: "Capability matrix + cli-dag-viz.md + DEC-028"
+    depends_on: [mp027-004]
+    complexity: MED
+    spec_file: EXECUTION-027/mp027-005.md
+    subtask_prompt: |
+      Microplano 027 Fase 5 — BLUEPRINT-027 T-22 T-23 RF-22 RF-23.
+      CRIAR docs/compatibility/cli-dag-viz.md: superfície `dare dag viz`; flags;
+        formatos; exit codes §0.1; DEFAULT_DAG_REL; jail; status soft-fail; OUTPUT_CAP;
+        fora de escopo execute/PNG; waiver compose se mp027-001; local verify commands.
+      DEC-028 em docs/DECISION-LOG.md (active): viz em dare-dag; nested CLI; ranks swim-lane;
+        ciclo→4; DEC nº 028.
+      Atualizar assets/capability-matrix.yml: dare-dag-viz (ou entrada equivalente)
+        cli_commands: ["dag"] + nota subcomando viz.
+      Manifest hashes se o repo exigir para docs novos.
+      Gate: ficheiros presentes; matrix contém "dag".
+      Sem git commit. NÃO fechar TASKS/matriz 000A (mp027-007).
+
+  - id: mp027-006
+    title: "Auditoria Ralph (fmt/clippy/test/audit)"
+    depends_on: [mp027-001, mp027-004, mp027-005]
+    complexity: MED
+    spec_file: EXECUTION-027/mp027-006.md
+    subtask_prompt: |
+      Microplano 027 Fase 6 — BLUEPRINT-027 §7–8 RS-04.
+      Rodar e corrigir até verde:
+        cargo fmt --check
+        cargo clippy -p dare-dag -p dare-cli --all-targets -- -D warnings
+        cargo test -p dare-dag -- viz
+        cargo test -p dare-cli --test cli_smoke -- dag
+        cargo audit (e cargo deny check se o repo exigir)
+      CVE HIGH/CRITICAL em deps novas → FAILED até fix.
+      Sem git commit. NÃO implementar execute 028+.
+
+  - id: mp027-007
+    title: "Fechamento TASKS/matriz/Blueprint"
+    depends_on: [mp027-006]
+    complexity: LOW
+    spec_file: EXECUTION-027/mp027-007.md
+    subtask_prompt: |
+      Microplano 027 Fase 7 — BLUEPRINT-027 §6 Fase 7.
+      TASKS-027 → 7/7 DONE 100%; barra cheia.
+      000A-MATRIZ-DE-STATUS linha 027 ✅.
+      BLUEPRINT-027 status APPROVED.
+      Confirmar dag-graph-027.mmd coerente (opcional regenerar se `dare dag viz` OK:
+        dare dag viz --dag DARE/dare-dag-027.yaml -o DARE/dag-graph-027.mmd).
+      Sem git commit (humano). Gate: ficheiros de closeout atualizados.

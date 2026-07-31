@@ -1,0 +1,50 @@
+%% DARE DAG — Fundação de enrichment por IA (024) - Development Tasks
+%% Generated: 2026-07-22T00:29:26.247Z
+graph LR
+  subgraph rank_0 ["Rank 0"]
+    direction TB
+    mp024_001["mp024-001\nVerificar docker-compose.ci.yml\n⏳ PENDING"]
+    mp024_002["mp024-002\nScaffold dare-ai + schema + inject\n⏳ PENDING"]
+  end
+  subgraph rank_1 ["Rank 1"]
+    direction TB
+    mp024_003["mp024-003\nMockProvider + resolve_provider\n⏳ PENDING"]
+    mp024_006["mp024-006\nDocs cli-design AI + DEC-025\n⏳ PENDING"]
+  end
+  subgraph rank_2 ["Rank 2"]
+    direction TB
+    mp024_004["mp024-004\nCodexCliProvider + overrides + timeout/stdin\n⏳ PENDING"]
+  end
+  subgraph rank_3 ["Rank 3"]
+    direction TB
+    mp024_005["mp024-005\nCLI --ai/--provider + DesignReport v2 + smokes\n⏳ PENDING"]
+  end
+  subgraph rank_4 ["Rank 4"]
+    direction TB
+    mp024_007["mp024-007\nAuditoria Ralph\n⏳ PENDING"]
+  end
+  subgraph rank_5 ["Rank 5"]
+    direction TB
+    mp024_008["mp024-008\nFechamento microplano 024\n⏳ PENDING"]
+  end
+  mp024_002 --> mp024_003
+  mp024_003 --> mp024_004
+  mp024_004 --> mp024_005
+  mp024_002 --> mp024_006
+  mp024_001 --> mp024_007
+  mp024_005 --> mp024_007
+  mp024_006 --> mp024_007
+  mp024_007 --> mp024_008
+  class mp024_001 st_pending;
+  class mp024_002 st_pending;
+  class mp024_003 st_pending;
+  class mp024_004 st_pending;
+  class mp024_005 st_pending;
+  class mp024_006 st_pending;
+  class mp024_007 st_pending;
+  class mp024_008 st_pending;
+  classDef st_pending fill:#f3f4f6,stroke:#9ca3af,color:#374151;
+  classDef st_running fill:#dbeafe,stroke:#2563eb,color:#1e3a8a;
+  classDef st_done fill:#dcfce7,stroke:#16a34a,color:#14532d;
+  classDef st_failed fill:#fee2e2,stroke:#dc2626,color:#7f1d1d;
+  classDef st_skipped fill:#e5e7eb,stroke:#6b7280,color:#374151;

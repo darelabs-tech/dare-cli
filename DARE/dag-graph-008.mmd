@@ -1,0 +1,22 @@
+```mermaid
+flowchart TB
+  subgraph rank0["Rank 0"]
+    mp008-001["mp008-001 compose"]
+    mp008-002["mp008-002 re-export strict"]
+  end
+  subgraph rank1["Rank 1"]
+    mp008-003["mp008-003 fixtures"]
+    mp008-004["mp008-004 P/B + migrate"]
+  end
+  mp008-005["mp008-005 docs"]
+  mp008-006["mp008-006 audit"]
+  mp008-007["mp008-007 closeout"]
+
+  mp008-002 --> mp008-003
+  mp008-002 --> mp008-004
+  mp008-003 --> mp008-005
+  mp008-004 --> mp008-005
+  mp008-001 --> mp008-006
+  mp008-005 --> mp008-006
+  mp008-006 --> mp008-007
+```

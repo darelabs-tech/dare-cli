@@ -1,0 +1,53 @@
+%% DARE DAG — Execute agent mock worktrees budget (030) - Development Tasks
+%% Generated: 2026-07-23T01:54:31.452Z
+graph LR
+  subgraph rank_0 ["Rank 0"]
+    direction TB
+    mp030_001["mp030-001\nVerificar docker-compose.ci.yml\n⏳ PENDING"]
+    mp030_002["mp030-002\nCrate dare-agent (driver/mock/budget/policy/sig)\n⏳ PENDING"]
+  end
+  subgraph rank_1 ["Rank 1"]
+    direction TB
+    mp030_003["mp030-003\nWorktreeManager (git worktree jail)\n⏳ PENDING"]
+  end
+  subgraph rank_2 ["Rank 2"]
+    direction TB
+    mp030_004["mp030-004\nCLI --agent loop + Ralph on Done\n⏳ PENDING"]
+  end
+  subgraph rank_3 ["Rank 3"]
+    direction TB
+    mp030_005["mp030-005\nCLI --cleanup-worktrees + recovery\n⏳ PENDING"]
+  end
+  subgraph rank_4 ["Rank 4"]
+    direction TB
+    mp030_006["mp030-006\nCapability + cli-execute-agent.md + DEC-031\n⏳ PENDING"]
+  end
+  subgraph rank_5 ["Rank 5"]
+    direction TB
+    mp030_007["mp030-007\nAuditoria Ralph (fmt/clippy/test/audit)\n⏳ PENDING"]
+  end
+  subgraph rank_6 ["Rank 6"]
+    direction TB
+    mp030_008["mp030-008\nFechamento TASKS/matriz/Blueprint\n⏳ PENDING"]
+  end
+  mp030_002 --> mp030_003
+  mp030_003 --> mp030_004
+  mp030_004 --> mp030_005
+  mp030_005 --> mp030_006
+  mp030_001 --> mp030_007
+  mp030_005 --> mp030_007
+  mp030_006 --> mp030_007
+  mp030_007 --> mp030_008
+  class mp030_001 st_pending;
+  class mp030_002 st_pending;
+  class mp030_003 st_pending;
+  class mp030_004 st_pending;
+  class mp030_005 st_pending;
+  class mp030_006 st_pending;
+  class mp030_007 st_pending;
+  class mp030_008 st_pending;
+  classDef st_pending fill:#f3f4f6,stroke:#9ca3af,color:#374151;
+  classDef st_running fill:#dbeafe,stroke:#2563eb,color:#1e3a8a;
+  classDef st_done fill:#dcfce7,stroke:#16a34a,color:#14532d;
+  classDef st_failed fill:#fee2e2,stroke:#dc2626,color:#7f1d1d;
+  classDef st_skipped fill:#e5e7eb,stroke:#6b7280,color:#374151;

@@ -1,0 +1,47 @@
+%% DARE DAG — Comando dare blueprint (025) - Development Tasks
+%% Generated: 2026-07-22T01:18:27.584Z
+graph LR
+  subgraph rank_0 ["Rank 0"]
+    direction TB
+    mp025_001["mp025-001\nVerificar docker-compose.ci.yml\n⏳ PENDING"]
+    mp025_002["mp025-002\ngenerate_bundle + heurística Design→tasks\n⏳ PENDING"]
+    mp025_005["mp025-005\nCapability matrix cli_commands blueprint\n⏳ PENDING"]
+  end
+  subgraph rank_1 ["Rank 1"]
+    direction TB
+    mp025_003["mp025-003\nStaging + validate_dag + promote keep/force\n⏳ PENDING"]
+    mp025_006["mp025-006\nDocs cli-blueprint.md + DEC-026\n⏳ PENDING"]
+  end
+  subgraph rank_2 ["Rank 2"]
+    direction TB
+    mp025_004["mp025-004\nCLI dare blueprint + AI soft + smokes\n⏳ PENDING"]
+  end
+  subgraph rank_3 ["Rank 3"]
+    direction TB
+    mp025_007["mp025-007\nAuditoria Ralph\n⏳ PENDING"]
+  end
+  subgraph rank_4 ["Rank 4"]
+    direction TB
+    mp025_008["mp025-008\nFechamento microplano 025\n⏳ PENDING"]
+  end
+  mp025_002 --> mp025_003
+  mp025_003 --> mp025_004
+  mp025_002 --> mp025_006
+  mp025_001 --> mp025_007
+  mp025_004 --> mp025_007
+  mp025_005 --> mp025_007
+  mp025_006 --> mp025_007
+  mp025_007 --> mp025_008
+  class mp025_001 st_pending;
+  class mp025_002 st_pending;
+  class mp025_003 st_pending;
+  class mp025_004 st_pending;
+  class mp025_005 st_pending;
+  class mp025_006 st_pending;
+  class mp025_007 st_pending;
+  class mp025_008 st_pending;
+  classDef st_pending fill:#f3f4f6,stroke:#9ca3af,color:#374151;
+  classDef st_running fill:#dbeafe,stroke:#2563eb,color:#1e3a8a;
+  classDef st_done fill:#dcfce7,stroke:#16a34a,color:#14532d;
+  classDef st_failed fill:#fee2e2,stroke:#dc2626,color:#7f1d1d;
+  classDef st_skipped fill:#e5e7eb,stroke:#6b7280,color:#374151;

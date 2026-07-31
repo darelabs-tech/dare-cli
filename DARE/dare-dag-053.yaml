@@ -1,0 +1,109 @@
+title: "Microplano 053 — Self-update e package managers"
+version: "1.0.0"
+microplano: "053"
+name: self-update-e-package-managers
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor: { HIGH: gpt-5.3-codex, MED: composer-2, LOW: auto-low }
+  claude: { HIGH: claude-sonnet-4-5, MED: claude-haiku-4, LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro, MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp053-001
+    title: "Crate dare-self: paths + lock + channel"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION-053/mp053-001.md
+    subtask_prompt: |
+      BLUEPRINT-053 Fase A / T-01/T-11: create crates/dare-self workspace member.
+      SelfHome from DARE_SELF_HOME or ~/.dare/self; layout update.lock, backup/, tmp/.
+      Channel::{Beta,Stable} parse only "beta"|"stable"; default beta constant.
+      lock.rs: acquire/release; LockHeld error; --force-unlock if stale >3600s (helper).
+      Unit: channel_parse_ok/bad; lock_contention_second_fails.
+      Do NOT implement download/apply/CLI. Avoid mass CRLF.
+
+  - id: mp053-002
+    title: "plan + download + SHA-256 verify"
+    depends_on: [mp053-001]
+    complexity: HIGH
+    spec_file: EXECUTION-053/mp053-002.md
+    subtask_prompt: |
+      BLUEPRINT-053 Fase B / §0.3–0.4: plan_update builds UpdatePlan schemaVersion 1
+        (channel, currentVersion, targetTag, targetTriple, assetName, urls, actions).
+      Asset name: dare-${TAG}-${TARGET}.tar.gz|zip per ADR-008.
+      HttpClient trait (mockable); download asset+SHA256SUMS+sig to temp.
+      verify_sha256 against SHA256SUMS two-space format; mismatch → checksum error.
+      Fixtures under crates/dare-self/tests/fixtures/ — NO real GitHub network in unit tests.
+      Exits mapping later in CLI; domain returns typed SelfError/CoreError.
+      Avoid mass CRLF.
+
+  - id: mp053-003
+    title: "SignatureVerifier + apply atomic + backup"
+    depends_on: [mp053-002]
+    complexity: HIGH
+    spec_file: EXECUTION-053/mp053-003.md
+    subtask_prompt: |
+      BLUEPRINT-053 Fase C / §0.5: SignatureVerifier trait; RejectSkipped if .sig
+        starts with "signing skipped" → MSG_SIGNING_SKIPPED.
+      CosignCliVerifier: SafeCommand argv `cosign verify-blob` (no shell); missing →
+        MSG_COSIGN_MISSING. DARE_SELF_ALLOW_UNSIGNED=1 skips cosign AFTER sha256 only
+        (stderr warning). apply_update: lock → verify → backup current_exe to
+        ~/.dare/self/backup/dare[.exe] → atomic replace → smoke --version → cleanup.
+      Failpoint test: interrupt after backup preserves old binary semantics.
+      Avoid mass CRLF.
+
+  - id: mp053-004
+    title: "rollback + uninstall"
+    depends_on: [mp053-003]
+    complexity: MED
+    spec_file: EXECUTION-053/mp053-004.md
+    subtask_prompt: |
+      BLUEPRINT-053 Fase D: rollback() restores backup over current_exe; no backup →
+        MSG_NO_BACKUP. uninstall() deletes only current_exe path (fixture temp binary);
+        MUST NOT delete user project trees or wipe SelfHome (no --purge in v1).
+      Unit/integration FS tests. Avoid mass CRLF.
+
+  - id: mp053-005
+    title: "CLI dare self + smokes"
+    depends_on: [mp053-004]
+    complexity: HIGH
+    spec_file: EXECUTION-053/mp053-005.md
+    subtask_prompt: |
+      BLUEPRINT-053 Fase E / §5.1: commands/self_cmd.rs + Commands::Self_ in main.rs.
+      dare self update|rollback|uninstall with flags --channel --version --dry-run
+        --yes --force-unlock --json. Exits 0/2/3/4/5/6 frozen §0.2.
+      channel+version together → 2; unknown channel → 2; non-TTY without --yes → 4.
+      Help must distinguish from `dare update` (assets). tests/self_cli.rs:
+        help_lists_self; bad_channel_exit_2; dry_run_ok (mock/env as needed).
+      Avoid mass CRLF.
+
+  - id: mp053-006
+    title: "Packaging Homebrew + WinGet"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION-053/mp053-006.md
+    subtask_prompt: |
+      BLUEPRINT-053 Fase F / T-10: packaging/homebrew/dare.rb Formula template with
+        URL+sha256 placeholders documented. packaging/winget/DareLabs.DareCli.yaml
+        minimal manifest (InstallerUrl + InstallerSha256 placeholders).
+      NO Scoop. Structural validation test or parse check. Parallel rank 0 — do not
+        modify dare-self/dare-cli. Avoid mass CRLF.
+
+  - id: mp053-007
+    title: "Docs DEC-054 + capability + Ralph"
+    depends_on: [mp053-005, mp053-006]
+    complexity: MED
+    spec_file: EXECUTION-053/mp053-007.md
+    subtask_prompt: |
+      BLUEPRINT-053 Fase G: docs/compatibility/cli-self-update.md (CLI, exits,
+        channels, cosign fail-closed vs ADR-008 soft-fail installers, packaging).
+      Append DEC-054 ONLY (do not edit DEC-053). Capability dare-self
+        cli_commands:["self"] + manifest hash capability-matrix ONLY.
+      Matriz 000A: 053 Concluído. Bump harness/cli_smoke capability counts 50→51.
+      Ralph: fmt --check; test dare-self; self_cli; cli_smoke; clippy dare-self+cli;
+        cargo audit. Avoid mass CRLF.

@@ -1,0 +1,120 @@
+title: "Microplano 050 — Comandos dare ai"
+version: "1.0.0"
+microplano: "050"
+name: comandos-ai
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor: { HIGH: gpt-5.3-codex, MED: composer-2, LOW: auto-low }
+  claude: { HIGH: claude-sonnet-4-5, MED: claude-haiku-4, LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro, MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp050-001
+    title: "command_registry design+blueprint"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION-050/mp050-001.md
+    subtask_prompt: |
+      In dare-ai per BLUEPRINT-050 §0.4 / Fase A:
+      Create command_registry.rs: sections_for_command("design"|"blueprint") ->
+        &'static [&str]; unknown -> CoreError::usage(MSG_UNKNOWN_COMMAND).
+      design sections = description,objectives,functional-requirements,stack
+        (align dare_ai::ENRICHABLE).
+      blueprint = architecture-overview,execution-phases,api-contracts,data-model
+        (align BP_ENRICHABLE from blueprint CLI — copy literals into dare-ai).
+      Export from lib.rs. Unit: known commands; unknown_command_usage.
+      No doctor/run/CLI. Avoid mass CRLF.
+
+  - id: mp050-002
+    title: "capabilities + doctor statuses"
+    depends_on: []
+    complexity: HIGH
+    spec_file: EXECUTION-050/mp050-002.md
+    subtask_prompt: |
+      BLUEPRINT-050 §0.2–0.3 / §4.1–4.2:
+      capabilities.rs: list_provider_capabilities() -> ProvidersReport
+        schemaVersion 1; order mock,codex,claude-code,cursor-cli,antigravity-cli;
+        fields enrich,implemented,envOverride,defaultTimeoutSecs=1200,commands.
+      doctor.rs: DoctorStatus ready|missing|invalid|not_implemented;
+        diagnose_provider / diagnose_all; mock always ready;
+        unimplemented CLIs -> not_implemented; codex missing exe -> missing;
+        empty DARE_CODEX_COMMAND -> invalid. NO enrich() spawn in doctor.
+      Probe: resolve program only (PATH/override), no --help spawn.
+      Unit: order stable; mock_ready; not_implemented_claude; invalid_override.
+      Parallel with mp050-001. Avoid mass CRLF.
+
+  - id: mp050-003
+    title: "prompt preview + redact (no env leak)"
+    depends_on: [mp050-001]
+    complexity: HIGH
+    spec_file: EXECUTION-050/mp050-003.md
+    subtask_prompt: |
+      BLUEPRINT §4.4 / §5.2: prompt.rs
+      build_enrich_prompt(req, section_ids) shared schema text;
+      prompt_preview -> PromptReport schemaVersion 1 with promptPreview=
+        redact_prompt_for_log(full); envLeaked=false always in report.
+      MUST NOT include values of DARE_*_COMMAND, PATH, or tokens in preview.
+      Unit: prompt_no_env_leak (set env override in test; assert not in preview);
+        prompt_truncates. No run/CLI. Avoid mass CRLF.
+
+  - id: mp050-004
+    title: "run_enrich + --write opt-in"
+    depends_on: [mp050-001]
+    complexity: HIGH
+    spec_file: EXECUTION-050/mp050-004.md
+    subtask_prompt: |
+      BLUEPRINT §0.5 / §4.3 / §5.2: run.rs RunEnrichRequest + run_enrich.
+      resolve_provider; sections_for_command; AiProvider::enrich; validate
+        parse_and_validate_sections_with; if write_rel Some -> inject_sections
+        + atomic_write; else no disk change.
+      not_implemented -> invalid_input MSG_PROVIDER_NOT_IMPL;
+        malformed -> invalid_input exit path 4; timeout -> provider timed out.
+      Unit: run_mock_ok; schema_fail_no_write; write_injects_markers;
+        write_requires_path. Reuse fixtures tests/fixtures/ai/. Avoid mass CRLF.
+
+  - id: mp050-005
+    title: "CLI dare ai + ai_cli smokes"
+    depends_on: [mp050-002, mp050-003, mp050-004]
+    complexity: HIGH
+    spec_file: EXECUTION-050/mp050-005.md
+    subtask_prompt: |
+      commands/ai.rs + main Commands::Ai per §5.1.
+      doctor/providers/run/prompt flags; default provider codex; -d ProjectRoot.
+      Facts/markdown loading §5.4; MSG_FACTS_REQUIRED / MSG_WRITE_NEEDS_MARKDOWN.
+      Map CoreError kinds to exits 0/1/2/3/4/5/124.
+      crates/dare-cli/tests/ai_cli.rs: doctor_mock_ready; providers_json_schema;
+        prompt_no_env_leak; run_mock_ok; unknown_provider; missing_facts_exit_3;
+        malformed_exit_4. Avoid mass CRLF.
+
+  - id: mp050-006
+    title: "SHOULD providers claude/cursor/antigravity"
+    depends_on: [mp050-002]
+    complexity: MED
+    spec_file: EXECUTION-050/mp050-006.md
+    subtask_prompt: |
+      BLUEPRINT T-07 / RF-14 SHOULD: implement ClaudeCode/CursorCli/AntigravityCli
+        in dare-ai via SafeCommand + DARE_*_COMMAND overrides (mirror CodexCliProvider).
+      Wire resolve_provider; doctor status becomes ready/missing/invalid (not
+        not_implemented). If blocked, keep stubs but document Class B in module
+        comments AND leave diagnose as not_implemented — prefer real adapters.
+      Unit: resolve_*_ok with fake runner OR from_env parse. No CLI changes required
+        beyond resolve. Parallel with mp050-005. Avoid mass CRLF.
+
+  - id: mp050-007
+    title: "Docs DEC-051 + capability + Ralph"
+    depends_on: [mp050-005, mp050-006]
+    complexity: MED
+    spec_file: EXECUTION-050/mp050-007.md
+    subtask_prompt: |
+      docs/compatibility/cli-ai.md; Append DEC-051 ONLY to DECISION-LOG.md
+        (do not touch DEC-050). Matriz 050 Concluído.
+      assets/capability-matrix.yml: capability dare-ai cli_commands:["ai"];
+        update manifest hash. TASKS-050 -> 7/7 DONE.
+      Ralph: cargo test -p dare-ai; cargo test -p dare-cli --test ai_cli;
+        clippy -p dare-ai -p dare-cli --all-targets -- -D warnings; cargo audit.
+      If assets_verify_ok fails: cargo clean -p dare-assets. Avoid mass CRLF.

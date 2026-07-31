@@ -1,0 +1,164 @@
+title: "CI cross-platform e qualidade (Microplano 003) - Development Tasks"
+version: "1.0.0"
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 900
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp003-001
+    title: "docker-compose.ci.yml (Fase 1)"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION-003/mp003-001.md
+    subtask_prompt: |
+      Microplano 003. BLUEPRINT-003 §5.4 / Fase 1.
+      CRIAR apenas docker-compose.ci.yml na raiz do repo.
+      Conteúdo canônico:
+        services:
+          dare-ci-smoke:
+            build:
+              context: .
+              dockerfile: Dockerfile.rust
+            command: ["--version"]
+            healthcheck:
+              test: ["CMD", "dare", "--version"]
+              interval: 30s
+              timeout: 10s
+              retries: 3
+      Reusa Dockerfile.rust do 002 — NÃO recriar Dockerfile.
+      DONE: ficheiro existe; `docker compose -f docker-compose.ci.yml config` exit 0.
+      Sem secrets. Sem git commit. Atualizar DARE/TASKS-003-ci-cross-platform-e-qualidade.md → mp003-001 DONE.
+      Return summary of path.
+
+  - id: mp003-002
+    title: "deny.toml + cargo deny check"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION-003/mp003-002.md
+    subtask_prompt: |
+      Microplano 003. BLUEPRINT-003 §4.2.
+      CRIAR deny.toml na raiz com política EXATA do Blueprint:
+      [advisories] yanked=deny unmaintained=warn
+      [licenses] allow Apache-2.0 MIT BSD-2-Clause BSD-3-Clause ISC Unicode-3.0 Zlib; confidence-threshold=0.8
+      [bans] multiple-versions=warn wildcards=deny
+      [sources] unknown-registry=deny unknown-git=deny allow-registry crates.io-index
+      Instalar cargo-deny 0.18.2 se preciso: cargo install cargo-deny --version 0.18.2 --locked
+      Rodar `cargo deny check` até exit 0. Se license edge-case: exception NOMEADA + comentário (não silenciar advisories).
+      NÃO criar workflows nesta task. Sem git commit.
+      Atualizar TASKS-003 → mp003-002 DONE. Return summary.
+
+  - id: mp003-003
+    title: "Scripts smoke Unix/Windows"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION-003/mp003-003.md
+    subtask_prompt: |
+      Microplano 003. BLUEPRINT-003 §5.3.
+      CRIAR scripts/ci/smoke-dare.sh e scripts/ci/smoke-dare.ps1 com contratos EXATOS do Blueprint:
+      - sh: set -euo pipefail; arg BIN; test -x; --version match ^dare 0.1.0-alpha.0$; --help match Usage:|--version
+      - ps1: param -Bin; Test-Path; same version/help checks; throw on fail
+      No Unix: chmod +x no .sh (ou documentar; GHA bash ignora bit em checkout às vezes — usar bash scripts/ci/smoke-dare.sh).
+      Validar localmente: cargo build -p dare-cli; bash scripts/ci/smoke-dare.sh target/debug/dare (ou release).
+      Windows: se shell disponivel, smoke-dare.ps1; senão documentar que CI Windows valida.
+      Sem eval. Sem secrets. Sem git commit. TASKS-003 → mp003-003 DONE.
+
+  - id: mp003-004
+    title: "Workflow ci.yml (fmt/clippy/test/audit/deny)"
+    depends_on: [mp003-002]
+    complexity: HIGH
+    spec_file: EXECUTION-003/mp003-004.md
+    subtask_prompt: |
+      Microplano 003. BLUEPRINT-003 §5.1.
+      CRIAR .github/workflows/ci.yml:
+      on.pull_request + on.push paths: crates/** Cargo.toml Cargo.lock rust-toolchain.toml rustfmt.toml deny.toml .github/workflows/ci.yml
+      permissions.contents: read
+      job quality on ubuntu-latest, steps NESTA ORDEM com names estáveis:
+      1 actions/checkout@v4.2.2
+      2 dtolnay/rust-toolchain@1.85.0 components rustfmt,clippy
+      3 Swatinem/rust-cache@v2.7.8
+      4 cargo fmt --check
+      5 cargo clippy --workspace --all-targets -- -D warnings
+      6 cargo test --workspace
+      7 cargo install cargo-audit --version 0.21.2 --locked
+      8 cargo audit
+      9 cargo install cargo-deny --version 0.18.2 --locked
+      10 cargo deny check
+      Sem secrets em YAML. NÃO tocar governance-001.yml nem build.yml.
+      Validar espelho local: fmt/clippy/test/audit/deny exit 0.
+      Sem git commit. TASKS-003 → mp003-004 DONE.
+
+  - id: mp003-005
+    title: "Workflow build.yml (matrix 5 + smoke + SHA256)"
+    depends_on: [mp003-003]
+    complexity: HIGH
+    spec_file: EXECUTION-003/mp003-005.md
+    subtask_prompt: |
+      Microplano 003. BLUEPRINT-003 §5.2 + §4.1 + T-07 checksums.
+      CRIAR .github/workflows/build.yml:
+      triggers: pull_request + push (mesmos paths que ci + scripts/ci/** + build.yml) + workflow_dispatch
+      permissions: contents: read; actions: write (upload-artifact)
+      strategy fail-fast false; matrix include EXATA:
+        x86_64-unknown-linux-gnu / ubuntu-latest
+        aarch64-unknown-linux-gnu / ubuntu-24.04-arm
+        x86_64-apple-darwin / macos-13
+        aarch64-apple-darwin / macos-14
+        x86_64-pc-windows-msvc / windows-latest
+      Por job: checkout@v4.2.2; rust-toolchain 1.85.0 com targets matrix.target;
+      rust-cache@v2.7.8; cargo build --release -p dare-cli --target matrix.target;
+      BIN path Windows .exe vs Unix dare; smoke via smoke-dare.sh ou smoke-dare.ps1;
+      gerar dare.sha256 (sha256sum / Get-FileHash); upload-artifact@v4.6.0 name dare-${{ matrix.target }}
+      paths bin+dare.sha256 retention-days 7.
+      NÃO publicar GitHub Releases. Sem SBOM. Sem git commit.
+      TASKS-003 → mp003-005 DONE.
+
+  - id: mp003-006
+    title: "Docs CI + DEC-004"
+    depends_on: [mp003-004, mp003-005]
+    complexity: MED
+    spec_file: EXECUTION-003/mp003-006.md
+    subtask_prompt: |
+      Microplano 003. BLUEPRINT-003 §5.5 Fase 5.
+      CRIAR docs/compatibility/ci-cross-platform.md com:
+      1 tabela targets↔runners↔artifact names (§4.1)
+      2 como baixar artifact Actions
+      3 como verificar dare.sha256
+      4 nota governance-001.yml separado
+      5 referência DEC-004 + release notes curtas "Ciclo CI 003"
+      APPEND docs/DECISION-LOG.md DEC-004: matrix 5 runners (ubuntu-24.04-arm, macos-13/14),
+      remoção planejada de rust-workspace-002.yml, pins cache/audit/deny, checksums MUST técnico, SBOM fora.
+      Não remover workflow 002 ainda (mp003-008). Sem git commit. TASKS-003 → mp003-006 DONE.
+
+  - id: mp003-007
+    title: "Auditoria RS-* + audit/deny final"
+    depends_on: [mp003-002, mp003-004, mp003-005]
+    complexity: HIGH
+    spec_file: EXECUTION-003/mp003-007.md
+    subtask_prompt: |
+      Microplano 003. BLUEPRINT-003 Fase 6 (N-1).
+      Rodar cargo audit + cargo deny check exit 0.
+      Revisar ci.yml e build.yml: permissions mínimas; sem secrets; paths fixos (RS-01);
+      smoke sem eval (RS-06); governance-001 intacto (RS-08).
+      Adicionar checklist RS-01..RS-08 em docs/compatibility/ci-cross-platform.md (secção Security).
+      Corrigir qualquer gap encontrado nos workflows/scripts.
+      Sem git commit. TASKS-003 → mp003-007 DONE.
+
+  - id: mp003-008
+    title: "Remover rust-workspace-002 + fechamento 003"
+    depends_on: [mp003-001, mp003-006, mp003-007]
+    complexity: MED
+    spec_file: EXECUTION-003/mp003-008.md
+    subtask_prompt: |
+      Microplano 003. BLUEPRINT-003 Fase 7 (T-05).
+      REMOVER .github/workflows/rust-workspace-002.yml.
+      Confirmar ci.yml + build.yml existem; governance-001.yml intacto.
+      Atualizar ci-cross-platform.md: workflow 002 removido; fonte de verdade = ci.yml + build.yml.
+      Atualizar TASKS-003 para 8/8 DONE e progresso 100%.
+      Confirmar ficheiros: deny.toml, scripts/ci/*, docker-compose.ci.yml, DEC-004.
+      Sem git commit (humano decide). Return closeout summary. Microplano 004 desbloqueado.

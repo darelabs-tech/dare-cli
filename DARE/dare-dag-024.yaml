@@ -1,0 +1,139 @@
+title: "Fundação de enrichment por IA (024) - Development Tasks"
+version: "1.0.0"
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp024-001
+    title: "Verificar docker-compose.ci.yml"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION-024/mp024-001.md
+    subtask_prompt: |
+      Microplano 024 Fase 1 — BLUEPRINT-024 §6 Fase 1 T-15.
+      Validar: `docker compose -f docker-compose.ci.yml config` exit 0.
+      Se Docker ausente: confirmar YAML + Dockerfile.rust; waiver docs (mp024-006).
+      Sem nova imagem. Sem git commit. NÃO criar dare-ai nem flags --ai.
+
+  - id: mp024-002
+    title: "Scaffold dare-ai + schema + inject"
+    depends_on: []
+    complexity: HIGH
+    spec_file: EXECUTION-024/mp024-002.md
+    subtask_prompt: |
+      Microplano 024 Fase 2 — BLUEPRINT-024 §2–4 §5.5–5.6 T-01 T-02 T-07 T-09 T-12.
+      1) Workspace: member crates/dare-ai; workspace.dependencies dare-ai path.
+         Cargo.toml dare-ai 0.1.0-alpha.0; deps dare-core, serde, serde_json.
+         NÃO depender de dare-cli / dare-agent / dare-harness. Sem [build] target global.
+      2) Constantes: ENRICH_TIMEOUT 20min; STDOUT_CAP=1048576; STDERR_CAP=65536;
+         BODY_MAX=65536; PROMPT_LOG_MAX=256; ENRICHABLE 4 ids; MARKER_BEGIN/END;
+         ENV_CODEX/CLAUDE/CURSOR/ANTIGRAVITY.
+      3) Tipos: ProviderId parse/as_str; EnrichRequest; EnrichRaw.
+      4) schema.rs: parse_and_validate_sections — JSON sections com 4 keys; ignore extras;
+         reject non-JSON / missing / empty / oversize / nested AGENT:BEGIN|END.
+      5) inject.rs: inject_enrichable — replace só interior dos markers; unmanaged intacto.
+      6) Fixtures tests/fixtures/ai/{mock-sections-valid,missing-key,oversize}.json.
+      7) Testes MUST: provider_id_parse; parse_valid_sections; parse_rejects_missing_key;
+         parse_rejects_oversize_body; parse_rejects_nested_markers;
+         inject_replaces_only_bodies; inject_missing_marker_errors.
+      NÃO MockProvider/Codex/CLI (mp024-003+). Gate: cargo test -p dare-ai. Sem git commit.
+
+  - id: mp024-003
+    title: "MockProvider + resolve_provider"
+    depends_on: [mp024-002]
+    complexity: MED
+    spec_file: EXECUTION-024/mp024-003.md
+    subtask_prompt: |
+      Microplano 024 Fase 3 — BLUEPRINT-024 §5.1 §5.3 T-03 T-05 T-06.
+      Trait AiProvider { id; enrich(&EnrichRequest)->CoreResult<EnrichRaw> } sync.
+      MockProvider: id=mock; stdout JSON estável (description=eco req.description;
+      objectives/functional-requirements/stack stubs determinísticos); sem spawn.
+      resolve_provider: Mock→box; Codex→CodexCliProvider stub Err("not wired") OU
+      adiar Codex a mp024-004 — CONGELADO: resolve Mock OK; Codex retorna Ok box
+      só se CodexCliProvider existir; se não existir ainda, resolve Codex →
+      invalid_input("provider not implemented: codex") até mp024-004 completar
+      (preferível: skeleton CodexCliProvider::from_env Err TODO removido em 004).
+      MELHOR: resolve Mock only works; Codex/others → invalid_input not implemented
+      excepto que mp024-004 implementa Codex — aqui só Mock + unimplemented others.
+      Testes: mock_enrich_deterministic; resolve_unimplemented_provider_errors.
+      Gate: cargo test -p dare-ai. Sem CLI. Sem git commit.
+
+  - id: mp024-004
+    title: "CodexCliProvider + overrides + timeout/stdin"
+    depends_on: [mp024-003]
+    complexity: HIGH
+    spec_file: EXECUTION-024/mp024-004.md
+    subtask_prompt: |
+      Microplano 024 Fase 4 — BLUEPRINT-024 §5.2 §5.4 T-04 T-11 T-13 T-16 RS-06.
+      parse_argv_override: whitespace split; sem shell.
+      CodexCliProvider::from_env: DARE_CODEX_COMMAND ou default program=codex args=[exec].
+      enrich: SafeCommand timeout ENRICH_TIMEOUT; stdout/stderr caps; cwd project root;
+      prompt via SafeCommand.stdin(Vec<u8>) se patch dare-core, senão prompt file sob
+      .dare/enrich-prompt-<pid>.txt + arg path + delete best-effort.
+      SystemProcessRunner; exit 124/timeout → Err; exit!=0 → Err stderr redact cap 512.
+      resolve_provider(Codex) → CodexCliProvider.
+      redact_log helpers PROMPT_LOG_MAX + dare_core::redact.
+      Testes: argv_override_split; codex_builds_command_with_mock_runner (MockProcessRunner);
+      timeout mapping se testável. Gate: cargo test -p dare-ai (+ dare-core se stdin).
+      Sem CLI design flags. Sem git commit. Sem --ai em main ainda.
+
+  - id: mp024-005
+    title: "CLI --ai/--provider + DesignReport v2 + smokes"
+    depends_on: [mp024-004]
+    complexity: MED
+    spec_file: EXECUTION-024/mp024-005.md
+    subtask_prompt: |
+      Microplano 024 Fase 5 — BLUEPRINT-024 §5.7–5.12 T-08 T-10 RS-03.
+      DesignReport schemaVersion=2 + campos ai, provider (Option), enriched.
+      Atualizar DESIGN_SCHEMA_VERSION=2; format_human/json; smokes 023 schema 1→2.
+      clap: --ai; --provider; Usage se provider sem --ai.
+      run_design: apply_design write1; se !ai → report v2 enriched=false;
+      se ai → resolve provider (default Codex); enrich; validate; inject; atomic_write2;
+      falha enrich → Err (write1 intacto); exit 1/4.
+      dare-cli dep dare-ai. Smokes MUST: design_without_ai_schema_v2; design_ai_mock_enriches;
+      design_provider_without_ai_usage; design_unknown_provider;
+      design_ai_schema_fail_keeps_file (unit ou smoke).
+      Gate: cargo test -p dare-cli -- design; cargo test -p dare-cli --test cli_smoke -- design.
+      Sem git commit. Sem dare ai subcommands (050).
+
+  - id: mp024-006
+    title: "Docs cli-design AI + DEC-025"
+    depends_on: [mp024-002]
+    complexity: LOW
+    spec_file: EXECUTION-024/mp024-006.md
+    subtask_prompt: |
+      Microplano 024 Fase 6 — BLUEPRINT-024 §5.13 T-14.
+      Atualizar docs/compatibility/cli-design.md: --ai/--provider; default codex; mock CI;
+      pipeline write1/write2; schema JSON sections; env DARE_*_COMMAND; exit codes enrich;
+      non-corrupt; fora 025/031/050.
+      ADD DEC-025 em docs/DECISION-LOG.md.
+      Sem git commit. Sem código Rust obrigatório.
+
+  - id: mp024-007
+    title: "Auditoria Ralph"
+    depends_on: [mp024-001, mp024-005, mp024-006]
+    complexity: MED
+    spec_file: EXECUTION-024/mp024-007.md
+    subtask_prompt: |
+      Microplano 024 Fase 7 — BLUEPRINT-024 §6 Fase 7 §7 RS-04.
+      cargo fmt --check; cargo clippy --workspace --all-features -- -D warnings;
+      cargo test --workspace; cargo audit; cargo deny check.
+      Reportar exit codes. Sem git commit.
+
+  - id: mp024-008
+    title: "Fechamento microplano 024"
+    depends_on: [mp024-007]
+    complexity: LOW
+    spec_file: EXECUTION-024/mp024-008.md
+    subtask_prompt: |
+      Microplano 024 Fase 8 — BLUEPRINT-024 §6 Fase 8.
+      TASKS-024 8/8 DONE; próximo → 025-blueprint.
+      DESIGN/BLUEPRINT-024 APPROVED. Atualizar 000A-MATRIZ 024 concluido. Sem código. Sem git commit.

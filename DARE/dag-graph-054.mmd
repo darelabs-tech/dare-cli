@@ -1,0 +1,42 @@
+%% DARE DAG — Microplano 054 — Hardening de paridade e segurança
+%% Generated: 2026-07-31T05:45:17.787Z
+graph LR
+  subgraph rank_0 ["Rank 0"]
+    direction TB
+    mp054_001["mp054-001\nScaffold dare-parity + CaseSpec + tests/ layout\n⏳ PENDING"]
+    mp054_006["mp054-006\nPerf scripts + baseline stub + diff-log skeleton\n⏳ PENDING"]
+  end
+  subgraph rank_1 ["Rank 1"]
+    direction TB
+    mp054_002["mp054-002\nNormalizer N-01..N-08 + anti over-normalize\n⏳ PENDING"]
+    mp054_004["mp054-004\nSecurity suite injection/leak/archive/sig/bidi\n⏳ PENDING"]
+    mp054_005["mp054-005\nproptest paths/parsers + cross-platform\n⏳ PENDING"]
+  end
+  subgraph rank_2 ["Rank 2"]
+    direction TB
+    mp054_003["mp054-003\nGolden runner + fixtures + diff-log\n⏳ PENDING"]
+  end
+  subgraph rank_3 ["Rank 3"]
+    direction TB
+    mp054_007["mp054-007\nDocs DEC-055 + CI paths + Ralph\n⏳ PENDING"]
+  end
+  mp054_001 --> mp054_002
+  mp054_001 --> mp054_004
+  mp054_001 --> mp054_005
+  mp054_002 --> mp054_003
+  mp054_003 --> mp054_007
+  mp054_004 --> mp054_007
+  mp054_005 --> mp054_007
+  mp054_006 --> mp054_007
+  class mp054_001 st_pending;
+  class mp054_006 st_pending;
+  class mp054_002 st_pending;
+  class mp054_004 st_pending;
+  class mp054_005 st_pending;
+  class mp054_003 st_pending;
+  class mp054_007 st_pending;
+  classDef st_pending fill:#f3f4f6,stroke:#9ca3af,color:#374151;
+  classDef st_running fill:#dbeafe,stroke:#2563eb,color:#1e3a8a;
+  classDef st_done fill:#dcfce7,stroke:#16a34a,color:#14532d;
+  classDef st_failed fill:#fee2e2,stroke:#dc2626,color:#7f1d1d;
+  classDef st_skipped fill:#e5e7eb,stroke:#6b7280,color:#374151;

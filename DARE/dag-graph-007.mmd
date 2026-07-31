@@ -1,0 +1,44 @@
+%% DARE DAG — Contratos persistidos (Microplano 007)
+graph LR
+  subgraph rank_0 ["Rank 0"]
+    mp007_001["mp007-001\ncompose\n⏳"]
+    mp007_002["mp007-002\nyaml_serde dep\n⏳"]
+  end
+  subgraph rank_1 ["Rank 1"]
+    mp007_003["mp007-003\nio.rs\n⏳"]
+  end
+  subgraph rank_2 ["Rank 2"]
+    mp007_004["mp007-004\nDareConfig\n⏳"]
+    mp007_005["mp007-005\nDAG\n⏳"]
+    mp007_006["mp007-006\nState/Verif/Tel\n⏳"]
+    mp007_007["mp007-007\nGraph/Skills/Update\n⏳"]
+  end
+  subgraph rank_3 ["Rank 3"]
+    mp007_008["mp007-008\nFixtures\n⏳"]
+  end
+  subgraph rank_4 ["Rank 4"]
+    mp007_009["mp007-009\nDocs DEC-008\n⏳"]
+  end
+  subgraph rank_5 ["Rank 5"]
+    mp007_010["mp007-010\nAudit\n⏳"]
+  end
+  subgraph rank_6 ["Rank 6"]
+    mp007_011["mp007-011\nCloseout\n⏳"]
+  end
+  mp007_002 --> mp007_003
+  mp007_003 --> mp007_004
+  mp007_003 --> mp007_005
+  mp007_003 --> mp007_006
+  mp007_003 --> mp007_007
+  mp007_004 --> mp007_008
+  mp007_005 --> mp007_008
+  mp007_006 --> mp007_008
+  mp007_007 --> mp007_008
+  mp007_008 --> mp007_009
+  mp007_008 --> mp007_010
+  mp007_009 --> mp007_010
+  mp007_001 --> mp007_011
+  mp007_009 --> mp007_011
+  mp007_010 --> mp007_011
+  classDef st_pending fill:#f3f4f6,stroke:#9ca3af,color:#374151;
+  class mp007_001,mp007_002,mp007_003,mp007_004,mp007_005,mp007_006,mp007_007,mp007_008,mp007_009,mp007_010,mp007_011 st_pending;

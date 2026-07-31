@@ -1,0 +1,124 @@
+title: "Configuração e migrations (Microplano 008) - Development Tasks"
+version: "1.0.0"
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 900
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp008-001
+    title: "Verificar docker-compose.ci.yml (Fase 1)"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION-008/mp008-001.md
+    subtask_prompt: |
+      Microplano 008. BLUEPRINT-008 Fase 1.
+      Confirmar docker-compose.ci.yml; rodar docker compose -f docker-compose.ci.yml config.
+      DONE: exit 0. Sem novo Dockerfile. Sem git commit.
+      TASKS-008 → mp008-001 DONE.
+
+  - id: mp008-002
+    title: "defaults.rs + default_config"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION-008/mp008-002.md
+    subtask_prompt: |
+      Microplano 008. BLUEPRINT-008 §5.1 Fase 2.
+      CRIAR crates/dare-config/src/defaults.rs: default_config() → DareConfig com blocos None.
+      Re-export em lib.rs. Manter config_layer_ping. Teste default_roundtrip.
+      cargo test -p dare-config. Sem git commit. TASKS-008 → mp008-002 DONE.
+
+  - id: mp008-003
+    title: "Env/CliOverrides + merge_layers + precedência"
+    depends_on: [mp008-002]
+    complexity: HIGH
+    spec_file: EXECUTION-008/mp008-003.md
+    subtask_prompt: |
+      Microplano 008. BLUEPRINT-008 §4.1 §5.2 §5.3 Apêndice A Fase 3 T-01/T-02/T-08.
+      CRIAR override.rs, env.rs, merge.rs.
+      Allowlist DARE_IDE + DARE_*_ENABLED. merge_layers CLI>env>file>default.
+      tests/precedence.rs casos P1–P5 e B1–B3. Preservar extra.
+      cargo test -p dare-config. Sem git commit. TASKS-008 → mp008-003 DONE.
+
+  - id: mp008-004
+    title: "validate + JSON Pointer"
+    depends_on: [mp008-002]
+    complexity: MED
+    spec_file: EXECUTION-008/mp008-004.md
+    subtask_prompt: |
+      Microplano 008. BLUEPRINT-008 §5.4 Fase 4 T-07.
+      CRIAR validate.rs: validate(&DareConfig)->CoreResult<()>.
+      ide vazio → Config com "/ide". enabled:false skip deep.
+      cargo test -p dare-config. Sem git commit. TASKS-008 → mp008-004 DONE.
+
+  - id: mp008-005
+    title: "load_effective"
+    depends_on: [mp008-003, mp008-004]
+    complexity: HIGH
+    spec_file: EXECUTION-008/mp008-005.md
+    subtask_prompt: |
+      Microplano 008. BLUEPRINT-008 §5.5 Fase 5.
+      CRIAR load.rs: load_effective(root,rel,env,cli). NotFound→defaults.
+      env_overrides_from_os com bool inválido → Config /env/NAME.
+      Testes tempdir missing+malformed+merge. Sem git commit.
+      TASKS-008 → mp008-005 DONE.
+
+  - id: mp008-006
+    title: "MigrationPlan + dry_run_migrate"
+    depends_on: [mp008-005]
+    complexity: HIGH
+    spec_file: EXECUTION-008/mp008-006.md
+    subtask_prompt: |
+      Microplano 008. BLUEPRINT-008 §4.2–4.3 §5.6 Fase 6 T-04/T-05.
+      CRIAR migrate.rs: MigrationPlan/Step, plan_migrate, apply_plan_in_memory,
+      dry_run_migrate (writes=false, zero FS change).
+      Teste dry-run com write_schema_version não toca disco.
+      cargo test -p dare-config. Sem git commit. TASKS-008 → mp008-006 DONE.
+
+  - id: mp008-007
+    title: "apply_migrate + backup"
+    depends_on: [mp008-006]
+    complexity: HIGH
+    spec_file: EXECUTION-008/mp008-007.md
+    subtask_prompt: |
+      Microplano 008. BLUEPRINT-008 §5.6 Fase 7 T-06.
+      apply_migrate: backup se ficheiro existe + save_dare_config.
+      Steps vazios → no write. Teste backup sob .dare/backups/.
+      cargo test -p dare-config. Sem git commit. TASKS-008 → mp008-007 DONE.
+
+  - id: mp008-008
+    title: "Fixtures + docs + DEC-009"
+    depends_on: [mp008-007]
+    complexity: MED
+    spec_file: EXECUTION-008/mp008-008.md
+    subtask_prompt: |
+      Microplano 008. BLUEPRINT-008 Fase 8.
+      fixtures/ + docs/compatibility/config-and-migrations.md + DEC-009 em DECISION-LOG.
+      Sem git commit. TASKS-008 → mp008-008 DONE.
+
+  - id: mp008-009
+    title: "Auditoria RS-* + audit/deny"
+    depends_on: [mp008-008]
+    complexity: HIGH
+    spec_file: EXECUTION-008/mp008-009.md
+    subtask_prompt: |
+      Microplano 008. BLUEPRINT-008 Fase 9.
+      cargo test -p dare-config; cargo test --workspace; clippy -D warnings;
+      cargo audit; cargo deny check — exit 0. Sem git commit.
+      TASKS-008 → mp008-009 DONE.
+
+  - id: mp008-010
+    title: "Fechamento microplano 008"
+    depends_on: [mp008-001, mp008-009]
+    complexity: LOW
+    spec_file: EXECUTION-008/mp008-010.md
+    subtask_prompt: |
+      Microplano 008. BLUEPRINT-008 Fase 10.
+      TASKS-008 → 10/10 DONE 100%. Microplano 009 desbloqueado. Sem git commit.
+      Return closeout summary.

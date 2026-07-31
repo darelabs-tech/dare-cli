@@ -1,0 +1,120 @@
+title: "Configuração e migrations (008) - Development Tasks"
+version: "1.0.0"
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp008-001
+    title: "Verificar docker-compose.ci.yml"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION-008/mp008-001.md
+    subtask_prompt: |
+      Microplano 008 Fase 1 — containerização.
+      Arquivo: docker-compose.ci.yml (raiz).
+      Validar: `docker compose -f docker-compose.ci.yml config` exit 0.
+      Se Docker ausente: confirmar YAML parseável (serviços definidos) e documentar no output.
+      Fix só se erro sintático. Sem novas crates. Sem git commit.
+      Complete: dare execute --dag DARE/dare-dag-008.yaml --complete mp008-001 --output "..."
+
+  - id: mp008-002
+    title: "Re-export env_overrides_from_vars_strict"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION-008/mp008-002.md
+    subtask_prompt: |
+      Microplano 008 Fase 2 — gap RF-18 / Blueprint T-03.
+      EDIT crates/dare-config/src/lib.rs:
+        pub use env::{env_overrides_from_os, env_overrides_from_vars, env_overrides_from_vars_strict};
+      Adicionar rustdoc curto nas 3 funções em env.rs: lenient ignora bool inválido; strict Err com pointer `/env/{KEY}`; from_os = strict(vars).
+      Confirmar teste `strict_rejects_bad_bool` passa e mensagem NÃO contém o valor "maybe" (só pointer) — RS-02.
+      Gate: cargo test -p dare-config env::
+      Sem alterar allowlist. Sem git commit.
+
+  - id: mp008-003
+    title: "Fixtures golden round-trip"
+    depends_on: [mp008-002]
+    complexity: MED
+    spec_file: EXECUTION-008/mp008-003.md
+    subtask_prompt: |
+      Microplano 008 Fase 3 — RF-17 / O-02.
+      CRIAR crates/dare-config/tests/fixtures_roundtrip.rs.
+      Fixtures em crates/dare-config/tests/fixtures/:
+        legacy.config.json, with_extras.config.json, enabled_false.config.json
+      Para cada: copiar para tempfile como dare.config.json; ProjectRoot::new; SafeRelativePath;
+      load_dare_config OU load_effective(empty overrides); validate Ok.
+      Asserts mínimos:
+      - legacy: ide Some; extra contém customExtension OU chave unknown preservada; guard.enabled Some(false)
+      - with_extras: unknown keys em extra sobrevivem
+      - enabled_false: validate Ok sem deep fail
+      Round-trip: merge_layers(default, Some(&loaded), empty env, empty cli) preserva extras do file.
+      Gate: cargo test -p dare-config --test fixtures_roundtrip
+      Sem git commit.
+
+  - id: mp008-004
+    title: "Matriz P/B + gates migration"
+    depends_on: [mp008-002]
+    complexity: MED
+    spec_file: EXECUTION-008/mp008-004.md
+    subtask_prompt: |
+      Microplano 008 Fase 4 — O-01/O-04/O-05/O-06.
+      1) Confirmar crates/dare-config/tests/precedence.rs cobre P1–P5 e B1–B3; completar se faltar B2/B3.
+      2) Em migrate.rs tests (ou novo test):
+         - apply_default_options_no_schema_version: MigrateOptions::default() + apply em tempfile com {"ide":"cursor"} → steps empty OU sem schemaVersion no ficheiro; sem criar backup se steps empty.
+         - apply_empty_steps_no_backup: opts write_schema_version false; assert !dir.join(".dare/backups").exists() ou count==0 após apply.
+         - Manter dry_run_does_not_write e apply_creates_backup_and_writes verdes.
+      Gate: cargo test -p dare-config
+      Sem git commit.
+
+  - id: mp008-005
+    title: "Docs config-and-migrations + DEC-009"
+    depends_on: [mp008-003, mp008-004]
+    complexity: LOW
+    spec_file: EXECUTION-008/mp008-005.md
+    subtask_prompt: |
+      Microplano 008 Fase 5 — RF-16.
+      EXPANDIR docs/compatibility/config-and-migrations.md com:
+      - Matriz P1–P5 / B1–B3
+      - Allowlist + bool grammar (true|1|yes|on / false|0|no|off)
+      - API: default_config, merge_layers, validate, load_effective, env_* (lenient vs strict), plan/dry_run/apply_migrate
+      - schemaVersion só com write_schema_version
+      - JSON Pointer exemplos `/ide`, `/env/DARE_GUARD_ENABLED`
+      - Dry-run writes=false; apply backup+atomic
+      - Paridade TS 3.18.1: Classe A precedência; COULD deep validation fora
+      - Links DEC-009, disk-and-json-policy, persisted-contracts
+      VERIFICAR docs/DECISION-LOG.md já tem DEC-009; NÃO criar DEC-010.
+      Sem git commit.
+
+  - id: mp008-006
+    title: "Auditoria Ralph test/clippy/audit/deny"
+    depends_on: [mp008-001, mp008-005]
+    complexity: MED
+    spec_file: EXECUTION-008/mp008-006.md
+    subtask_prompt: |
+      Microplano 008 Fase 6 (N-1).
+      Rodar e corrigir regressões 008:
+      - cargo test --workspace
+      - cargo clippy --workspace --all-targets -- -D warnings
+      - cargo audit
+      - cargo deny check (se deny.toml; senão skip justificado)
+      Checklist RS-01..RS-10 na doc config-and-migrations.md (secção Segurança).
+      Output: exit codes de cada gate. Sem git commit.
+
+  - id: mp008-007
+    title: "Fechamento microplano 008"
+    depends_on: [mp008-006]
+    complexity: LOW
+    spec_file: EXECUTION-008/mp008-007.md
+    subtask_prompt: |
+      Microplano 008 Fase 7.
+      Atualizar DARE/TASKS-008-configuracao-e-migrations.md: 7/7 (100%); todas ✅ DONE.
+      Output: próximo microplano 009-inventario-e-empacotamento-de-assets.
+      Sem código de produto. Sem git commit.

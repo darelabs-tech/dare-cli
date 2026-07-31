@@ -1,0 +1,138 @@
+title: "Drivers reais de agentes (031) - Development Tasks"
+version: "1.0.0"
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp031-001
+    title: "Verificar docker-compose.ci.yml"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION-031/mp031-001.md
+    subtask_prompt: |
+      Microplano 031 Fase 1 — BLUEPRINT-031 §6 Fase 1 T-26.
+      Validar: `docker compose -f docker-compose.ci.yml config` exit 0.
+      Se Docker ausente: confirmar YAML + Dockerfile.rust; waiver em
+      docs na mp031-006.
+      Sem nova imagem. Sem drivers. Sem git commit.
+
+  - id: mp031-002
+    title: "drivers/argv + common finalize"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION-031/mp031-002.md
+    subtask_prompt: |
+      Microplano 031 Fase 2 — BLUEPRINT-031 §0 T-02 T-03 T-14 §0.3 §3.
+      CRIAR crates/dare-agent/src/drivers/{mod,argv,common}.rs; pub mod drivers.
+      parse_argv_override: trim; empty→InvalidInput; split_whitespace program+args.
+      Constantes ENV_CODEX/CLAUDE/CURSOR/ANTIGRAVITY = DARE_*_COMMAND (iguais 024).
+      common::finalize_result: truncate_chars + dare_core::redact em stdout/stderr/summary;
+        map timed_out|exit 124 → Timeout; cancel → Cancelled.
+      MSG_EXEC_NOT_FOUND / MSG_MALFORMED / SUMMARY_MAX_CHARS=512 / AGENT_DRIVER_TIMEOUT=20min.
+      NÃO depender de dare-ai. NÃO implementar drivers reais ainda.
+      Testes: argv empty/valid; finalize redacts Bearer secret.
+      Gate: cargo test -p dare-agent
+      Sem git commit.
+
+  - id: mp031-003
+    title: "CodexDriver JSONL + suite comum"
+    depends_on: [mp031-002]
+    complexity: HIGH
+    spec_file: EXECUTION-031/mp031-003.md
+    subtask_prompt: |
+      Microplano 031 Fase 3 — BLUEPRINT-031 T-15 T-19–T-22 §4.3 §5 §9.
+      CRIAR crates/dare-agent/src/drivers/codex.rs.
+      CodexDriver::from_env / from_env_with_runner(Arc<ProcessRunner>).
+      Default argv: program=codex args=[exec,--json,--sandbox,read-only,--ask-for-approval,never]
+        OU parse DARE_CODEX_COMMAND.
+      doctor: probe --version timeout 5s → DriverHealth ok true/false (nunca Err).
+      run: stdin=prompt; cwd=ProjectRoot(req.cwd); timeout AGENT_DRIVER_TIMEOUT;
+        SafeCommand argv-only; parse JSONL tolerante (§4.3); tokens Option<u64>;
+        missing exe → Err internal MSG_EXEC_NOT_FOUND.
+      supports_model_flag=true: append --model se req.model Some.
+      Suite comum 9 casos com ProcessRunner mock (doctor ok/missing, success, failure,
+        timeout, cancel, malformed, missing exe, secret redaction).
+      Gate: cargo test -p dare-agent
+      Sem resolve_driver ainda (mp031-005). Sem git commit.
+
+  - id: mp031-004
+    title: "Claude/Cursor/Antigravity drivers + suite"
+    depends_on: [mp031-002]
+    complexity: HIGH
+    spec_file: EXECUTION-031/mp031-004.md
+    subtask_prompt: |
+      Microplano 031 Fase 4 — BLUEPRINT-031 T-16–T-18 §4.4 §9.
+      CRIAR claude.rs cursor.rs antigravity.rs.
+      Defaults: claude [-p,--output-format,text]; cursor-agent [--print];
+        antigravity [agent,--print]; overrides DARE_CLAUDE/CURSOR/ANTIGRAVITY_COMMAND.
+      Parse texto §4.4; tokens via regex tokens?; Claude supports_model_flag=true;
+        cursor/antigravity false.
+      Suite comum 9 casos × 3 drivers com ProcessRunner mock.
+      Gate: cargo test -p dare-agent
+      Sem resolve_driver wire (mp031-005). Sem git commit.
+
+  - id: mp031-005
+    title: "resolve_driver + smokes CLI"
+    depends_on: [mp031-003, mp031-004]
+    complexity: HIGH
+    spec_file: EXECUTION-031/mp031-005.md
+    subtask_prompt: |
+      Microplano 031 Fase 5 — BLUEPRINT-031 T-23 T-24 T-27 T-28 §5.1 §9.
+      MOD driver.rs resolve_driver: mock|noop|codex|claude|cursor|antigravity Ok;
+        outros InvalidInput "driver not implemented: {id}".
+      Export drivers via lib.rs.
+      Smokes cli_smoke: (1) fake success override + SKIP_RALPH --driver codex (ou claude)
+        exit 0; (2) missing exe override exit 1 contains "executable not found";
+        (3) --driver unknown → 4; (4) guard evil + --driver mock → 6 regressão 034.
+      Gate: cargo test -p dare-agent; cargo test -p dare-cli --test cli_smoke -- agent
+      Sem docs (mp031-006). Sem git commit.
+
+  - id: mp031-006
+    title: "Docs + DEC-037 + matriz"
+    depends_on: [mp031-005]
+    complexity: MED
+    spec_file: EXECUTION-031/mp031-006.md
+    subtask_prompt: |
+      Microplano 031 Fase 6 — BLUEPRINT-031 T-25 §11.
+      ATUALIZAR docs/compatibility/cli-execute-agent.md: drivers reais; env DARE_*_COMMAND;
+        defaults argv; exits 1 missing / 124 timeout / 6 guard; tabela ids vs dare-ai ProviderId.
+      DEC-037 em DECISION-LOG.md (active): CLI drivers Classe B; sem SDK; sync trait;
+        complements DEC-031.
+      Matriz 000A linha 031 → Concluído (ou defer closeout mp031-008 se preferir — MUST
+        pelo menos draft DEC+docs aqui).
+      Gate: ficheiros presentes. Sem git commit.
+
+  - id: mp031-007
+    title: "Auditoria Ralph (fmt/clippy/test/audit)"
+    depends_on: [mp031-001, mp031-005, mp031-006]
+    complexity: MED
+    spec_file: EXECUTION-031/mp031-007.md
+    subtask_prompt: |
+      Microplano 031 Fase 7 — BLUEPRINT-031 §7 RS-04.
+      Rodar até verde:
+        cargo fmt --check
+        cargo clippy -p dare-agent -p dare-cli --all-targets -- -D warnings
+        cargo test -p dare-agent
+        cargo test -p dare-cli --test cli_smoke -- agent
+        cargo audit
+      CVE HIGH/CRITICAL → FAILED até fix.
+      Sem git commit. NÃO implementar 033+.
+
+  - id: mp031-008
+    title: "Fechamento TASKS/Blueprint/matriz"
+    depends_on: [mp031-007]
+    complexity: LOW
+    spec_file: EXECUTION-031/mp031-008.md
+    subtask_prompt: |
+      Microplano 031 Fase 8 — BLUEPRINT-031 §6 Fase 8.
+      TASKS-031 → 8/8 DONE; BLUEPRINT-031 APPROVED; 000A 031 ✅ Concluído;
+      opcional dare dag viz -o DARE/dag-graph-031.mmd.
+      Sem git commit (humano).

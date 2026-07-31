@@ -1,0 +1,129 @@
+title: "Pipeline de release nativo alpha (015) - Development Tasks"
+version: "1.0.0"
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp015-001
+    title: "Verificar Dockerfile.rust + docker-compose.ci.yml"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION-015/mp015-001.md
+    subtask_prompt: |
+      Microplano 015 Fase 1 — BLUEPRINT-015 §6 Fase 1 T-09.
+      Validar: `docker compose -f docker-compose.ci.yml config` exit 0.
+      Opcional: `docker build -f Dockerfile.rust .` se Docker disponível.
+      Se Docker ausente: confirmar YAML parseável + Dockerfile.rust existe; documentar waiver numa linha em docs/compatibility/release-alpha.md § Local verify (criar ficheiro mínimo se stub).
+      Sem nova imagem de release. Sem git commit. NÃO alterar crates.
+
+  - id: mp015-002
+    title: "Congelar release.yml matrix 5 + package + dry_run"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION-015/mp015-002.md
+    subtask_prompt: |
+      Microplano 015 Fase 2 — BLUEPRINT-015 §4.1–4.2 §5.1–5.2 T-02 T-05.
+      Editar `.github/workflows/release.yml`:
+      - Triggers: tags `v*-alpha*` / `v*-alpha.*` + workflow_dispatch dry_run default true
+      - Matrix EXACTAMENTE 5 targets:
+        x86_64-unknown-linux-gnu (ubuntu-latest, tar.gz)
+        aarch64-unknown-linux-gnu (ubuntu-latest, tar.gz, cross: true)
+        x86_64-apple-darwin (macos-13, tar.gz)  # NÃO macos-latest
+        aarch64-apple-darwin (macos-14, tar.gz) # NÃO macos-latest
+        x86_64-pc-windows-msvc (windows-latest, zip)
+      - Package name: dare-${VERSION}-${TARGET}.{tar.gz|zip}; VERSION=GITHUB_REF_NAME ou dev
+      - fail-fast: false; upload-artifact por target
+      Gate: ficheiro contém os 5 triples + macos-13 + macos-14 + dry_run.
+      Sem git commit. NÃO implementar installers nesta task (mp015-004).
+
+  - id: mp015-003
+    title: "SHA256SUMS + SBOM + cosign soft + publish"
+    depends_on: [mp015-002]
+    complexity: MED
+    spec_file: EXECUTION-015/mp015-003.md
+    subtask_prompt: |
+      Microplano 015 Fase 3 — BLUEPRINT-015 §4.3–4.5 §5.6–5.7 T-03 T-04.
+      Em `.github/workflows/release.yml` jobs checksums-sbom + publish:
+      - SHA256SUMS: sha256sum de *.tar.gz/*.zip; sort; dois espaços; só archives
+      - SBOM.spdx.json SPDX-2.3 mínimo (§4.4 campos obrigatórios)
+      - SHA256SUMS.sig: cosign sign-blob OU texto "signing skipped…"; job NÃO falha se cosign falta
+      - Copiar installers/install.sh + install.ps1 para dist meta
+      - publish: softprops/action-gh-release@v2.2.1; prerelease true; files dist/**
+      - if publish: startsWith(refs/tags/) && (event != workflow_dispatch || dry_run == false)
+      - permissions: contents write + id-token write
+      Gate: jobs presentes; condição publish exacta; SBOM campos no script.
+      Sem git commit. Sem criar tags.
+
+  - id: mp015-004
+    title: "Installers install.sh + install.ps1"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION-015/mp015-004.md
+    subtask_prompt: |
+      Microplano 015 Fase 4 — BLUEPRINT-015 §5.3–5.4 §4.6 T-06 T-08 RS-01/06/07.
+      Congelar `installers/install.sh`:
+      - Env: DARE_VERSION|DARE_LOCAL_ARCHIVE (exit 2 se ambos vazios); DARE_REPO; DARE_INSTALL_BASE; DARE_PREFIX default $HOME/.local
+      - detect_target: linux/darwin × x86_64/aarch64 → triples canónicos; unsupported → exit 1
+      - Remoto: curl archive + SHA256SUMS; sha256sum -c --ignore-missing; mismatch → fail
+      - Local: file:// ou cp; install -m 755 → $PREFIX/bin/dare; run --version
+      - Sem eval; URLs quotadas
+      Congelar `installers/install.ps1`:
+      - Target x86_64-pc-windows-msvc; arm64 throw; PREFIX default LOCALAPPDATA\dare
+      - Checksum mismatch throw; sums download fail → Warning continue
+      - Expand-Archive; dare.exe; --version
+      Gate: scripts existem; grep exit 2 / DARE_LOCAL_ARCHIVE / --version; sem eval.
+      Sem git commit.
+
+  - id: mp015-005
+    title: "Smoke instalação limpa + docs DEC-016 + ADR-008"
+    depends_on: [mp015-003, mp015-004]
+    complexity: MED
+    spec_file: EXECUTION-015/mp015-005.md
+    subtask_prompt: |
+      Microplano 015 Fase 5 — BLUEPRINT-015 §5.5 §6 Fase 5.
+      1) Alinhar scripts/smoke-release-install.sh (+ .ps1 se Win):
+         build release → package host → SHA256SUMS + SBOM mínimo + sig skip →
+         DARE_LOCAL_ARCHIVE + DARE_PREFIX isolado → installer → assert --version (^dare ) exit 0
+         NÃO só --help. Grep opcional 5 targets em release.yml.
+      2) Completar docs/compatibility/release-alpha.md: triggers, 5 targets+runners, naming,
+         SHA256SUMS/SBOM/sig política cosign soft, env installers, smoke, canal npm paralelo.
+      3) Criar docs/adr/ADR-008-release-alpha-nativo.md: canal alpha sem npm; SBOM mínimo;
+         cosign soft-fail; clap vs tag; cross linux-aarch64; macos-13/14.
+      4) Confirmar DEC-016 em docs/DECISION-LOG.md aponta ADR-008 + release-alpha.md.
+      Gate: bash scripts/smoke-release-install.sh exit 0 (ou documentar skip se cargo release lento + rodar com bin já built).
+      Sem git commit. Sem tags. NÃO welcome 016.
+
+  - id: mp015-006
+    title: "Auditoria Ralph"
+    depends_on: [mp015-001, mp015-005]
+    complexity: MED
+    spec_file: EXECUTION-015/mp015-006.md
+    subtask_prompt: |
+      Microplano 015 Fase 6 — BLUEPRINT-015 §7–8.
+      Rodar e reportar exit codes:
+      cargo fmt --check
+      cargo clippy --workspace --all-targets -- -D warnings
+      cargo test --workspace
+      cargo audit
+      cargo deny check
+      Confirmar: sem secrets hardcoded em release.yml / installers / smoke.
+      Sem git commit.
+
+  - id: mp015-007
+    title: "Fechamento microplano 015"
+    depends_on: [mp015-006]
+    complexity: LOW
+    spec_file: EXECUTION-015/mp015-007.md
+    subtask_prompt: |
+      Microplano 015 Fase 7.
+      Atualizar DARE/TASKS-015-pipeline-de-release-nativo-alpha.md: 7/7 DONE; próximo 016-comando-welcome.
+      Opcional: Status APPROVED em DESIGN-015 e BLUEPRINT-015 headers.
+      Sem código funcional. Sem git commit.

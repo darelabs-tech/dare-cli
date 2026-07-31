@@ -1,0 +1,23 @@
+```mermaid
+flowchart TD
+  subgraph rank0 [Rank 0]
+    A[mp051-001 crate+auth+health]
+    B[mp051-002 dashboard assets]
+  end
+  subgraph rank1 [Rank 1]
+    C[mp051-003 dashboard+telemetry]
+    D[mp051-004 REST routes]
+  end
+  E[mp051-005 serve+browser]
+  F[mp051-006 CLI+contracts]
+  G[mp051-007 docs+DEC-052]
+  A --> C
+  B --> C
+  A --> D
+  A --> E
+  C --> E
+  C --> F
+  D --> F
+  E --> F
+  F --> G
+```

@@ -1,0 +1,46 @@
+%% DARE DAG — Microplano 055 — Pilotos, shadow tests e release candidate
+%% Generated: 2026-07-31T12:53:09.473Z
+graph LR
+  subgraph rank_0 ["Rank 0"]
+    direction TB
+    mp055_001["mp055-001\nPilot inventory + synthetic fixtures\n⏳ PENDING"]
+    mp055_004["mp055-004\nTypeScript freeze + contract freeze docs\n⏳ PENDING"]
+  end
+  subgraph rank_1 ["Rank 1"]
+    direction TB
+    mp055_002["mp055-002\nShadow playbook + pilot-shadow scripts\n⏳ PENDING"]
+  end
+  subgraph rank_2 ["Rank 2"]
+    direction TB
+    mp055_003["mp055-003\nRun ≥3 shadow cycles + incidents log\n⏳ PENDING"]
+  end
+  subgraph rank_3 ["Rank 3"]
+    direction TB
+    mp055_005["mp055-005\nPublish RC v4.0.0-rc1 + notes + smoke\n⏳ PENDING"]
+  end
+  subgraph rank_4 ["Rank 4"]
+    direction TB
+    mp055_006["mp055-006\nRollback drill PASS\n⏳ PENDING"]
+  end
+  subgraph rank_5 ["Rank 5"]
+    direction TB
+    mp055_007["mp055-007\nDEC-056 + matriz + Ralph close\n⏳ PENDING"]
+  end
+  mp055_001 --> mp055_002
+  mp055_002 --> mp055_003
+  mp055_003 --> mp055_005
+  mp055_004 --> mp055_005
+  mp055_005 --> mp055_006
+  mp055_006 --> mp055_007
+  class mp055_001 st_pending;
+  class mp055_004 st_pending;
+  class mp055_002 st_pending;
+  class mp055_003 st_pending;
+  class mp055_005 st_pending;
+  class mp055_006 st_pending;
+  class mp055_007 st_pending;
+  classDef st_pending fill:#f3f4f6,stroke:#9ca3af,color:#374151;
+  classDef st_running fill:#dbeafe,stroke:#2563eb,color:#1e3a8a;
+  classDef st_done fill:#dcfce7,stroke:#16a34a,color:#14532d;
+  classDef st_failed fill:#fee2e2,stroke:#dc2626,color:#7f1d1d;
+  classDef st_skipped fill:#e5e7eb,stroke:#6b7280,color:#374151;

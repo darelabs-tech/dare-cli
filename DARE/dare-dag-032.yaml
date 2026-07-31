@@ -1,0 +1,60 @@
+title: "Review static anti-stub (032) - Development Tasks"
+version: "1.0.0"
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp032-001
+    title: "Crate dare-review: rules + scan"
+    depends_on: []
+    complexity: HIGH
+    spec_file: EXECUTION-032/mp032-001.md
+    subtask_prompt: |
+      Create crates/dare-review with rules engine and line scanner per BLUEPRINT-032.
+      Workspace member; deps dare-core, serde, serde_json. Unit tests for rules.
+      No CLI yet.
+
+  - id: mp032-002
+    title: "run_review + formatters + agent merge"
+    depends_on: [mp032-001]
+    complexity: HIGH
+    spec_file: EXECUTION-032/mp032-002.md
+    subtask_prompt: |
+      Implement run_review, spec file parse, formatters human/json/github,
+      --from-agent merge, fail-on/strict/errors-only policy, comment markdown.
+      Unit tests MUST from Blueprint §6.
+
+  - id: mp032-003
+    title: "CLI dare review + smokes"
+    depends_on: [mp032-002]
+    complexity: MED
+    spec_file: EXECUTION-032/mp032-003.md
+    subtask_prompt: |
+      Wire Commands::Review in main.rs; commands/review.rs; dare-cli dep.
+      Smoke tests: pass, TODO fail, github format, fail-on never.
+
+  - id: mp032-004
+    title: "Capability + docs + DEC-034 + matriz"
+    depends_on: [mp032-003]
+    complexity: MED
+    spec_file: EXECUTION-032/mp032-004.md
+    subtask_prompt: |
+      Update capability-matrix cli_commands; assets/capabilities/dare-review/README.md;
+      docs/compatibility/cli-review.md; DEC-034 in DECISION-LOG; matriz 032 Concluído.
+
+  - id: mp032-005
+    title: "Ralph Loop workspace"
+    depends_on: [mp032-004]
+    complexity: LOW
+    spec_file: EXECUTION-032/mp032-005.md
+    subtask_prompt: |
+      cargo fmt --check && cargo clippy --workspace --all-targets -- -D warnings
+      && cargo test --workspace. Mark TASKS Done. Commit feat(review).

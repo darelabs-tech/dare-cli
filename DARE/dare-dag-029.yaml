@@ -1,0 +1,186 @@
+title: "Execute complete fail reset Ralph (029) - Development Tasks"
+version: "1.0.0"
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp029-001
+    title: "Verificar docker-compose.ci.yml"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION-029/mp029-001.md
+    subtask_prompt: |
+      Microplano 029 Fase 1 — BLUEPRINT-029 §6 Fase 1 T-23.
+      Validar: `docker compose -f docker-compose.ci.yml config` exit 0.
+      Se Docker ausente: confirmar YAML + Dockerfile.rust existem; waiver em
+      docs/compatibility/cli-execute-mutations.md (escrito em mp029-006).
+      Sem nova imagem. Sem git commit.
+      NÃO criar dare-verify / flags complete neste task.
+
+  - id: mp029-002
+    title: "Crate dare-verify (stacks + run_ralph)"
+    depends_on: []
+    complexity: HIGH
+    spec_file: EXECUTION-029/mp029-002.md
+    subtask_prompt: |
+      Microplano 029 Fase 2 — BLUEPRINT-029 §0 T-01–T-14 §4.1–4.3 §5.2.
+      CRIAR crates/dare-verify/ (Cargo.toml edition 2021, version workspace 0.1.0-alpha.0).
+      Adicionar member em Cargo.toml workspace; deps: dare-core, serde, serde_json.
+      NÃO depender de dare-dag (T-02).
+      src/lib.rs: pub mod ralph; pub mod stacks; re-exports.
+      stacks.rs:
+        pub fn resolve_stack(root: &ProjectRoot) -> CoreResult<String>
+          Ler dare.config.json campo "backend" (string); se ausente e existe Cargo.toml
+          → "rust-axum"; senão Err(invalid_input("unknown stack")).
+        pub fn gate_commands(stack: &str) -> CoreResult<Vec<(GateAspect, SafeCommand)>>
+          rust-axum|rust: 3 cmds cwd=root timeout 600s:
+            build: cargo build --workspace
+            test: cargo test --workspace
+            lint: cargo clippy --workspace --all-targets -- -D warnings
+          IDs conhecidos não-Rust (node-nestjs, python-fastapi, php-laravel, go-gin,
+            go-stdlib, react, vue, rust-leptos, rust-leptos-csr, mcp-node-ts):
+            Err(invalid_input) msg contém "not implemented"
+          outro: Err msg contém "unknown stack"
+      ralph.rs:
+        GateAspect { Build, Test, Lint } + as_str build|test|lint
+        GateStep { aspect, program, args, exit_code, timed_out, stdout_tail, stderr_tail, duration_ms }
+        RalphReport { ok, timed_out, stack, steps, total_duration_ms } serde camelCase
+        pub fn run_ralph(root, stack, runner: &dyn ProcessRunner, stdout_cap_chars: usize)
+          -> CoreResult<RalphReport>
+          gate_commands; short-circuit no primeiro exit≠0 ou timed_out (ProcessOutput exit 124);
+          truncate tails via truncate_chars; ok iff all exit 0 && !timed_out.
+      Testes MUST (MockProcessRunner): run_ralph_all_pass; run_ralph_fail_short_circuits
+        (só 1 step); run_ralph_timeout_exit_124; resolve_stack_from_backend;
+        gate_commands_not_implemented_nestjs.
+      Gate: cargo test -p dare-verify
+      Sem CLI. Sem verification.rs ainda (mp029-003). Sem git commit.
+
+  - id: mp029-003
+    title: "Verification writer (.dare/verification)"
+    depends_on: [mp029-002]
+    complexity: MED
+    spec_file: EXECUTION-029/mp029-003.md
+    subtask_prompt: |
+      Microplano 029 Fase 3 — BLUEPRINT-029 §4.4 T-15 T-21 RS-01 RS-02.
+      CRIAR crates/dare-verify/src/verification.rs (+ pub mod / pub use).
+      pub const VERIFICATION_DIR_REL: &str = ".dare/verification";
+      VerificationReport { schema_version:u32=1, task_id, ok, timed_out, stack,
+        aspects: Vec<GateStep>, updated_at: String } serde camelCase.
+      pub fn task_id_is_path_safe(id: &str) -> bool
+        regex ^[A-Za-z0-9][A-Za-z0-9._-]*$ (sem / \\ ..)
+      pub fn write_verification(root: &ProjectRoot, report: &VerificationReport) -> CoreResult<()>
+        se !task_id_is_path_safe → InvalidInput 4;
+        SafeRelativePath "{VERIFICATION_DIR_REL}/{task_id}.json";
+        criar dir .dare/verification; redact stdout_tail/stderr_tail via dare_core::redact;
+        atomic_write JSON.
+      pub fn verification_from_ralph(task_id, ralph: &RalphReport, clock_rfc3339) -> VerificationReport
+      Testes FS MUST: write+read roundtrip; unsafe id "a/b" → Err; cria dir.
+      Gate: cargo test -p dare-verify
+      Sem CLI. Sem git commit.
+
+  - id: mp029-004
+    title: "CLI --complete + smokes Ralph mock"
+    depends_on: [mp029-003]
+    complexity: HIGH
+    spec_file: EXECUTION-029/mp029-004.md
+    subtask_prompt: |
+      Microplano 029 Fase 4 — BLUEPRINT-029 §5 T-06–T-10 T-18 Apêndice C E.
+      Estender Commands::Execute em main.rs:
+        complete: Option<String> (long, value_name TASK_ID, conflicts status/next/watch/fail/reset)
+        fail/reset Option<String> (podem stub Usage até mp029-005 — PREFERIR wiring Fail/Reset
+          retornando invalid_input("not implemented") exit 4 ATÉ 005, OU implementar mínimo;
+          smokes fail/reset ficam em 005)
+        output: Option<String> requires=complete
+        reason: Option<String> requires=fail
+      ExecuteAction::{ Complete{id,output}, Fail{id,reason}, Reset{id}, Status, Next, Watch… }
+      Fluxo Complete (Apêndice C):
+        root→dag→load→ensure_state→task in DAG else NotFound 3→id path-safe else 4→
+        resolve_stack+gate_commands→ensure_running (PENDING→transition Start RefreshCanvas::No)→
+        run_ralph com SystemProcessRunner OU mock se env DARE_RALPH_MOCK:
+          unset=real; 1|pass=3 steps exit0; fail=build exit1; timeout=build timed_out 124
+        write_verification(ok=ralph.ok)→
+        se timed_out: human MSG_COMPLETE_GATE_FAIL; ExitCode(124) SEM Complete→
+        se !ok: ExitCode(1) SEM Complete (status RUNNING)→
+        output=truncate(--output or "Task completed.") task_output_chars→
+        transition(Complete{output}, RefreshCanvas::Yes)→write_verification ok=true→
+        success MSG_COMPLETE_OK + JSON §5.5.
+      dare-cli Cargo.toml: dep dare-verify.
+      Smokes MUST (cli_smoke execute_complete_*):
+        DARE_RALPH_MOCK=pass → DONE + verification ok;
+        =fail → RUNNING + exit 1 + verif ok:false;
+        =timeout → exit 124;
+        missing task → 3; --complete --fail → 2; --status --complete → 2.
+      Gate: cargo test -p dare-cli --test cli_smoke -- execute_complete
+      Sem docs/DEC. Sem git commit. Sem --agent.
+
+  - id: mp029-005
+    title: "CLI --fail + --reset + smokes"
+    depends_on: [mp029-004]
+    complexity: MED
+    spec_file: EXECUTION-029/mp029-005.md
+    subtask_prompt: |
+      Microplano 029 Fase 5 — BLUEPRINT-029 §5.3 fail/reset T-19 T-26 T-27 T-28.
+      Completar Fail/Reset (remover stubs):
+        Fail: ensure→ensure_running→transition(Fail{error: reason or "Task failed."},
+          RefreshCanvas::Yes); MSG_FAIL_OK; JSON action fail.
+        Reset: ensure→transition(Reset, RefreshCanvas::Yes); MSG_RESET_OK;
+          JSON attemptsPreserved:true.
+      Smokes MUST:
+        execute_fail_marks_failed (+ cascade child SKIPPED se fixture chain);
+        execute_reset_preserves_attempts (complete mock pass → reset → attempts.len unchanged;
+          status PENDING; output/error empty);
+        execute_complete_from_done_exit_4;
+        execute_fail_from_done_exit_4 (sem reset).
+      Gate: cargo test -p dare-cli --test cli_smoke -- execute_
+      Sem docs. Sem git commit.
+
+  - id: mp029-006
+    title: "Capability + cli-execute-mutations.md + DEC-030"
+    depends_on: [mp029-005]
+    complexity: MED
+    spec_file: EXECUTION-029/mp029-006.md
+    subtask_prompt: |
+      Microplano 029 Fase 6 — BLUEPRINT-029 T-16 T-17 T-30 RF-25.
+      CRIAR docs/compatibility/cli-execute-mutations.md: complete/fail/reset; MSG_*;
+        exits 0/1/2/3/4/5/124; auto-Start; Ralph fail→RUNNING; DARE_RALPH_MOCK;
+        verification path; fora agent/review; waiver compose se mp029-001; local verify.
+      DEC-030 em docs/DECISION-LOG.md (active): mutações + Ralph; auto-Start Classe B;
+        exit 1 vs 124; file-only verification; complements DEC-029.
+      Atualizar assets/capability-matrix.yml dare-execute instructions (cli_commands já
+        ["execute"]); regen manifest se hash; assets verify ok.
+      Gate: ficheiros + DEC-030 active. Sem git commit. Sem closeout 000A (mp029-008).
+
+  - id: mp029-007
+    title: "Auditoria Ralph (fmt/clippy/test/audit)"
+    depends_on: [mp029-001, mp029-005, mp029-006]
+    complexity: MED
+    spec_file: EXECUTION-029/mp029-007.md
+    subtask_prompt: |
+      Microplano 029 Fase 7 — BLUEPRINT-029 §7 RS-04.
+      Rodar até verde:
+        cargo fmt --check
+        cargo clippy -p dare-verify -p dare-cli -p dare-dag --all-targets -- -D warnings
+        cargo test -p dare-verify
+        cargo test -p dare-cli --test cli_smoke -- execute
+        cargo audit
+      CVE HIGH/CRITICAL → FAILED até fix.
+      Sem git commit. NÃO implementar 030+.
+
+  - id: mp029-008
+    title: "Fechamento TASKS/matriz/Blueprint"
+    depends_on: [mp029-007]
+    complexity: LOW
+    spec_file: EXECUTION-029/mp029-008.md
+    subtask_prompt: |
+      Microplano 029 Fase 8 — BLUEPRINT-029 §6 Fase 8.
+      TASKS-029 → 8/8 DONE 100%; 000A-MATRIZ linha 029 ✅ Concluído;
+      BLUEPRINT-029 Status APPROVED; opcional dare dag viz -o DARE/dag-graph-029.mmd.
+      Sem git commit (humano).

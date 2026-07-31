@@ -1,0 +1,88 @@
+title: "Comando welcome (016) - Development Tasks"
+version: "1.0.0"
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp016-001
+    title: "Verificar docker-compose.ci.yml"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION-016/mp016-001.md
+    subtask_prompt: |
+      Microplano 016 Fase 1 — BLUEPRINT-016 §6 Fase 1 T-08.
+      Validar: `docker compose -f docker-compose.ci.yml config` exit 0.
+      Se Docker ausente: YAML parseável + Dockerfile.rust existe; waiver numa linha a adicionar depois em cli-welcome.md § Local verify (mp016-004).
+      Sem nova imagem. Sem git commit. NÃO alterar welcome.rs.
+
+  - id: mp016-002
+    title: "Congelar render_welcome + política banner + CI-005"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION-016/mp016-002.md
+    subtask_prompt: |
+      Microplano 016 Fase 2 — BLUEPRINT-016 §4–§5.1 T-01..T-07.
+      Em crates/dare-cli/src/commands/welcome.rs congelar:
+      - WelcomeOptions { no_banner, stdout_is_tty: Option<bool>, no_color }
+      - env_no_banner: DARE_NO_BANNER ∈ {1,true,TRUE,yes,YES}
+      - should_show_banner: off se no_banner|env|!tty
+      - render_welcome: BANNER vs BANNER_PLAIN; tagline; QUICK_START; NUNCA "dare new"
+      - Testes: no_tty_skips_banner; no_banner_flag; snapshot_human_tty_no_color; snapshot_no_tty
+      Alinhar gaps; NÃO reescrever cosmético se já cumpre.
+      Gate: cargo test -p dare-cli --lib commands::welcome::
+      Sem git commit. NÃO docs (mp016-004). NÃO info 017.
+
+  - id: mp016-003
+    title: "CLI wiring + smoke welcome"
+    depends_on: [mp016-002]
+    complexity: LOW
+    spec_file: EXECUTION-016/mp016-003.md
+    subtask_prompt: |
+      Microplano 016 Fase 3 — BLUEPRINT-016 §5.2 §5.4 §5.6.
+      main.rs: Commands::Welcome { --no-banner }; WelcomeOptions { no_banner, no_color: cli.no_color, stdout_is_tty: None }; ok_msg(render_welcome).
+      Default sem subcomando DEVE mencionar "dare welcome".
+      cli_smoke: welcome_no_banner_no_dare_new; welcome_env_no_banner (DARE_NO_BANNER=1).
+      Gate: cargo test -p dare-cli --test cli_smoke -- welcome
+      Sem git commit.
+
+  - id: mp016-004
+    title: "Docs cli-welcome.md + DEC-017"
+    depends_on: [mp016-002]
+    complexity: LOW
+    spec_file: EXECUTION-016/mp016-004.md
+    subtask_prompt: |
+      Microplano 016 Fase 4 — BLUEPRINT-016 §5.5 T-09.
+      CRIAR docs/compatibility/cli-welcome.md com: flags; env DARE_NO_BANNER/NO_COLOR; política TTY;
+      CI-005 proibição dare new; quick-start steps; DEC-017; § Local verify (compose).
+      Atualizar docs/DECISION-LOG.md nota DEC-017 apontando cli-welcome.md.
+      Sem git commit. Sem código Rust.
+
+  - id: mp016-005
+    title: "Auditoria Ralph"
+    depends_on: [mp016-001, mp016-003, mp016-004]
+    complexity: MED
+    spec_file: EXECUTION-016/mp016-005.md
+    subtask_prompt: |
+      Microplano 016 Fase 5 — BLUEPRINT-016 §7–8.
+      cargo fmt --check; cargo clippy --workspace --all-targets -- -D warnings;
+      cargo test --workspace; cargo audit; cargo deny check.
+      Reportar exit codes. Sem git commit.
+
+  - id: mp016-006
+    title: "Fechamento microplano 016"
+    depends_on: [mp016-005]
+    complexity: LOW
+    spec_file: EXECUTION-016/mp016-006.md
+    subtask_prompt: |
+      Microplano 016 Fase 6.
+      Atualizar DARE/TASKS-016-comando-welcome.md: 6/6 DONE; próximo 017-comando-info.
+      Opcional: Status APPROVED em DESIGN-016 e BLUEPRINT-016.
+      Sem código funcional. Sem git commit.

@@ -1,0 +1,22 @@
+flowchart TB
+  subgraph rank_0["Rank 0"]
+    mp039_001["mp039-001<br/>Domain: types + allowlist + compare + p…"]
+    mp039_002["mp039-002<br/>Capability README + matrix row (assets)"]
+  end
+  subgraph rank_1["Rank 1"]
+    mp039_003["mp039-003<br/>render + run_migrate check/write + path…"]
+  end
+  subgraph rank_2["Rank 2"]
+    mp039_004["mp039-004<br/>CLI dare migrate + main.rs + AI soft-fa…"]
+  end
+  subgraph rank_3["Rank 3"]
+    mp039_005["mp039-005<br/>Docs DEC-044 + cli-migrate + matriz fin…"]
+  end
+  subgraph rank_4["Rank 4"]
+    mp039_006["mp039-006<br/>Smokes migrate_* + Ralph close"]
+  end
+  mp039_001 --> mp039_003
+  mp039_002 --> mp039_005
+  mp039_003 --> mp039_004
+  mp039_004 --> mp039_005
+  mp039_005 --> mp039_006

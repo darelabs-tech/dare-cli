@@ -1,0 +1,146 @@
+title: "Microplano 048 — Hooks e steering"
+version: "1.0.0"
+microplano: "048"
+name: hooks-e-steering
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor: { HIGH: gpt-5.3-codex, MED: composer-2, LOW: auto-low }
+  claude: { HIGH: claude-sonnet-4-5, MED: claude-haiku-4, LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro, MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp048-001
+    title: "dare-hooks: events + actions + defs/embed"
+    depends_on: []
+    complexity: HIGH
+    spec_file: EXECUTION-048/mp048-001.md
+    subtask_prompt: |
+      Create workspace member crates/dare-hooks per BLUEPRINT-048 §0.2–0.4 / §3.
+      Pin nothing new yet except crate deps: dare-core, dare-contracts, serde,
+        serde_json, serde_yaml, sha2 (sha2 used later; ok to add), thiserror if needed.
+      Implement HookEvent { OnSave, OnFileCreate, OnTaskComplete, PreCommit } with
+        parse from "on-save"|"on-file-create"|"on-task-complete"|"pre-commit"
+        (case-sensitive). Unknown → CoreError::usage(MSG_UNKNOWN_EVENT).
+      HookAction { DareValidate, DareReview, GraphRegister, Lint, Test } ids
+        dare-validate|dare-review|graph-register|lint|test. Unknown →
+        invalid_input(MSG_UNKNOWN_ACTION). fn action_argv(action) -> &'static [&str]
+        per §0.3 (validate|review|graph ingest|guard|info).
+      Load defs: include_str!("../../../assets/hooks/default-hooks.yml") like
+        dare-guard rules; schemaVersion MUST 1; overlay .dare/hooks.yml REPLACE
+        hooks array if present. Validate events/actions against enums.
+      Create assets/hooks/default-hooks.yml exactly as BLUEPRINT §0.4 sample.
+      Exports in lib.rs. Unit: parse_events; parse_actions; load_embed;
+        overlay_replaces; reject_unknown_action_in_overlay.
+      Do NOT implement run/trust/CLI yet. No dare-cli dep. Avoid mass CRLF.
+
+  - id: mp048-002
+    title: "dare-steering: frontmatter + resolve + .env deny"
+    depends_on: []
+    complexity: HIGH
+    spec_file: EXECUTION-048/mp048-002.md
+    subtask_prompt: |
+      Create crates/dare-steering workspace member. Pin globset = "=0.4.16" in
+        workspace Cargo.toml + path dep. Deps: dare-core, serde, serde_json,
+        serde_yaml, globset.
+      env_deny: basename .env or .env.* (case-sensitive basename) → true.
+      Frontmatter: --- YAML --- via serde_yaml; scope project|glob; glob optional;
+        priority default 100. Invalid scope → skip file + warning string.
+      list_steering(root): DNA (prio 0) + PATTERNS (prio 1) if exist +
+        .dare/steering/*.md non-recursive; sort priority ASC, path ASC posix.
+        Returns SteeringListReport schemaVersion 1 camelCase.
+      show_steering(root, target_rel): SafeRelativePath; if env_deny →
+        InvalidInput MSG_ENV_EXCLUDED before read; path escape → InvalidInput;
+        missing file → NotFound; filter project|glob match (globset on posix
+        target); sort same; SteeringShowReport with body text.
+      Unit: env_deny_dot_env; env_deny_dot_env_local; priority_sort;
+        glob_match; show_excludes_env. Parallel with mp048-001. Avoid mass CRLF.
+
+  - id: mp048-003
+    title: "hooks trust + validate + idempotency"
+    depends_on: [mp048-001]
+    complexity: HIGH
+    spec_file: EXECUTION-048/mp048-003.md
+    subtask_prompt: |
+      In dare-hooks per BLUEPRINT §0.5–0.6: hooks_enabled(cfg) default true;
+        hooks_trusted(cfg) default false reading hooks.extra["trusted"] bool.
+      list_hooks(root, cfg) -> HooksListReport schema 1 (trusted, enabled,
+        source embed|overlay, hooks sorted event ASC).
+      validate_hooks(root, cfg) -> HooksValidateReport zero writes; ok=false
+        on bad overlay/schema/actions; errors en-US strings.
+      Idempotency: canonical JSON keys schemaVersion,event,action,file,task
+        (nulls allowed); SHA-256 hex lower; markers under
+        .dare/hooks-idempotency/{hash}.ok via SafeRelativePath; IDEMPOTENCY_CAP
+        512 prune mtime ASC. Helpers: digest_key, marker_exists, write_marker,
+        prune_if_needed.
+      Unit: trusted_default_false; enabled_false; validate_bad_action;
+        digest_stable; prune_over_cap. No spawn/CLI. Avoid mass CRLF.
+
+  - id: mp048-004
+    title: "hooks run_hooks + SafeCommand spawn"
+    depends_on: [mp048-003]
+    complexity: HIGH
+    spec_file: EXECUTION-048/mp048-004.md
+    subtask_prompt: |
+      Implement run_hooks(root, cfg, req, runner) per BLUEPRINT §5.2–5.3.
+      RunHooksRequest { event, file: Option<&str>, task: Option<&str>,
+        trust_flag: bool }.
+      If !hooks_enabled → Err(usage MSG_HOOKS_DISABLED) exit 2 path.
+      If !(hooks_trusted||trust_flag) → Err(usage MSG_HOOKS_TRUST); zero spawn.
+      file Some → SafeRelativePath or InvalidInput.
+      For each action in def: if marker → skipped idempotent; else build
+        SafeCommand: program=current_exe path string, args=action_argv, cwd
+        root+"", timeout 120s; runner.run; exit 0 → write_marker; else failed
+        no marker. Always Ok(HooksRunReport) if trust/defs ok; results in order.
+      Unit with fake ProcessRunner: untrusted_err; trusted_spawns;
+        idempotent_skips_second; failed_no_marker. No CLI yet. Avoid mass CRLF.
+
+  - id: mp048-005
+    title: "CLI dare hooks list/run/validate"
+    depends_on: [mp048-004]
+    complexity: MED
+    spec_file: EXECUTION-048/mp048-005.md
+    subtask_prompt: |
+      Wire Commands::Hooks { List, Run, Validate } in dare-cli main.rs +
+        commands/hooks.rs. Flags: --json, -d/--dir, run: --file --task --trust.
+      Unknown event → exit 2. Untrusted run → exit 2 HOOKS_TRUST.
+      Action spawn failed in report → process exit 1; all ok/skipped → 0.
+      validate ok=false → exit 4. Dep dare-hooks in dare-cli Cargo.toml.
+      Smoke tests crates/dare-cli/tests/hooks_steering_cli.rs (or hooks_cli.rs):
+        unknown_event_exit_2; untrusted_exit_2; validate_ok_json.
+      Human messages en-US. Avoid mass CRLF.
+
+  - id: mp048-006
+    title: "CLI dare steering list/show"
+    depends_on: [mp048-002]
+    complexity: MED
+    spec_file: EXECUTION-048/mp048-006.md
+    subtask_prompt: |
+      Wire Commands::Steering { List, Show } + commands/steering.rs.
+      Flags --json -d. show <FILE>: .env / .env.* → exit 4 MSG_ENV_EXCLUDED;
+        path escape → 4; missing → 3. list/show --json schemaVersion 1.
+      Dep dare-steering. Smokes in same or steering section of
+        hooks_steering_cli.rs: list_json; show_env_excluded; show_blocks.
+      Can parallel with mp048-003. Avoid mass CRLF.
+
+  - id: mp048-007
+    title: "Docs DEC-049 + capabilities + Ralph"
+    depends_on: [mp048-005, mp048-006]
+    complexity: MED
+    spec_file: EXECUTION-048/mp048-007.md
+    subtask_prompt: |
+      docs/compatibility/cli-hooks-steering.md (events, trust, exit 2, allowlist
+        spawn table Classe B lint/test, steering .env*, idempotency).
+      Append DEC-049 ONLY to docs/DECISION-LOG.md.
+      Mark 048 Concluído in 000A-MATRIZ-DE-STATUS.md.
+      capability-matrix: dare-hooks cli_commands:["hooks"];
+        dare-steering cli_commands:["steering"].
+      Update TASKS-048 to 7/7 DONE.
+      Ralph: cargo test -p dare-hooks -p dare-steering;
+        cargo test -p dare-cli --test hooks_steering_cli;
+        clippy -p dare-hooks -p dare-steering -p dare-cli --all-targets -- -D warnings;
+        cargo audit (no new HIGH/CRITICAL). Avoid mass CRLF.

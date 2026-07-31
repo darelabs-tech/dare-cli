@@ -1,0 +1,69 @@
+%% DARE DAG — Governança baseline e ADRs prioritárias (Microplano 001) - Development Tasks
+%% Generated: 2026-07-20T22:38:44.254Z
+graph LR
+  subgraph rank_0 ["Rank 0"]
+    direction TB
+    task_001["task-001\nScaffold árvore docs/ (placeholders obrigatórios)\n⏳ PENDING"]
+    task_002["task-002\nScaffold scripts/governance + verify-structure\n⏳ PENDING"]
+  end
+  subgraph rank_1 ["Rank 1"]
+    direction TB
+    task_003["task-003\nContainerização governance (Docker + Compose)\n⏳ PENDING"]
+    task_004["task-004\nBaseline 3.18.1 + verify-baseline (hash real)\n⏳ PENDING"]
+    task_005["task-005\nPacote compatibility + DECISION-LOG (DEC-001)\n⏳ PENDING"]
+    task_006["task-006\nADR-001 Compatibilidade de bugs legados\n⏳ PENDING"]
+    task_007["task-007\nADR-002 Contrato de saída JSON\n⏳ PENDING"]
+    task_008["task-008\nADR-004 REST compatível e MCP real\n⏳ PENDING"]
+    task_009["task-009\nADR-006 Compatibilidade e migração Graph DB\n⏳ PENDING"]
+    task_010["task-010\nADR-007 Formato canônico de capabilities\n⏳ PENDING"]
+  end
+  subgraph rank_2 ["Rank 2"]
+    direction TB
+    task_011["task-011\nverify-adr-frontmatter + índices README\n⏳ PENDING"]
+  end
+  subgraph rank_3 ["Rank 3"]
+    direction TB
+    task_012["task-012\nAuditoria segurança npm + NO_SECRETS\n⏳ PENDING"]
+  end
+  subgraph rank_4 ["Rank 4"]
+    direction TB
+    task_013["task-013\nCI GHA + fixtures-inventory + fechamento ciclo 0\n⏳ PENDING"]
+  end
+  task_001 --> task_003
+  task_002 --> task_003
+  task_002 --> task_004
+  task_001 --> task_005
+  task_001 --> task_006
+  task_001 --> task_007
+  task_001 --> task_008
+  task_001 --> task_009
+  task_001 --> task_010
+  task_002 --> task_011
+  task_006 --> task_011
+  task_007 --> task_011
+  task_008 --> task_011
+  task_009 --> task_011
+  task_010 --> task_011
+  task_004 --> task_012
+  task_005 --> task_012
+  task_011 --> task_012
+  task_003 --> task_013
+  task_012 --> task_013
+  class task_001 st_pending;
+  class task_002 st_pending;
+  class task_003 st_pending;
+  class task_004 st_pending;
+  class task_005 st_pending;
+  class task_006 st_pending;
+  class task_007 st_pending;
+  class task_008 st_pending;
+  class task_009 st_pending;
+  class task_010 st_pending;
+  class task_011 st_pending;
+  class task_012 st_pending;
+  class task_013 st_pending;
+  classDef st_pending fill:#f3f4f6,stroke:#9ca3af,color:#374151;
+  classDef st_running fill:#dbeafe,stroke:#2563eb,color:#1e3a8a;
+  classDef st_done fill:#dcfce7,stroke:#16a34a,color:#14532d;
+  classDef st_failed fill:#fee2e2,stroke:#dc2626,color:#7f1d1d;
+  classDef st_skipped fill:#e5e7eb,stroke:#6b7280,color:#374151;

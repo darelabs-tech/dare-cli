@@ -1,0 +1,69 @@
+%% DARE DAG — Workspace Rust e toolchain (Microplano 002) - Development Tasks
+%% Generated: 2026-07-20T23:25:06.670Z
+graph LR
+  subgraph rank_0 ["Rank 0"]
+    direction TB
+    mp002_001["mp002-001\nDocker Rust smoke (Dockerfile + Compose)\n⏳ PENDING"]
+    mp002_002["mp002-002\nToolchain, workspace root, LICENSE, docs MSRV\n⏳ PENDING"]
+  end
+  subgraph rank_1 ["Rank 1"]
+    direction TB
+    mp002_003["mp002-003\nCrate dare-core (APIs mínimas + testes)\n⏳ PENDING"]
+  end
+  subgraph rank_2 ["Rank 2"]
+    direction TB
+    mp002_004["mp002-004\nCrate dare-contracts\n⏳ PENDING"]
+    mp002_005["mp002-005\nCrate dare-assets\n⏳ PENDING"]
+  end
+  subgraph rank_3 ["Rank 3"]
+    direction TB
+    mp002_006["mp002-006\nCrate dare-config\n⏳ PENDING"]
+  end
+  subgraph rank_4 ["Rank 4"]
+    direction TB
+    mp002_007["mp002-007\nCrate dare-cli --help/--version + smoke tests\n⏳ PENDING"]
+  end
+  subgraph rank_5 ["Rank 5"]
+    direction TB
+    mp002_008["mp002-008\nrustfmt + clippy -D warnings (workspace)\n⏳ PENDING"]
+    mp002_009["mp002-009\ndare.config.json → rust-axum (Ralph Cargo)\n⏳ PENDING"]
+  end
+  subgraph rank_6 ["Rank 6"]
+    direction TB
+    mp002_010["mp002-010\ncargo audit + checklist RS-*\n⏳ PENDING"]
+  end
+  subgraph rank_7 ["Rank 7"]
+    direction TB
+    mp002_011["mp002-011\nCI rust-workspace-002 + fechamento microplano\n⏳ PENDING"]
+  end
+  mp002_002 --> mp002_003
+  mp002_003 --> mp002_004
+  mp002_003 --> mp002_005
+  mp002_003 --> mp002_006
+  mp002_004 --> mp002_006
+  mp002_003 --> mp002_007
+  mp002_004 --> mp002_007
+  mp002_005 --> mp002_007
+  mp002_006 --> mp002_007
+  mp002_007 --> mp002_008
+  mp002_007 --> mp002_009
+  mp002_008 --> mp002_010
+  mp002_009 --> mp002_010
+  mp002_001 --> mp002_011
+  mp002_010 --> mp002_011
+  class mp002_001 st_pending;
+  class mp002_002 st_pending;
+  class mp002_003 st_pending;
+  class mp002_004 st_pending;
+  class mp002_005 st_pending;
+  class mp002_006 st_pending;
+  class mp002_007 st_pending;
+  class mp002_008 st_pending;
+  class mp002_009 st_pending;
+  class mp002_010 st_pending;
+  class mp002_011 st_pending;
+  classDef st_pending fill:#f3f4f6,stroke:#9ca3af,color:#374151;
+  classDef st_running fill:#dbeafe,stroke:#2563eb,color:#1e3a8a;
+  classDef st_done fill:#dcfce7,stroke:#16a34a,color:#14532d;
+  classDef st_failed fill:#fee2e2,stroke:#dc2626,color:#7f1d1d;
+  classDef st_skipped fill:#e5e7eb,stroke:#6b7280,color:#374151;

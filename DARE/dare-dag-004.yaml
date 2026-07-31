@@ -1,0 +1,136 @@
+title: "Erros, tracing e saída da CLI (Microplano 004) - Development Tasks"
+version: "1.0.0"
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 900
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp004-001
+    title: "Verificar docker-compose.ci.yml (Fase 1)"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION-004/mp004-001.md
+    subtask_prompt: |
+      Microplano 004. BLUEPRINT-004 Fase 1.
+      NÃO criar Dockerfile novo. Confirmar que docker-compose.ci.yml (do 003) ainda existe.
+      Rodar: docker compose -f docker-compose.ci.yml config
+      DONE: exit 0. Anotar no summary que Fase 1 OK sem regressão.
+      Sem git commit. Atualizar DARE/TASKS-004-erros-tracing-e-saida-da-cli.md → mp004-001 DONE.
+
+  - id: mp004-002
+    title: "ErrorKind + CoreError + exit_code"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION-004/mp004-002.md
+    subtask_prompt: |
+      Microplano 004. BLUEPRINT-004 §4.1 §4.2 §5.6 Fase 2.
+      REESCREVER crates/dare-core/src/error.rs:
+      - ErrorKind { Usage, NotFound, InvalidInput, Config, Io, Internal } + as_str()
+      - exit_code(kind)->i32: Internal=1 Usage=2 NotFound=3 InvalidInput|Config=4 Io=5
+      - CoreError variants Usage/NotFound/InvalidInput/Config/Io/Internal(String) via thiserror
+      - kind(), exit_code(), message(); constructors usage/invalid_input/... que chamam redact se já existir,
+        senão redact inline mínimo OU constructors sem redact ainda (mp004-003 liga depois) —
+        PREFERIR constructors que aceitam String e documentar que mp004-005/003 aplicam redact;
+        se redact.rs ainda não existe, constructors armazenam message as-is.
+      REMOVER InvalidArgument. Atualizar validate_nonempty_name → InvalidInput + todos call sites
+      (dare-assets, dare-config, testes).
+      Teste exit_code_mapping_is_stable cobrindo os 6 kinds.
+      cargo test -p dare-core. Sem anyhow em dare-core. Sem git commit.
+      TASKS-004 → mp004-002 DONE.
+
+  - id: mp004-003
+    title: "redact + fixtures"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION-004/mp004-003.md
+    subtask_prompt: |
+      Microplano 004. BLUEPRINT-004 §5.1 Fase 3.
+      CRIAR crates/dare-core/src/redact.rs com pub fn redact(input: &str) -> String.
+      Patterns MUST: Bearer token; password=/: ; api_key=/api-key=; token=; Authorization:; AKIA[0-9A-Z]{16}.
+      Replacement [REDACTED] conforme Blueprint. Idempotente. Edge: empty, no-match, multi-match.
+      Exportar em lib.rs (mod redact; pub use redact::redact).
+      Teste redact_bearer_password_api_key_token_akia.
+      Se conflict em lib.rs com mp004-002 paralelo: apenas ADICIONAR linhas mod/use sem apagar exports de error.
+      cargo test -p dare-core. Sem git commit. TASKS-004 → mp004-003 DONE.
+
+  - id: mp004-004
+    title: "ExecutionContext + telemetry + uuid"
+    depends_on: [mp004-002]
+    complexity: MED
+    spec_file: EXECUTION-004/mp004-004.md
+    subtask_prompt: |
+      Microplano 004. BLUEPRINT-004 §4.3 §5.2 Fase 4.
+      Adicionar workspace dep uuid =1.16.0 features [v4]; dare-core depende uuid.
+      CRIAR context.rs: ColorMode Auto|Never|Always; ExecutionContext com correlation_id, json, color,
+      stdout_is_terminal, stderr_is_terminal, started_at Instant;
+      from_cli(json, no_color): NO_COLOR any => Never; no_color flag => Never; else Auto;
+      color_enabled_for_stdout/stderr.
+      CRIAR/MOVER telemetry.rs: init_tracing(ctx)->Result<(), CoreError> EnvFilter RUST_LOG default warn;
+      init_test_subscriber() preservado (de tracing_init.rs — remover ou reexport).
+      correlation_id = uuid v4 hyphenated lowercase.
+      Testes: from_cli NO_COLOR; correlation_id formato UUID.
+      cargo test -p dare-core. Sem git commit. TASKS-004 → mp004-004 DONE.
+
+  - id: mp004-005
+    title: "OutputRenderer + JSON canónico + wire main"
+    depends_on: [mp004-002, mp004-003, mp004-004]
+    complexity: HIGH
+    spec_file: EXECUTION-004/mp004-005.md
+    subtask_prompt: |
+      Microplano 004. BLUEPRINT-004 §5.3 §5.4 §5.5 Fase 5.
+      Workspace: serde=1.0.219, anstream=0.6.18; dare-core: serde_json; dare-cli: anstream + dare-core APIs.
+      Core: to_canonical_json_string(&Value)->Result<String,CoreError> sort keys recursivo.
+      Teste canonical_json_sorts_object_keys_recursively.
+      Ligar constructors CoreError a redact().
+      CRIAR crates/dare-cli/src/output.rs OutputRenderer conforme Blueprint (write_success/write_error).
+      Streams: human err→stderr; json err→stdout+exit; json sem ANSI.
+      EDIT main.rs: Cli { json, no_color }; ExecutionContext::from_cli; init_tracing;
+      help/version nunca JSON; clap parse error → CoreError::usage + write_error + exit.
+      Testes assert_cmd: cli_unknown_flag_exit_2_human; cli_unknown_flag_json_stdout_no_ansi;
+      --version/--help ainda OK.
+      cargo test --workspace. Sem git commit. TASKS-004 → mp004-005 DONE.
+
+  - id: mp004-006
+    title: "Docs cli-output-and-errors + DEC-005"
+    depends_on: [mp004-005]
+    complexity: MED
+    spec_file: EXECUTION-004/mp004-006.md
+    subtask_prompt: |
+      Microplano 004. BLUEPRINT-004 Fase 6.
+      CRIAR docs/compatibility/cli-output-and-errors.md: tabela exit 1-5 + reserva ≥6;
+      streams T-01; envelope JSON exemplos; flags --json/--no-color; NO_COLOR; RUST_LOG;
+      referência ADR-002; release notes "Ciclo 004".
+      APPEND docs/DECISION-LOG.md DEC-005: T-01..T-07, exit table, anstream/uuid pins, InvalidArgument→InvalidInput.
+      Sem secrets em exemplos. Sem git commit. TASKS-004 → mp004-006 DONE.
+
+  - id: mp004-007
+    title: "Auditoria RS-* + audit/deny"
+    depends_on: [mp004-003, mp004-005, mp004-006]
+    complexity: HIGH
+    spec_file: EXECUTION-004/mp004-007.md
+    subtask_prompt: |
+      Microplano 004. BLUEPRINT-004 Fase 7 (N-1).
+      cargo audit + cargo deny check exit 0; cargo clippy --workspace --all-targets -- -D warnings;
+      cargo test --workspace.
+      Checklist RS-01..RS-08 em cli-output-and-errors.md secção Security.
+      Confirmar: sem unwrap em paths novos produção; redact fixtures OK; JSON exemplos sem secrets;
+      anyhow só em dare-cli. Corrigir gaps. Sem git commit. TASKS-004 → mp004-007 DONE.
+
+  - id: mp004-008
+    title: "Fechamento microplano 004"
+    depends_on: [mp004-001, mp004-006, mp004-007]
+    complexity: LOW
+    spec_file: EXECUTION-004/mp004-008.md
+    subtask_prompt: |
+      Microplano 004. BLUEPRINT-004 Fase 8.
+      Atualizar TASKS-004 para 8/8 DONE 100%.
+      Confirmar ficheiros: error/redact/context/telemetry/output, docs, DEC-005.
+      dare --version e smoke help OK. Microplano 005 desbloqueado.
+      Sem git commit. Return closeout summary.

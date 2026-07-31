@@ -1,0 +1,33 @@
+```mermaid
+flowchart TB
+  subgraph rank0["Rank 0"]
+    A[mp026-001 container LOW]
+    B[mp026-002 graph ranks HIGH]
+  end
+  subgraph rank1["Rank 1"]
+    C[mp026-003 status+skip MED]
+  end
+  subgraph rank2["Rank 2"]
+    D[mp026-004 state+lock HIGH]
+    F[mp026-006 next+proptest MED]
+  end
+  subgraph rank3["Rank 3"]
+    E[mp026-005 canvas MED]
+  end
+  subgraph rank4["Rank 4"]
+    G[mp026-007 Ralph MED]
+  end
+  subgraph rank5["Rank 5"]
+    H[mp026-008 docs+DEC-027 LOW]
+  end
+  B --> C
+  C --> D
+  C --> F
+  B --> F
+  D --> E
+  A --> G
+  D --> G
+  E --> G
+  F --> G
+  G --> H
+```

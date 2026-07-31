@@ -1,0 +1,126 @@
+title: "Execução segura de processos (Microplano 006) - Development Tasks"
+version: "1.0.0"
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 900
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp006-001
+    title: "Verificar docker-compose.ci.yml (Fase 1)"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION-006/mp006-001.md
+    subtask_prompt: |
+      Microplano 006. BLUEPRINT-006 Fase 1.
+      Confirmar docker-compose.ci.yml; rodar docker compose -f docker-compose.ci.yml config.
+      DONE: exit 0. Sem novo Dockerfile. Sem git commit.
+      TASKS-006 → mp006-001 DONE.
+
+  - id: mp006-002
+    title: "Dep kill_tree 0.2.4"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION-006/mp006-002.md
+    subtask_prompt: |
+      Microplano 006. BLUEPRINT-006 §2 Fase 2 T-03.
+      Adicionar workspace pin EXATO: kill_tree=0.2.4 (default blocking, SEM feature tokio).
+      dare-core depende de kill_tree. cargo check -p dare-core. Atualizar Cargo.lock.
+      Se bindgen falhar no Windows: NÃO improvisar — documentar bloqueio e falhar a task com reason.
+      Sem implementar process.rs ainda. Sem git commit. TASKS-006 → mp006-002 DONE.
+
+  - id: mp006-003
+    title: "SafeCommand + ProcessOutput + sanitize_env"
+    depends_on: [mp006-002]
+    complexity: HIGH
+    spec_file: EXECUTION-006/mp006-003.md
+    subtask_prompt: |
+      Microplano 006. BLUEPRINT-006 §4.1–4.2 §5.1 Fase 3 T-02/T-07/T-11.
+      CRIAR crates/dare-core/src/process/{mod,command,env,output}.rs.
+      SafeCommand builder (new/arg/args/cwd/env/clear_env/timeout/limits/cancel_flag) — SEM API shell.
+      ProcessOutput (exit_code, stdout, stderr, truncate flags, timed_out, cancelled).
+      sanitize_env + env_key_is_denied (SECRET|TOKEN|KEY|PASSWORD case-insensitive).
+      truncate_chars helper (4000). Export em lib.rs. Testes: sanitize_env_strips_*; sanitize_env_keeps_path;
+      extra_env_denied_key_is_invalid_input; truncate_chars_at_4000.
+      Sem SystemProcessRunner ainda. cargo test -p dare-core. Sem git commit.
+      TASKS-006 → mp006-003 DONE.
+
+  - id: mp006-004
+    title: "SystemProcessRunner spawn + capture + truncate"
+    depends_on: [mp006-003]
+    complexity: HIGH
+    spec_file: EXECUTION-006/mp006-004.md
+    subtask_prompt: |
+      Microplano 006. BLUEPRINT-006 §4.3 §5.2–5.4 Fase 4 T-08/T-09.
+      CRIAR process/runner.rs: trait ProcessRunner + SystemProcessRunner.
+      std::process::Command argv only; env sanitize; program resolve T-09; cwd via ProjectRoot 005.
+      Piped stdout/stderr + reader threads; truncate 4000 chars; UTF-8 lossy.
+      Timeout None nesta task (ou ignore). Testes: system_runner_echo_ok; system_runner_truncates_stdout;
+      relative_program_outside_root_rejected. Win: cmd.exe args /C echo hi. cargo test -p dare-core.
+      Sem git commit. TASKS-006 → mp006-004 DONE.
+
+  - id: mp006-005
+    title: "Timeout 124 + kill_tree + grace 2s"
+    depends_on: [mp006-004]
+    complexity: HIGH
+    spec_file: EXECUTION-006/mp006-005.md
+    subtask_prompt: |
+      Microplano 006. BLUEPRINT-006 §5.4–5.5 Fase 5 T-05/T-06.
+      CRIAR process/kill.rs kill_with_grace(pid) via kill_tree::blocking + grace 2s.
+      Integrar timeout no SystemProcessRunner: timed_out=true, exit_code=124.
+      Teste system_runner_timeout_returns_124 (sleep/long cmd + timeout 200–500ms).
+      Sem órfãos best-effort. cargo test -p dare-core. Sem git commit.
+      TASKS-006 → mp006-005 DONE.
+
+  - id: mp006-006
+    title: "CancelFlag + MockProcessRunner + exe missing"
+    depends_on: [mp006-004]
+    complexity: MED
+    spec_file: EXECUTION-006/mp006-006.md
+    subtask_prompt: |
+      Microplano 006. BLUEPRINT-006 §5.4 §5.6–5.7 Fase 6 T-04/T-12.
+      CRIAR process/mock.rs MockProcessRunner (push/push_err/when_program) — NÃO spawna Command.
+      CancelFlag Arc<AtomicBool>: cancelled=true, exit_code=-1 + kill_tree.
+      Exe ausente → CoreError::not_found contendo "executable not found".
+      Testes: mock_runner_returns_queued_output_without_spawn; system_runner_cancel_sets_cancelled;
+      system_runner_missing_exe_not_found. Wire mod.rs. cargo test -p dare-core. Sem git commit.
+      TASKS-006 → mp006-006 DONE.
+
+  - id: mp006-007
+    title: "Docs process-safety + DEC-007"
+    depends_on: [mp006-005, mp006-006]
+    complexity: MED
+    spec_file: EXECUTION-006/mp006-007.md
+    subtask_prompt: |
+      Microplano 006. BLUEPRINT-006 Fase 7.
+      CRIAR docs/compatibility/process-safety.md: argv, denylist, 124, truncate 4000, kill-tree,
+      cancel -1, mock, T-01 Classe B tokio, RS checklist, release notes Ciclo 006.
+      APPEND DEC-007 em docs/DECISION-LOG.md (T-01..T-12, kill_tree 0.2.4).
+      Sem git commit. TASKS-006 → mp006-007 DONE.
+
+  - id: mp006-008
+    title: "Auditoria RS-* + audit/deny"
+    depends_on: [mp006-005, mp006-006, mp006-007]
+    complexity: HIGH
+    spec_file: EXECUTION-006/mp006-008.md
+    subtask_prompt: |
+      Microplano 006. BLUEPRINT-006 Fase 8.
+      cargo test --workspace; clippy -D warnings; cargo audit; cargo deny check — todos exit 0.
+      Completar RS-01..RS-09 em process-safety.md. Corrigir gaps. Sem shell API.
+      Sem git commit. TASKS-006 → mp006-008 DONE.
+
+  - id: mp006-009
+    title: "Fechamento microplano 006"
+    depends_on: [mp006-001, mp006-007, mp006-008]
+    complexity: LOW
+    spec_file: EXECUTION-006/mp006-009.md
+    subtask_prompt: |
+      Microplano 006. BLUEPRINT-006 Fase 9.
+      TASKS-006 → 9/9 DONE 100%. Confirmar process/* + docs + DEC-007.
+      Microplano 007 desbloqueado. Sem git commit. Return closeout summary.

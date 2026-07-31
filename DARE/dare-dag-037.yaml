@@ -1,0 +1,68 @@
+title: "DNA (037) - Development Tasks"
+version: "1.0.0"
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp037-001
+    title: "Domínio dna collect + report types"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION-037/mp037-001.md
+    subtask_prompt: |
+      Microplano 037 — BLUEPRINT T-01 T-03 T-07 T-13 T-14.
+      CRIAR crates/dare-project/src/dna.rs + export em lib.rs.
+      Tipos DnaFact/DnaReport/DnaOptions; collect tooling/naming/architecture/tests/libraries.
+      Caps + skip dirs. Sem git/ast/graph ainda. Gate: cargo test -p dare-project
+
+  - id: mp037-002
+    title: "Render PROJECT-DNA + dna-facts + write/check"
+    depends_on: [mp037-001]
+    complexity: MED
+    spec_file: EXECUTION-037/mp037-002.md
+    subtask_prompt: |
+      BLUEPRINT T-04 — render_markdown + write dna-facts.json.
+      --check zero writes. Path safety atomic_write. Gate: cargo test -p dare-project
+
+  - id: mp037-003
+    title: "Git log + AST opt-in + graph soft"
+    depends_on: [mp037-001]
+    complexity: MED
+    spec_file: EXECUTION-037/mp037-003.md
+    subtask_prompt: |
+      BLUEPRINT T-05 T-06 T-08 — SafeCommand git log; --ast dare-ast sample;
+      open_graph soft-fail. Deps Cargo.toml. Gate: cargo test -p dare-project
+
+  - id: mp037-004
+    title: "CLI dare dna + main.rs"
+    depends_on: [mp037-002, mp037-003]
+    complexity: MED
+    spec_file: EXECUTION-037/mp037-004.md
+    subtask_prompt: |
+      commands/dna.rs + Commands::Dna em main.rs (só Dna, sem reverse).
+      Flags -d --check --ast. Gate: cargo test -p dare-cli --test cli_smoke dna
+
+  - id: mp037-005
+    title: "Capability + docs DEC-039 + matriz"
+    depends_on: [mp037-004]
+    complexity: LOW
+    spec_file: EXECUTION-037/mp037-005.md
+    subtask_prompt: |
+      assets/capabilities/dare-dna; matrix cli_commands; cli-dna.md; DEC-039 append;
+      matriz 037 Concluído.
+
+  - id: mp037-006
+    title: "Smokes + Ralph close"
+    depends_on: [mp037-005]
+    complexity: MED
+    spec_file: EXECUTION-037/mp037-006.md
+    subtask_prompt: |
+      Smokes success/--check/no-git; fmt+clippy+test; TASKS 100%; fechar.

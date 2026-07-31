@@ -1,0 +1,46 @@
+%% DARE DAG — CI cross-platform e qualidade (Microplano 003) - Development Tasks
+%% Generated: 2026-07-20T23:50:40.267Z
+graph LR
+  subgraph rank_0 ["Rank 0"]
+    direction TB
+    mp003_001["mp003-001\ndocker-compose.ci.yml (Fase 1)\n⏳ PENDING"]
+    mp003_002["mp003-002\ndeny.toml + cargo deny check\n⏳ PENDING"]
+    mp003_003["mp003-003\nScripts smoke Unix/Windows\n⏳ PENDING"]
+  end
+  subgraph rank_1 ["Rank 1"]
+    direction TB
+    mp003_004["mp003-004\nWorkflow ci.yml (fmt/clippy/test/audit/deny)\n⏳ PENDING"]
+    mp003_005["mp003-005\nWorkflow build.yml (matrix 5 + smoke + SHA256)\n⏳ PENDING"]
+  end
+  subgraph rank_2 ["Rank 2"]
+    direction TB
+    mp003_006["mp003-006\nDocs CI + DEC-004\n⏳ PENDING"]
+    mp003_007["mp003-007\nAuditoria RS-* + audit/deny final\n⏳ PENDING"]
+  end
+  subgraph rank_3 ["Rank 3"]
+    direction TB
+    mp003_008["mp003-008\nRemover rust-workspace-002 + fechamento 003\n⏳ PENDING"]
+  end
+  mp003_002 --> mp003_004
+  mp003_003 --> mp003_005
+  mp003_004 --> mp003_006
+  mp003_005 --> mp003_006
+  mp003_002 --> mp003_007
+  mp003_004 --> mp003_007
+  mp003_005 --> mp003_007
+  mp003_001 --> mp003_008
+  mp003_006 --> mp003_008
+  mp003_007 --> mp003_008
+  class mp003_001 st_pending;
+  class mp003_002 st_pending;
+  class mp003_003 st_pending;
+  class mp003_004 st_pending;
+  class mp003_005 st_pending;
+  class mp003_006 st_pending;
+  class mp003_007 st_pending;
+  class mp003_008 st_pending;
+  classDef st_pending fill:#f3f4f6,stroke:#9ca3af,color:#374151;
+  classDef st_running fill:#dbeafe,stroke:#2563eb,color:#1e3a8a;
+  classDef st_done fill:#dcfce7,stroke:#16a34a,color:#14532d;
+  classDef st_failed fill:#fee2e2,stroke:#dc2626,color:#7f1d1d;
+  classDef st_skipped fill:#e5e7eb,stroke:#6b7280,color:#374151;

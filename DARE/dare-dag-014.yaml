@@ -1,0 +1,93 @@
+title: "Adapter Antigravity (014) - Development Tasks"
+version: "1.0.0"
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp014-001
+    title: "Verificar docker-compose.ci.yml"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION-014/mp014-001.md
+    subtask_prompt: |
+      Microplano 014 Fase 1 — containerização.
+      Validar: `docker compose -f docker-compose.ci.yml config` exit 0.
+      Se Docker ausente: YAML parseável documentado. Sem git commit.
+
+  - id: mp014-002
+    title: "Congelar detect + rules + workflows + preserve"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION-014/mp014-002.md
+    subtask_prompt: |
+      Microplano 014 Fase 2 — BLUEPRINT-014 §5.1–5.3 T-06/T-08.
+      Congelar em crates/dare-harness/src/antigravity.rs:
+      - detect_antigravity; generate_antigravityrules; ensure_workflows_dir (.gitkeep)
+      - preserve unmanaged .antigravityrules
+      Testes: detect empty; generate managed; preserve unmanaged rules; workflows keep.
+      Gate: cargo test -p dare-harness -- antigravity::
+      Sem git commit. NÃO implementar release 015.
+
+  - id: mp014-003
+    title: "install + validate + frontmatter + coexistência Codex"
+    depends_on: [mp014-002]
+    complexity: MED
+    spec_file: EXECUTION-014/mp014-003.md
+    subtask_prompt: |
+      Microplano 014 Fase 3 — BLUEPRINT-014 §5.4–5.6 T-03/T-07/T-11.
+      install_antigravity: commands + .agents/skills; force→49; validate frontmatter name+description.
+      Coexistência: Antigravity then Codex !force → validate still 49.
+      Testes: install_validate_and_codex_coexistence; frontmatter_rejects_incomplete.
+      Gate: cargo test -p dare-harness -- antigravity::
+      Sem git commit.
+
+  - id: mp014-004
+    title: "CLI help --force + install pipeline"
+    depends_on: [mp014-002]
+    complexity: LOW
+    spec_file: EXECUTION-014/mp014-004.md
+    subtask_prompt: |
+      Microplano 014 Fase 4 — §5.7 T-10/T-12 RS-07.
+      AntigravityCmd::Install: clap --force docstring overwrite unmanaged.
+      Ordem: generate_antigravityrules → ensure_workflows_dir → install_antigravity.
+      Gate: cargo build -p dare-cli
+      Sem git commit.
+
+  - id: mp014-005
+    title: "CLI smoke + docs DEC-015 + exception"
+    depends_on: [mp014-003, mp014-004]
+    complexity: MED
+    spec_file: EXECUTION-014/mp014-005.md
+    subtask_prompt: |
+      Microplano 014 Fase 5.
+      cli_smoke: tempdir → dare harness antigravity install --force --root … → validate ok 49; detect rules true.
+      EXPANDIR docs/compatibility/harness-antigravity.md: CLI, frontmatter, share Codex, workflows .gitkeep, T-01..T-14, RS, SoT 49 vs 48 exception, DEC-015.
+      NÃO remover agent-skills-full-parity. NÃO release 015.
+      Gate: cargo test -p dare-cli --test cli_smoke
+      Sem git commit.
+
+  - id: mp014-006
+    title: "Auditoria Ralph"
+    depends_on: [mp014-001, mp014-005]
+    complexity: MED
+    spec_file: EXECUTION-014/mp014-006.md
+    subtask_prompt: |
+      Microplano 014 Fase 6.
+      cargo test --workspace; clippy -D warnings; cargo audit; cargo deny check.
+      Output exit codes. Sem git commit.
+
+  - id: mp014-007
+    title: "Fechamento microplano 014"
+    depends_on: [mp014-006]
+    complexity: LOW
+    spec_file: EXECUTION-014/mp014-007.md
+    subtask_prompt: |
+      Atualizar TASKS-014: 7/7 DONE. Próximo: 015-pipeline-de-release-nativo-alpha. Sem código. Sem git commit.

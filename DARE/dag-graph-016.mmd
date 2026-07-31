@@ -1,0 +1,27 @@
+# DAG 016 — Comando welcome
+
+```mermaid
+flowchart TB
+  subgraph rank0["Rank 0"]
+    mp016-001["mp016-001 ✅"]
+    mp016-002["mp016-002 ✅"]
+  end
+  subgraph rank1["Rank 1"]
+    mp016-003["mp016-003 ✅"]
+    mp016-004["mp016-004 ✅"]
+  end
+  subgraph rank2["Rank 2"]
+    mp016-005["mp016-005 ✅"]
+  end
+  subgraph rank3["Rank 3"]
+    mp016-006["mp016-006 ✅"]
+  end
+  mp016-002 --> mp016-003
+  mp016-002 --> mp016-004
+  mp016-001 --> mp016-005
+  mp016-003 --> mp016-005
+  mp016-004 --> mp016-005
+  mp016-005 --> mp016-006
+```
+
+Progress: **6/6 DONE** · Próximo: `017-comando-info`

@@ -1,0 +1,152 @@
+title: "Workspace Rust e toolchain (Microplano 002) - Development Tasks"
+version: "1.0.0"
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 900
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp002-001
+    title: "Docker Rust smoke (Dockerfile + Compose)"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION-002/mp002-001.md
+    subtask_prompt: |
+      Microplano 002. Criar APENAS: Dockerfile.rust, docker-compose.rust.yml, .env.rust.example
+      conforme DARE/BLUEPRINT-002-workspace-rust-e-toolchain.md §6 Fase 1.
+      Dockerfile multi-stage: FROM rust:1.85.0-bookworm AS builder; COPY workspace;
+      cargo build --release -p dare-cli; runtime debian:bookworm-slim com /usr/local/bin/dare;
+      ENTRYPOINT dare; CMD --version. Compose serviço dare-cli-smoke; healthcheck CMD dare --version.
+      .env.rust.example: RUST_LOG= (nome só, sem secret).
+      DONE: ficheiros existem; docker compose -f docker-compose.rust.yml config OK.
+      Build imagem pode falhar até crates existirem — OK nesta task.
+      NÃO modificar crates/, DARE/TASKS.md do 001, scripts/governance.
+      Sem git commit. Return summary of paths.
+
+  - id: mp002-002
+    title: "Toolchain, workspace root, LICENSE, docs MSRV"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION-002/mp002-002.md
+    subtask_prompt: |
+      Microplano 002. BLUEPRINT-002 §2, §3, §6 Fase 2.
+      Criar rust-toolchain.toml channel 1.85.0 + components rustfmt,clippy profile minimal.
+      Criar Cargo.toml workspace: resolver 2; members explícitos das 5 crates; package
+      version 0.1.0-alpha.0 edition 2021 rust-version 1.85.0 license Apache-2.0;
+      [workspace.dependencies] pins exatos clap 4.5.40 thiserror 2.0.12 anyhow 1.0.98
+      tracing 0.1.41 tracing-subscriber 0.3.19 assert_cmd 2.0.17 predicates 3.1.3.
+      Criar skeletons compiláveis das 5 crates (lib.rs/main mínimos) para cargo metadata OK.
+      rustfmt.toml newline_style Unix. LICENSE Apache-2.0. .github/CODEOWNERS.
+      CONTRIBUTING.md Conventional Commits. docs/compatibility/rust-msrv.md.
+      Append DEC-002 em docs/DECISION-LOG.md (toolchain 1.85.0, edition 2021, Apache-2.0).
+      PROIBIDO: [build] target em .cargo/config.toml.
+      Validation: rustup show active 1.85.0 (ou documenta install); cargo metadata lista 5 packages.
+      Sem git commit.
+
+  - id: mp002-003
+    title: "Crate dare-core (APIs mínimas + testes)"
+    depends_on: [mp002-002]
+    complexity: MED
+    spec_file: EXECUTION-002/mp002-003.md
+    subtask_prompt: |
+      Implementar crates/dare-core conforme BLUEPRINT-002 §5.2.
+      CoreError + validate_nonempty_name + init_test_subscriber.
+      Deps: thiserror, tracing (+ tracing-subscriber dev se preciso).
+      Testes: validate_nonempty_name_ok|empty_err|nul_err.
+      Sem todo!/funções vazias. Sem I/O filesystem.
+      cargo test -p dare-core. Sem git commit.
+
+  - id: mp002-004
+    title: "Crate dare-contracts"
+    depends_on: [mp002-003]
+    complexity: LOW
+    spec_file: EXECUTION-002/mp002-004.md
+    subtask_prompt: |
+      Implementar crates/dare-contracts §5.3: CONTRACTS_SCHEMA_VERSION + schema_version().
+      Path dep dare-core. Teste schema_version_is_placeholder.
+      cargo test -p dare-contracts. Sem git commit.
+
+  - id: mp002-005
+    title: "Crate dare-assets"
+    depends_on: [mp002-003]
+    complexity: LOW
+    spec_file: EXECUTION-002/mp002-005.md
+    subtask_prompt: |
+      Implementar crates/dare-assets §5.5: assets_layer_ping usando validate_nonempty_name.
+      Testes ping_ok, ping_empty_err. cargo test -p dare-assets. Sem git commit.
+
+  - id: mp002-006
+    title: "Crate dare-config"
+    depends_on: [mp002-003, mp002-004]
+    complexity: LOW
+    spec_file: EXECUTION-002/mp002-006.md
+    subtask_prompt: |
+      Implementar crates/dare-config §5.4: config_layer_ping(label) -> CoreResult.
+      Deps path dare-core + dare-contracts. Testes ping_ok, ping_empty_err.
+      cargo test -p dare-config. Sem git commit.
+
+  - id: mp002-007
+    title: "Crate dare-cli --help/--version + smoke tests"
+    depends_on: [mp002-003, mp002-004, mp002-005, mp002-006]
+    complexity: HIGH
+    spec_file: EXECUTION-002/mp002-007.md
+    subtask_prompt: |
+      Implementar crates/dare-cli §5.1: clap Parser name dare version from CARGO_PKG_VERSION;
+      sem subcommands; zero args -> print_help exit 0; --version "dare 0.1.0-alpha.0";
+      tracing-subscriber só se RUST_LOG set.
+      Path deps: dare-core, dare-contracts, dare-config, dare-assets.
+      Dev-deps: assert_cmd, predicates.
+      Testes cli_smoke: version_prints_semver, help_mentions_version_flag, help_exit_zero, unknown_flag_fails.
+      Teste dep_graph §5.6: libs não dependem de dare-cli.
+      Validation: cargo build --release -p dare-cli; cargo test --workspace.
+      Sem git commit.
+
+  - id: mp002-008
+    title: "rustfmt + clippy -D warnings (workspace)"
+    depends_on: [mp002-007]
+    complexity: MED
+    spec_file: EXECUTION-002/mp002-008.md
+    subtask_prompt: |
+      Configurar [workspace.lints] no Cargo.toml raiz; garantir rustfmt/clippy limpos.
+      DONE: cargo fmt --check; cargo clippy --workspace --all-targets -- -D warnings exit 0.
+      Corrigir warnings introduzidos. Sem git commit.
+
+  - id: mp002-009
+    title: "dare.config.json → rust-axum (Ralph Cargo)"
+    depends_on: [mp002-007]
+    complexity: LOW
+    spec_file: EXECUTION-002/mp002-009.md
+    subtask_prompt: |
+      Atualizar dare.config.json backend para rust-axum; notes sobre DEC-001 resolvido no 002.
+      NÃO remover/quebrar scripts/governance nem governance-001.yml.
+      Validar dare info mostra config. Documentar que Ralph passa a cargo build/test/clippy.
+      Sem git commit.
+
+  - id: mp002-010
+    title: "cargo audit + checklist RS-*"
+    depends_on: [mp002-008, mp002-009]
+    complexity: HIGH
+    spec_file: EXECUTION-002/mp002-010.md
+    subtask_prompt: |
+      Rodar cargo audit (instalar cargo-audit --locked se preciso). Fail se HIGH/CRITICAL.
+      Confirmar sem .cargo/config.toml [build] target; .env.rust.example sem secrets.
+      Adicionar seção curta Security gate 002 em docs/compatibility/rust-msrv.md ou README.
+      Mapear RS-01..RS-08. Sem git commit.
+
+  - id: mp002-011
+    title: "CI rust-workspace-002 + fechamento microplano"
+    depends_on: [mp002-001, mp002-010]
+    complexity: MED
+    spec_file: EXECUTION-002/mp002-011.md
+    subtask_prompt: |
+      Criar .github/workflows/rust-workspace-002.yml: ubuntu-latest; toolchain 1.85.0;
+      fmt check; clippy -D warnings; cargo test --workspace; cargo build --release -p dare-cli;
+      upload-artifact binário. Atualizar DARE/TASKS-002-workspace-rust-e-toolchain.md 11/11.
+      Nota RF-14 épico placeholder no DECISION-LOG. Confirmar desbloqueio microplano 003.
+      Opcional docker build se daemon up. Sem git commit.

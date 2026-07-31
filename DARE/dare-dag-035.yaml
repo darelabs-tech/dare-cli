@@ -1,0 +1,94 @@
+title: "Engine AST nativo (035) - Development Tasks"
+version: "1.0.0"
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp035-001
+    title: "Scaffold crate + model/language"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION-035/mp035-001.md
+    subtask_prompt: |
+      Microplano 035 — BLUEPRINT-035 T-01 T-02 T-10 T-14 §3–4.
+      CRIAR crates/dare-ast/ member + workspace.dependencies.dare-ast.
+      Deps: dare-core, serde. Sem tree-sitter ainda. Sem dare-cli.
+      Modules: model.rs (Language, SourceKind, HttpEndpoint, Entity, DataModel),
+      language.rs (detect_language), lib.rs re-exports.
+      MAX_SOURCE_BYTES = 2MiB. Testes detect_language extensions.
+      Gate: cargo test -p dare-ast
+
+  - id: mp035-002
+    title: "Parse + feature-gated grammars"
+    depends_on: [mp035-001]
+    complexity: HIGH
+    spec_file: EXECUTION-035/mp035-002.md
+    subtask_prompt: |
+      BLUEPRINT-035 T-03 T-04 T-05 T-17 — parse.rs.
+      tree-sitter=0.25.10 + grammar crates sob features lang-*.
+      default = all langs. language_for(lang) Option; parse_source -> Tree ou Err.
+      Warning estável se feature off. Gate: cargo test -p dare-ast --all-features
+
+  - id: mp035-003
+    title: "Extract AST endpoints/entities"
+    depends_on: [mp035-002]
+    complexity: HIGH
+    spec_file: EXECUTION-035/mp035-003.md
+    subtask_prompt: |
+      BLUEPRINT-035 §4.1 — extract.rs walk/query heuristics per language.
+      SourceKind::Ast. Gate: cargo test -p dare-ast
+
+  - id: mp035-004
+    title: "Regex fallback + merge/dedupe"
+    depends_on: [mp035-003]
+    complexity: HIGH
+    spec_file: EXECUTION-035/mp035-004.md
+    subtask_prompt: |
+      BLUEPRINT-035 T-08 T-09 — regex_fallback.rs + merge.rs.
+      Prefer Ast; sort (method,path,line) / (kind,name,line).
+      Test regex_only + dedupe. Gate: cargo test -p dare-ast --no-default-features
+      e --all-features
+
+  - id: mp035-005
+    title: "analyze API + corpus fixtures"
+    depends_on: [mp035-004]
+    complexity: MED
+    spec_file: EXECUTION-035/mp035-005.md
+    subtask_prompt: |
+      analyze.rs: analyze_source(path, source) -> DataModel.
+      Fixtures 8 langs + tsx; golden asserts ≥1 endpoint + ≥1 entity.
+      Reject NUL / oversize. Gate: cargo test -p dare-ast --all-features
+
+  - id: mp035-006
+    title: "Docs DEC-032 + ast-engine.md"
+    depends_on: [mp035-005]
+    complexity: LOW
+    spec_file: EXECUTION-035/mp035-006.md
+    subtask_prompt: |
+      docs/compatibility/ast-engine.md + DEC-032 em DECISION-LOG.md.
+      Sem alterar main.rs.
+
+  - id: mp035-007
+    title: "Ralph Loop audit"
+    depends_on: [mp035-006]
+    complexity: MED
+    spec_file: EXECUTION-035/mp035-007.md
+    subtask_prompt: |
+      cargo fmt --check && cargo clippy --workspace --all-features -- -D warnings
+      && cargo test --workspace. Audit se deps novas.
+
+  - id: mp035-008
+    title: "Fechamento TASKS/matriz/Blueprint"
+    depends_on: [mp035-007]
+    complexity: LOW
+    spec_file: EXECUTION-035/mp035-008.md
+    subtask_prompt: |
+      Marcar tasks DONE; matriz 035 Concluído; Blueprint status execução 8/8.

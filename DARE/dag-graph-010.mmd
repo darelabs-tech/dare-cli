@@ -1,0 +1,22 @@
+```mermaid
+flowchart TB
+  subgraph rank0["Rank 0"]
+    mp010-001["mp010-001 compose"]
+    mp010-002["mp010-002 harden+exceptions"]
+  end
+  subgraph rank1["Rank 1"]
+    mp010-003["mp010-003 count 49"]
+    mp010-004["mp010-004 render"]
+  end
+  mp010-005["mp010-005 smoke+docs"]
+  mp010-006["mp010-006 audit"]
+  mp010-007["mp010-007 closeout"]
+
+  mp010-002 --> mp010-003
+  mp010-002 --> mp010-004
+  mp010-003 --> mp010-005
+  mp010-004 --> mp010-005
+  mp010-001 --> mp010-006
+  mp010-005 --> mp010-006
+  mp010-006 --> mp010-007
+```

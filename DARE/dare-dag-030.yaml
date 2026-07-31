@@ -1,0 +1,148 @@
+title: "Execute agent mock worktrees budget (030) - Development Tasks"
+version: "1.0.0"
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp030-001
+    title: "Verificar docker-compose.ci.yml"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION-030/mp030-001.md
+    subtask_prompt: |
+      Microplano 030 Fase 1 — BLUEPRINT-030 §6 Fase 1 T-32.
+      Validar: `docker compose -f docker-compose.ci.yml config` exit 0.
+      Se Docker ausente: confirmar YAML + Dockerfile.rust; waiver em
+      docs/compatibility/cli-execute-agent.md (mp030-006).
+      Sem nova imagem. Sem git commit.
+      NÃO criar dare-agent / --agent neste task.
+
+  - id: mp030-002
+    title: "Crate dare-agent (driver/mock/budget/policy/sig)"
+    depends_on: []
+    complexity: HIGH
+    spec_file: EXECUTION-030/mp030-002.md
+    subtask_prompt: |
+      Microplano 030 Fase 2 — BLUEPRINT-030 §0 T-01–T-13 T-27–T-28 §4.1–4.6 §5.2.
+      CRIAR crates/dare-agent/ (edition 2021, version workspace). Member em Cargo.toml.
+      Deps: dare-core, serde, serde_json, sha2. NÃO dare-cli/dare-dag.
+      src/lib.rs + modules: driver, mock, budget, policy, signature.
+      Trait sync AgentDriver: id(), doctor() -> DriverHealth, run(&AgentRequest, &CancelFlag)
+        -> AgentRunResult. AgentRunStatus::{Success,Failure,Timeout,Cancelled}.
+      resolve_driver("mock"|"noop") -> MockDriver; outros Err "driver not implemented: …".
+      MockMode from DARE_AGENT_MOCK: success|fail|timeout (default success).
+        Success: tokens=Some(1), summary="mock success"; check cancel -> Cancelled.
+        Fail: status Failure, stderr="mock failure".
+        Timeout: status Timeout.
+      BudgetTracker::new(0)=unlimited; consume/can_continue.
+      apply_fixed(status, attempt_n, max=5): Success->Done; Failure continue if n<5 else Stop;
+        Timeout|Cancelled->Stop. FixedDecision::{Done,Continue,Stop}.
+      failure_signature(aspect, stderr): 8 hex chars sha256(aspect||0x00||normalize_stderr).
+      normalize_stderr: lowercase ASCII, strip CSI, collapse whitespace, trim.
+      Testes MUST: mock_success/fail/timeout/cancel; budget_zero_unlimited; budget_exhaust;
+        apply_fixed_matrix; signature_golden_stable.
+      Gate: cargo test -p dare-agent
+      Sem worktree.rs ainda (mp030-003). Sem CLI. Sem git commit.
+
+  - id: mp030-003
+    title: "WorktreeManager (git worktree jail)"
+    depends_on: [mp030-002]
+    complexity: HIGH
+    spec_file: EXECUTION-030/mp030-003.md
+    subtask_prompt: |
+      Microplano 030 Fase 3 — BLUEPRINT-030 T-18–T-22 §4.7 §5.2 WorktreeManager.
+      CRIAR crates/dare-agent/src/worktree.rs (+ pub mod/use).
+      pub const AGENT_WORKTREES_REL: &str = ".dare/agent-worktrees";
+      WorktreeSpec { task_id, attempt, branch, rel_path }.
+      WorktreeManager::new(root, runner: Arc<dyn ProcessRunner>).
+      create(task_id, attempt): path-safe id; branch=dare/agent-{id}-{n};
+        rel=.dare/agent-worktrees/{id}-{n}; git worktree add -b branch path HEAD (cwd=root).
+      remove(spec): git worktree remove --force path.
+      list_orphans / cleanup_all -> count.
+      Testes: MockProcessRunner assert argv; unsafe id Err; optional #[ignore] real git init.
+      Gate: cargo test -p dare-agent
+      Sem CLI. Sem git commit.
+
+  - id: mp030-004
+    title: "CLI --agent loop + Ralph on Done"
+    depends_on: [mp030-003]
+    complexity: HIGH
+    spec_file: EXECUTION-030/mp030-004.md
+    subtask_prompt: |
+      Microplano 030 Fase 4 — BLUEPRINT-030 §5 Apêndice C T-04–T-17 T-24 T-33–T-35.
+      CRIAR crates/dare-cli/src/commands/execute_agent.rs; dep dare-agent no dare-cli.
+      Extender Commands::Execute: agent:bool; driver:Option<String>; task:Option<String>;
+        budget_tokens:Option<u64> default 0; policy:Option<String>; conflicts exclusivos.
+      ExecuteAction::Agent { driver, task, budget_tokens, policy }.
+      Fluxo Apêndice C: .git required else 4; guard stub Ok; select --task or ready[0];
+        loop attempts; worktree; compose_task_prompt; MockDriver; cleanup; Timeout->124;
+        budget exhaust->1; Stop->1 (+ stamp Fail+failureSignature T-35);
+        Done -> Ralph complete 029 unless DARE_AGENT_SKIP_RALPH=1.
+      Smokes execute_agent_*: success (SKIP_RALPH or RALPH_MOCK=pass); fail stop;
+        timeout 124; driver claude->4; budget exhaust->1; --agent --complete->2; no git->4.
+      Gate: cargo test -p dare-cli --test cli_smoke -- execute_agent
+      Sem cleanup flag ainda (mp030-005). Sem docs. Sem git commit.
+
+  - id: mp030-005
+    title: "CLI --cleanup-worktrees + recovery"
+    depends_on: [mp030-004]
+    complexity: MED
+    spec_file: EXECUTION-030/mp030-005.md
+    subtask_prompt: |
+      Microplano 030 Fase 5 — BLUEPRINT-030 T-23 RF-26.
+      Flag exclusiva --cleanup-worktrees em Execute; ExecuteAction::CleanupWorktrees.
+      Chama WorktreeManager::cleanup_all; MSG_CLEANUP_OK; JSON {action, removed}.
+      Smoke: criar dir órfão sob .dare/agent-worktrees/x; cleanup exit 0 removed>=1.
+      Gate: cargo test -p dare-cli --test cli_smoke -- execute_agent
+      Sem docs. Sem git commit.
+
+  - id: mp030-006
+    title: "Capability + cli-execute-agent.md + DEC-031"
+    depends_on: [mp030-005]
+    complexity: MED
+    spec_file: EXECUTION-030/mp030-006.md
+    subtask_prompt: |
+      Microplano 030 Fase 6 — BLUEPRINT-030 T-30 T-31.
+      CRIAR docs/compatibility/cli-execute-agent.md: --agent flags; mock env; budget 0=∞;
+        worktree paths; exits 0/1/2/3/4/5/124; no exit 6; fixed policy; Ralph-on-Done;
+        cleanup-worktrees; waiver compose se mp030-001; local verify.
+      DEC-031 em docs/DECISION-LOG.md (active): sync AgentDriver Classe B; agent-worktrees;
+        fixed-only; complements DEC-029/030.
+      Atualizar assets/capability-matrix.yml dare-execute instructions; regen manifest;
+        assets verify ok.
+      Gate: ficheiros + DEC-031. Sem git commit. Sem closeout 000A (mp030-008).
+
+  - id: mp030-007
+    title: "Auditoria Ralph (fmt/clippy/test/audit)"
+    depends_on: [mp030-001, mp030-005, mp030-006]
+    complexity: MED
+    spec_file: EXECUTION-030/mp030-007.md
+    subtask_prompt: |
+      Microplano 030 Fase 7 — BLUEPRINT-030 §7 RS-04.
+      Rodar até verde:
+        cargo fmt --check
+        cargo clippy -p dare-agent -p dare-cli --all-targets -- -D warnings
+        cargo test -p dare-agent
+        cargo test -p dare-cli --test cli_smoke -- execute_agent
+        cargo audit
+      CVE HIGH/CRITICAL → FAILED até fix.
+      Sem git commit. NÃO implementar 031+.
+
+  - id: mp030-008
+    title: "Fechamento TASKS/matriz/Blueprint"
+    depends_on: [mp030-007]
+    complexity: LOW
+    spec_file: EXECUTION-030/mp030-008.md
+    subtask_prompt: |
+      Microplano 030 Fase 8 — BLUEPRINT-030 §6 Fase 8.
+      TASKS-030 → 8/8 DONE; 000A linha 030 ✅; BLUEPRINT-030 APPROVED;
+      opcional dare dag viz -o DARE/dag-graph-030.mmd.
+      Sem git commit (humano).

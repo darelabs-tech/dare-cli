@@ -1,0 +1,142 @@
+title: "Microplano 043 — GraphRAG avançado + Neo4j experimental"
+version: "1.0.0"
+microplano: "043"
+name: graphrag-advanced-neo4j
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor: { HIGH: gpt-5.3-codex, MED: composer-2, LOW: auto-low }
+  claude: { HIGH: claude-sonnet-4-5, MED: claude-haiku-4, LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro, MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: mp043-001
+    title: "advanced locate + owners + tests"
+    depends_on: []
+    complexity: HIGH
+    spec_file: EXECUTION-043/mp043-001.md
+    subtask_prompt: |
+      Create/extend crates/dare-graph/src/advanced.rs + lib.rs exports.
+
+      Implement per BLUEPRINT-043 §0.2/0.4:
+      - LocateOptions { query, max_hops, fanout, limit, decay } decay default 0.7 in (0,1]
+      - locate(g, opts) -> Vec<RankedHit>: keyword seeds score 1.0; BFS neighbors
+        score = 1.0 * decay.powi(hop); max per id; sort score DESC id ASC; take limit.
+        Empty query trim -> InvalidInput "query must not be empty".
+      - owners(g, seed) -> Vec<String>: seed must exist else InvalidInput "unknown node";
+        metadata owner string + Contains incoming parents; unique sort ASC.
+
+      Reuse node_matches_keyword / bfs neighbor ordering from search.rs.
+      Caps: MAX_HOPS_CAP=5, MAX_FANOUT_CAP=200, MAX_LIMIT_CAP=100.
+
+      Unit tests: locate_decay_scores; locate_empty_query; owners_contains_and_metadata.
+      Do NOT implement impact/trace/drift/CLI/neo4j yet.
+      Avoid mass CRLF fmt.
+
+  - id: mp043-002
+    title: "advanced impact + trace + tests"
+    depends_on: []
+    complexity: HIGH
+    spec_file: EXECUTION-043/mp043-002.md
+    subtask_prompt: |
+      In crates/dare-graph/src/advanced.rs (create module if missing; coordinate via
+      same file — if parallel with 001, implement impact/trace in advanced.rs and
+      merge carefully; prefer adding functions without rewriting locate if present):
+
+      TraverseOptions { max_hops, fanout, limit } defaults hops=2 fanout=50 limit=20.
+
+      impact(g, seeds, opts) -> Vec<String>: BFS Out on edge types depends_on|uses|
+      contains|affects|implements; exclude seeds; sort ASC; apply limit.
+      Unknown seed -> InvalidInput.
+
+      trace(g, from, to, opts) -> Vec<Vec<String>>: all shortest paths within max_hops;
+      sort path.len ASC then lex join of ids. Empty if none. Unknown endpoints -> InvalidInput.
+
+      Unit tests: impact_excludes_seeds_caps; trace_shortest_paths.
+      No drift/CLI/neo4j. Avoid mass CRLF.
+
+  - id: mp043-003
+    title: "advanced drift + threshold helper"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION-043/mp043-003.md
+    subtask_prompt: |
+      In crates/dare-graph/src/advanced.rs:
+
+      DriftOptions { threshold: u32 } default 1.
+      DriftReport camelCase: orphan_requirements, orphan_code, stale, violations, threshold.
+
+      Rules BLUEPRINT §0.3:
+      - orphan_requirements: requirement with zero outbound implements
+      - orphan_code: file|code_symbol with zero inbound implements
+      - stale: metadata.stale JSON true or string "true" (ascii case-insensitive)
+      violations = sum of list lengths; ids sorted ASC dedup within list.
+
+      drift_exceeds_threshold(report): threshold==0 => violations>0; else violations>=threshold.
+
+      Unit tests: drift_three_buckets; drift_exceeds_threshold_cases.
+      Domain always Ok — exit 7 is CLI only (mp043-005).
+      No CLI/neo4j.
+
+  - id: mp043-004
+    title: "neo4j feature + HTTP client + config"
+    depends_on: []
+    complexity: HIGH
+    spec_file: EXECUTION-043/mp043-004.md
+    subtask_prompt: |
+      Add Cargo feature neo4j (NOT default) on dare-graph and dare-cli.
+      Create crates/dare-graph/src/neo4j.rs under cfg(feature="neo4j").
+
+      Config: when feature on, open_graph accepts backend neo4j; URL from yaml/env
+      NEO4J_URL, NEO4J_USER, NEO4J_PASSWORD, NEO4J_DATABASE.
+      Without feature: InvalidInput "neo4j backend requires the neo4j feature".
+
+      HTTP via ureq: POST {url}/db/{database}/tx/commit Basic auth; timeout 5s;
+      retries 2 on 5xx/timeout; backoff 100ms*attempt; scheme http|https only.
+      KnowledgeGraph read-only subset; writes -> InvalidInput "neo4j writes not supported in 043".
+      Never log password.
+
+      Unit tests with mock/httptest or stub: timeout/retry path; reject bad scheme.
+      Real Neo4j #[ignore]. No advanced CLI yet.
+
+  - id: mp043-005
+    title: "CLI advanced cmds + exit 7 smokes"
+    depends_on: [mp043-001, mp043-002, mp043-003]
+    complexity: MED
+    spec_file: EXECUTION-043/mp043-005.md
+    subtask_prompt: |
+      Extend graph.rs + main.rs additive:
+      locate <query>, owners <seed>, impact <seeds>, trace --from --to,
+      drift [--strict] [--threshold N].
+
+      Wire advanced::* ; drift --strict && drift_exceeds_threshold -> ExitCode::from(7)
+      with human/stderr containing DRIFT_THRESHOLD.
+
+      Smokes: graph_locate_*; graph_owners_*; graph_impact_*; graph_trace_*;
+      graph_drift_report_ok; graph_drift_strict_exit_7.
+      Fixture temp graph with requirement/file nodes as needed.
+
+  - id: mp043-006
+    title: "Docs DEC-046 + matriz + Ralph close"
+    depends_on: [mp043-004, mp043-005]
+    complexity: MED
+    spec_file: EXECUTION-043/mp043-006.md
+    subtask_prompt: |
+      Create docs/compatibility/graphrag-advanced.md (cmds, decay, drift, exit 7, neo4j opt-in).
+      Append DEC-046 ONLY to DECISION-LOG.md.
+      Mark 043 Concluído in 000A-MATRIZ-DE-STATUS.md.
+      Pointer from graphrag-ingest.md.
+
+      Ralph:
+      cargo test -p dare-graph
+      cargo test -p dare-graph --features neo4j
+      cargo clippy -p dare-graph -p dare-cli --all-targets -- -D warnings
+      cargo clippy -p dare-graph -p dare-cli --features neo4j --all-targets -- -D warnings
+      cargo test -p dare-cli --test cli_smoke -- graph_
+      cargo audit
+      Update TASKS-043 to 6/6 DONE.
+      No mass CRLF fmt.

@@ -1,0 +1,30 @@
+flowchart TB
+  subgraph rank_0["Rank 0"]
+    mp031_001["mp031-001<br/>Verificar docker-compose.ci.yml"]
+    mp031_002["mp031-002<br/>drivers/argv + common finalize"]
+  end
+  subgraph rank_1["Rank 1"]
+    mp031_003["mp031-003<br/>CodexDriver JSONL + suite comum"]
+    mp031_004["mp031-004<br/>Claude/Cursor/Antigravity drivers + sui…"]
+  end
+  subgraph rank_2["Rank 2"]
+    mp031_005["mp031-005<br/>resolve_driver + smokes CLI"]
+  end
+  subgraph rank_3["Rank 3"]
+    mp031_006["mp031-006<br/>Docs + DEC-037 + matriz"]
+  end
+  subgraph rank_4["Rank 4"]
+    mp031_007["mp031-007<br/>Auditoria Ralph (fmt/clippy/test/audit)"]
+  end
+  subgraph rank_5["Rank 5"]
+    mp031_008["mp031-008<br/>Fechamento TASKS/Blueprint/matriz"]
+  end
+  mp031_001 --> mp031_007
+  mp031_002 --> mp031_003
+  mp031_002 --> mp031_004
+  mp031_003 --> mp031_005
+  mp031_004 --> mp031_005
+  mp031_005 --> mp031_006
+  mp031_005 --> mp031_007
+  mp031_006 --> mp031_007
+  mp031_007 --> mp031_008
