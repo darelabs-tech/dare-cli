@@ -1,0 +1,13 @@
+Manage the dare CLI binary itself (self-update / rollback / uninstall). Distinct from `dare update`, which refreshes project assets under a ProjectRoot
+
+Usage: dare self [OPTIONS] <COMMAND>
+
+Commands:
+  update     Download, verify, and replace the dare CLI binary (not project assets)
+  rollback   Restore the previous binary from `~/.dare/self/backup`
+  uninstall  Remove only the current dare binary (no `--purge` in v1)
+
+Options:
+      --json      Emit JSON envelopes on stdout (ADR-002)
+      --no-color  Disable ANSI colors (also honors NO_COLOR)
+  -h, --help      Print help

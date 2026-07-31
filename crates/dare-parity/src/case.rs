@@ -6,7 +6,7 @@ use std::sync::OnceLock;
 
 use dare_core::{CoreError, CoreResult};
 use regex::Regex;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::axis::CompareAxis;
 
@@ -26,7 +26,7 @@ fn case_id_re() -> &'static Regex {
 }
 
 /// Intentional-diff classification (A|B|C|D).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum DiffClass {
     A,
     B,

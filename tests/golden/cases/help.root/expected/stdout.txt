@@ -1,0 +1,43 @@
+DARE Framework CLI (native Rust rewrite)
+
+Usage: dare [OPTIONS] [COMMAND]
+
+Commands:
+  welcome       Show banner (TTY) and DARE quick-start guide
+  info          Read-only installation / project diagnostics
+  discover      Brownfield project detection and DARE install
+  init          Greenfield init: scaffold + config + harnesses (microplano 047)
+  bootstrap     Re-apply scaffold on existing greenfield project (microplano 047)
+  reverse       Brownfield reverse engineering → IDEIA.md + REVERSE specs
+  dna           Extract project DNA conventions into DARE/PROJECT-DNA.md
+  patterns      Mine recurring code patterns into DARE/PATTERNS.md
+  migrate       Brownfield migration plan → MIGRATION.md + parity skeletons
+  validate      Validate DARE/dare-dag.yaml (read-only)
+  guard         Security gate: unicode, injection scan, provenance (exit 6 on FAIL)
+  dag           DAG utilities (visualization)
+  execute       Orchestrate DAG execution (status / next / watch / complete / fail / reset / agent)
+  design        Render DARE/DESIGN.md from a feature description (deterministic)
+  blueprint     Generate DARE/BLUEPRINT.md, TASKS.md, dare-dag.yaml and EXECUTION specs from Design
+  review        Static anti-stub / mock / TODO review for a task
+  refine        Measure task complexity and optionally splice a sub-DAG
+  update        Plan (`--dry-run`) or apply project asset updates
+  assets        Asset inventory / embed checks (microplano 009)
+  config        Configuration load / merge smoke (microplano 008)
+  capabilities  Canonical capabilities matrix (microplano 010 / ADR-007)
+  harness       IDE harness adapters (microplano 011+)
+  skill         Skills-pacote registry and lifecycle (microplanos 044–045)
+  graph         GraphRAG ingest / query / stats / viz / advanced (microplanos 041–043)
+  hooks         Deterministic hooks list / run / validate (microplano 048)
+  steering      Steering file discovery and resolution (microplano 048)
+  bench         Deterministic Fix·Rate bench harness (microplano 049)
+  ai            AI enrich doctor / providers / run / prompt (microplano 050)
+  dashboard     Local read-only telemetry dashboard (microplano 051)
+  server        REST-compatible HTTP server (microplano 051)
+  mcp           MCP transport serve (microplano 052)
+  self          Manage the dare CLI binary itself (self-update / rollback / uninstall). Distinct from `dare update`, which refreshes project assets under a ProjectRoot
+
+Options:
+      --json      Emit JSON envelopes on stdout (ADR-002)
+      --no-color  Disable ANSI colors (also honors NO_COLOR)
+  -h, --help      Print help
+  -V, --version   Print version

@@ -1,0 +1,11 @@
+MCP transport serve (microplano 052)
+
+Usage: dare mcp [OPTIONS] <COMMAND>
+
+Commands:
+  serve  Serve MCP over stdio or streamable-http
+
+Options:
+      --json      Emit JSON envelopes on stdout (ADR-002)
+      --no-color  Disable ANSI colors (also honors NO_COLOR)
+  -h, --help      Print help

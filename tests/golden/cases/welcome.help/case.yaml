@@ -1,0 +1,9 @@
+schemaVersion: 1
+id: golden.welcome.help
+command: ["welcome", "--help"]
+cwd_fixture: empty-project
+env: {}
+axes: [exit, stdout]
+expected:
+  exit: 0
+  stdout_file: expected/stdout.txt

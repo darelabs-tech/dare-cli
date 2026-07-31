@@ -1,0 +1,9 @@
+Show banner (TTY) and DARE quick-start guide
+
+Usage: dare welcome [OPTIONS]
+
+Options:
+      --json       Emit JSON envelopes on stdout (ADR-002)
+      --no-banner  Skip ASCII banner even on TTY
+      --no-color   Disable ANSI colors (also honors NO_COLOR)
+  -h, --help       Print help

@@ -21,6 +21,9 @@ yarn-error.log*
 .dare/
 DARE/.canvas.md
 
+# --- Golden parity report (SHOULD overwrite; do not commit) ---
+tests/golden/last-report.json
+
 # --- IDE / OS ---
 .idea/
 .vscode/
