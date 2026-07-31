@@ -1,11 +1,12 @@
-//! Parity harness: golden cases, security suite, and perf regression gate.
+//! Parity harness: golden cases, security suite, normalize, and perf regression gate.
 //!
-//! Modules `runner` and `security` arrive in later mp054 tasks.
+//! Module `runner` arrives in a later mp054 task.
 
 mod axis;
 mod case;
 mod normalize;
 mod perf;
+pub mod security;
 
 #[cfg(test)]
 mod fuzz_parsers;
@@ -19,3 +20,7 @@ pub use case::{
 };
 pub use normalize::{normalize_text, NormalizeCtx, MSG_OVER_NORMALIZE};
 pub use perf::{within_regression, PERF_REGRESSION_MAX};
+pub use security::{
+    test_archive_traversal_fixtures, test_bidi_path_rejected, test_command_injection_payloads,
+    test_env_leak_absent, test_signature_mismatch_fixtures,
+};

@@ -930,7 +930,10 @@ dependencies = [
 name = "dare-parity"
 version = "0.1.0-alpha.0"
 dependencies = [
+ "assert_cmd",
  "dare-core",
+ "dare-self",
+ "dare-skills",
  "proptest",
  "regex",
  "serde",
