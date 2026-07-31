@@ -1,4 +1,4 @@
-name: release-alpha
+name: release
 
 on:
   push:
@@ -7,6 +7,7 @@ on:
       - "v*-alpha.*"
       - "v*-rc*"
       - "v*-rc.*"
+      - "v[0-9]+.[0-9]+.[0-9]+"
   workflow_dispatch:
     inputs:
       dry_run:
@@ -182,7 +183,7 @@ jobs:
         uses: softprops/action-gh-release@v2.2.1
         with:
           draft: false
-          prerelease: true
+          prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-alpha') }}
           files: dist/**
           generate_release_notes: true
         env:
