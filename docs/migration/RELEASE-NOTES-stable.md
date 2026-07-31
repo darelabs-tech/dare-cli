@@ -21,12 +21,14 @@ Follow [`install-rust.md`](install-rust.md). Summary:
 
 | Path | Command / action |
 |------|------------------|
-| GitHub Release | Download `v4.0.0` assets (+ `SHA256SUMS` / `.sig`) — URLs may be **TBD** until publish completes |
+| GitHub Release | Download `v4.0.0` assets (+ `SHA256SUMS` / `.sig`) — URLs **TBD** (`publish_ready=false`, `blocked:actions_billing`; see [`publish-stable-checklist.md`](publish-stable-checklist.md)) |
 | Homebrew | Formula under `packaging/homebrew/dare.rb` |
 | WinGet | Manifest `DareLabs.DareCli` under `packaging/winget/` |
-| Self-update | `dare self update --channel stable --yes` |
+| Self-update | `dare self update --channel stable --yes` (after Release exists) |
 
 **Node / npm is not required** for the recommended path.
+
+Local Windows smoke (not a published Release): [`stable-smoke/`](stable-smoke/).
 
 ### Channel defaults (unchanged)
 
@@ -39,7 +41,7 @@ There is **no** silent redirect from `stable` → `beta`.
 
 ## Known issues
 
-- **Download URLs:** public asset URLs may remain **TBD** until the stable Release is fully published (billing / Actions gate or signed manual publish — see publish checklist when available).
+- **Download URLs:** public asset URLs remain **TBD** — no GitHub Release `v4.0.0` yet (`blocked:actions_billing`; RC run https://github.com/darelabs-tech/dare-cli/actions/runs/30636494439). Do not invent URLs.
 - **Cosign / `dare self update`:** fail-closed on missing cosign or a `SHA256SUMS.sig` that starts with `signing skipped` (exit **6**). Prefer installers when signature soft-fail applies; see [`../compatibility/cli-self-update.md`](../compatibility/cli-self-update.md).
 - **Asset hash in `dare info`:** dirty / worktree checkouts may report `assets: FAIL` — expected for non-release trees; not a stable install blocker once Release assets match.
 - **Pilot leftovers (from RC):** fixture density and synthetic multi-OS notes remain documented under [`../pilot/incidents.md`](../pilot/incidents.md) — not blockers for the stable product identity.
