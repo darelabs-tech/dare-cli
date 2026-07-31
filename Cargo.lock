@@ -931,6 +931,7 @@ name = "dare-parity"
 version = "0.1.0-alpha.0"
 dependencies = [
  "dare-core",
+ "proptest",
  "regex",
  "serde",
  "serde_json",

@@ -1,0 +1,12 @@
+schemaVersion: 1
+id: xplat.windows.path-cases
+command: ["--version"]
+cwd_fixture: null
+env: {}
+axes: [exit]
+expected:
+  exit: 0
+skip:
+  reason: "fixture asserts live in dare-parity --test cross_platform (separators + drive casing); no binary spawn in this task"
+  class: C
+  adr_ref: DEC-055

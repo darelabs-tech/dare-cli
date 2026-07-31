@@ -6,6 +6,11 @@ mod axis;
 mod case;
 mod perf;
 
+#[cfg(test)]
+mod fuzz_parsers;
+#[cfg(test)]
+mod fuzz_paths;
+
 pub use axis::CompareAxis;
 pub use case::{
     load_case, validate_case, CaseSpec, ContentExpect, DiffClass, HttpExpect, SkipSpec,
