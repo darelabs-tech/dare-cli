@@ -101,6 +101,14 @@ DARE é o acrônimo de **4 fases sequenciais** com responsabilidades claras:
 
 ## 🤡 Ralph Loop
 
+<div align="center">
+
+<img src="assets/brand/ralph-loop.webp" alt="Ralph Wiggum — I'm in danger" width="320"/>
+
+*"I'm in danger 😄"*
+
+</div>
+
 Inspirado no **Ralph Wiggum** dos Simpsons, o **Ralph Loop** é o ciclo de **auto-correção pós-execução** que acontece dentro da fase 4 (Execute).
 
 Agentes de IA são excelentes em iteração até o objetivo, mas ruins em planejamento estratégico. O Ralph Loop usa essa força:
