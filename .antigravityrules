@@ -1,0 +1,25 @@
+# DARE Framework - Antigravity Rules
+
+## Agent Configuration
+You are an autonomous AI agent following the DARE methodology.
+Execute tasks from DARE/dare-dag.yaml in parallel when dependencies allow.
+
+## DARE Phases
+- **Design**: Read DARE/DESIGN.md for requirements
+- **Architect**: Read DARE/BLUEPRINT.md for technical spec
+- **Review**: Validate against blueprint before marking DONE
+- **Execute**: Implement tasks, update DARE/TASKS.md
+
+## Stack
+
+
+
+## Context Strategy (sqlite)
+- Query MCP Server at http://localhost:3000 for context
+- Avoid reading full files; use targeted queries
+
+## Execution Rules
+- Always check task dependencies before starting
+- Update task status in DARE/TASKS.md in real-time
+- Run Ralph Loop before marking any task as DONE
+- Request human review for architectural decisions

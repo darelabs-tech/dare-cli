@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "updatedAt": "2026-07-31T22:48:53.211Z",
+  "tasks": {
+    "mp056-001": {
+      "status": "DONE",
+      "output": "version 4.0.0; release.yml stable; publish_ready=false blocked:actions_billing; cli_smoke fixed; commit e6a4471+smoke",
+      "duration": 93586,
+      "dependsOn": []
+    },
+    "mp056-002": {
+      "status": "DONE",
+      "output": "migration+support docs; CHANGELOG 4.0.0; commit 9eca789",
+      "duration": 126412,
+      "dependsOn": []
+    },
+    "mp056-003": {
+      "status": "DONE",
+      "output": "Release https://github.com/darelabs-tech/dare-cli/releases/tag/v4.0.0 isPrerelease=false; 4/5 targets+SUMS/sig; GAP x86_64-apple-darwin; commit 810778c",
+      "duration": 114983,
+      "dependsOn": [
+        "mp056-001",
+        "mp056-002"
+      ]
+    },
+    "mp056-004": {
+      "status": "DONE",
+      "output": "self --channel stable resolves v4.0.0; homebrew+winget filled; REPLACE_ME=0; commit 37b54b8",
+      "duration": 588563,
+      "dependsOn": [
+        "mp056-003"
+      ]
+    },
+    "mp056-005": {
+      "status": "PENDING",
+      "dependsOn": [
+        "mp056-003"
+      ]
+    },
+    "mp056-006": {
+      "status": "PENDING",
+      "dependsOn": [
+        "mp056-004"
+      ]
+    },
+    "mp056-007": {
+      "status": "PENDING",
+      "dependsOn": [
+        "mp056-004",
+        "mp056-005",
+        "mp056-006"
+      ]
+    }
+  }
+}
