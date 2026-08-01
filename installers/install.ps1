@@ -52,7 +52,35 @@ try {
         }
     }
     else {
-        throw 'Set DARE_VERSION=vX.Y.Z-alpha.N or DARE_LOCAL_ARCHIVE=/path/to/archive.zip'
+        Write-Host "Fetching latest release version from GitHub..."
+        try {
+            # Disable progress bar for faster Invoke-WebRequest
+            $ProgressPreference = 'SilentlyContinue'
+            # Fetch latest release to get the tag name
+            $latest = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/releases/latest" -ErrorAction Stop
+            $Version = $latest.tag_name
+            if (-not $Version) { throw "tag_name not found in response" }
+            Write-Host "Latest version is $Version"
+        } catch {
+            throw "Failed to fetch latest version from GitHub: $_"
+        }
+
+        $archiveName = "dare-$Version-$target.zip"
+        $url = "$BaseUrl/$archiveName"
+        $archivePath = Join-Path $tmp $archiveName
+        Invoke-WebRequest -Uri $url -OutFile $archivePath
+        try {
+            $sums = Join-Path $tmp 'SHA256SUMS'
+            Invoke-WebRequest -Uri "$BaseUrl/SHA256SUMS" -OutFile $sums
+            $expected = (Get-Content $sums | Where-Object { $_ -match [regex]::Escape($archiveName) } | ForEach-Object { ($_ -split '\s+', 2)[0] })
+            if ($expected) {
+                $actual = (Get-FileHash -Algorithm SHA256 -Path $archivePath).Hash.ToLowerInvariant()
+                if ($actual -ne $expected.ToLowerInvariant()) { throw "SHA256 mismatch for $archiveName" }
+            }
+        }
+        catch {
+            Write-Warning "checksum verification skipped: $_"
+        }
     }
 
     Expand-Archive -Path $archivePath -DestinationPath $tmp -Force

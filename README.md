@@ -12,6 +12,18 @@ Native **Rust** CLI for the DARE methodology (Design → Architecture → Review
 2. Verify `SHA256SUMS` / follow installers under `installers/`
 3. Or: `dare self update --channel stable --yes` (after a native binary is present)
 
+Ou instale de forma rápida via terminal:
+
+**macOS, Linux, and FreeBSD:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/dewtech/dare-cli/main/installers/install | sh
+```
+
+**Windows PowerShell:**
+```powershell
+irm https://raw.githubusercontent.com/dewtech/dare-cli/main/installers/install.ps1 | iex
+```
+
 Node.js / npm is **not required** for the recommended path.
 
 ## Docs
