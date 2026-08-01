@@ -1,10 +1,16 @@
 {
   "name": "dare-cli",
-  "version": "0.1.0-alpha.0",
-  "structure": "backend",
-  "backend": "rust-axum",
-  "ide": "cursor",
-  "graphrag": "sqlite",
-  "mcp": false,
-  "notes": "Microplano 002: workspace Cargo ativo. Ralph Loop = cargo build/test/clippy. DEC-001 resolvido. Scripts Node governance-001.yml permanecem para docs/scripts/governance."
+  "structure": "unknown",
+  "ide": "antigravity",
+  "graphrag": {
+    "backend": "sqlite",
+    "semantic": {
+      "enabled": false,
+      "model": "all-MiniLM-L6-v2",
+      "rrfK": 60
+    }
+  },
+  "mcp": true,
+  "version": "3.18.1",
+  "installedAt": "2026-08-01T00:32:08.770Z"
 }

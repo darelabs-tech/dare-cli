@@ -37,9 +37,29 @@ The TypeScript / npm package **`@dewtech/dare-cli`** is **legacy**.
 
 Maintainers **MUST** reject PRs that change the TS legacy tree for non-security reasons while this policy is in force. Security PRs SHOULD still follow supply-chain and audit gates (`npm audit --audit-level=high` where applicable).
 
+## Registry deprecate (mp056-005)
+
+Intended command (re-run when npm credentials for `@dewtech` are available):
+
+```bash
+npm deprecate @dewtech/dare-cli@"*" "Legacy TypeScript line — use native DARE CLI v4.0.0 (see docs/migration/install-rust.md). Security fixes only until 2026-10-29."
+```
+
+| Field | Value |
+|-------|-------|
+| `attempted_at` | `2026-07-31` |
+| `result` | `blocked:credentials` |
+| `evidence` | `npm whoami` → HTTP **401 Unauthorized**; `NPM_TOKEN` / `NODE_AUTH_TOKEN` unset in operator environment |
+| `package_exists` | yes — public `npm view` reports `@dewtech/dare-cli@3.18.1` |
+| `hard_delete` | **forbidden** — do not delete npm history |
+
+Until deprecate succeeds, the root [`README.md`](../../README.md) **MUST** keep the legacy npm banner pointing at [`install-rust.md`](install-rust.md). Checklist: [`legacy-archive-checklist.md`](legacy-archive-checklist.md).
+
 ## Related
 
 - [`install-rust.md`](install-rust.md) — recommended install
 - [`RELEASE-NOTES-stable.md`](RELEASE-NOTES-stable.md) — stable notes + legacy pointer
+- [`legacy-archive-checklist.md`](legacy-archive-checklist.md) — archive operationalization
+- [`final-compatibility-report.md`](final-compatibility-report.md) — cutover compat close
 - [`../support/legacy-support-window.md`](../support/legacy-support-window.md) — window dates and scope
 - [`../compatibility/breaking-change-process.md`](../compatibility/breaking-change-process.md) — breaking-change machine

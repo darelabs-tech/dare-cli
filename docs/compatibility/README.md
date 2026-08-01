@@ -1,4 +1,4 @@
-# Pacote de compatibilidade — baseline 3.18.1
+ Pacote de compatibilidade — baseline 3.18.1
 
 Mapa dos artefatos de paridade entre o CLI legado npm `@dewtech/dare-cli@3.18.1` e o rewrite nativo Rust.
 
@@ -50,6 +50,8 @@ Microplano **001** (governança, baseline e ADRs prioritárias) concluído em 20
 | [`../release-candidate/contract-freeze.md`](../release-candidate/contract-freeze.md) | Freeze contrato Classe A no RC: ADR Accepted + matrix + DECISION-LOG (055) | — |
 | [`../migration/install-rust.md`](../migration/install-rust.md) | Install Rust-first stable `v4.0.0` (Download / Homebrew / WinGet / `dare self`) (056) | — |
 | [`../migration/npm-legacy-policy.md`](../migration/npm-legacy-policy.md) | npm `@dewtech/dare-cli` status `legacy` + security window (056) | — |
+| [`../migration/legacy-archive-checklist.md`](../migration/legacy-archive-checklist.md) | Archive checklist (deprecate / `blocked:credentials`, banner, freeze) (056) | — |
+| [`../migration/final-compatibility-report.md`](../migration/final-compatibility-report.md) | Relatório final compat — `unclassified_count == 0` (056) | — |
 | [`../migration/RELEASE-NOTES-stable.md`](../migration/RELEASE-NOTES-stable.md) | Stable release notes `v4.0.0` ≠ RC (056) | — |
 | [`../support/legacy-support-window.md`](../support/legacy-support-window.md) | Janela suporte legado security-only (056) | — |
 | [`../support/incident-response.md`](../support/incident-response.md) | Incident response P0–P3 + ack SLA pós-cutover (056) | — |

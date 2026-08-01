@@ -19,8 +19,10 @@ yarn-error.log*
 
 # --- DARE CLI local runtime + methodology artifacts (keep local only; repo is public) ---
 .dare/
-/DARE/
-/DARE-RUST-MICRO-PLANOS/
+DARE/
+DARE-RUST-MICRO-PLANOS/
+.agents/
+.antigravityrules
 
 # --- Golden parity report (SHOULD overwrite; do not commit) ---
 tests/golden/last-report.json

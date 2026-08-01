@@ -1,4 +1,4 @@
-# Changelog
+ Changelog
 
 All notable changes to the DARE CLI are documented in this file.
 
@@ -14,6 +14,8 @@ and this project uses [Semantic Versioning](https://semver.org/).
   - [`docs/migration/install-rust.md`](docs/migration/install-rust.md) — Rust-first install (Download / Homebrew / WinGet / `dare self update --channel stable`)
   - [`docs/migration/RELEASE-NOTES-stable.md`](docs/migration/RELEASE-NOTES-stable.md) — stable release notes (not RC)
   - [`docs/migration/npm-legacy-policy.md`](docs/migration/npm-legacy-policy.md) — npm line status `legacy`
+  - [`docs/migration/legacy-archive-checklist.md`](docs/migration/legacy-archive-checklist.md) — archive checklist (`blocked:credentials` + banner)
+  - [`docs/migration/final-compatibility-report.md`](docs/migration/final-compatibility-report.md) — final compat report (`unclassified_count == 0`)
   - [`docs/support/legacy-support-window.md`](docs/support/legacy-support-window.md) — security-only support window
   - [`docs/support/incident-response.md`](docs/support/incident-response.md) — P0–P3 + ack SLA
 
