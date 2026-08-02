@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dare CLI Book — Documentation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --dare-blue: #2563EB;
+            --dare-purple: #7C3AED;
+            --dare-teal: #10B9B1;
+            --dare-bg: #0F172A;
+            --dare-surface: #1E293B;
+            --dare-border: #334155;
+            --dare-text: #E2E8F0;
+            --dare-text-muted: #94A3B8;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--dare-bg);
+            color: var(--dare-text);
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Subtle animated background grid */
+        .background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: radial-gradient(var(--dare-border) 1px, transparent 1px);
+            background-size: 24px 24px;
+            opacity: 0.15;
+            z-index: 1;
+        }
+
+        .container {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            max-width: 600px;
+            padding: 2rem;
+        }
+
+        .logo {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: 0.05em;
+            background: linear-gradient(90deg, var(--dare-blue), var(--dare-purple), var(--dare-teal));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .tagline {
+            color: var(--dare-text-muted);
+            font-size: 1.1rem;
+            margin-bottom: 3rem;
+        }
+
+        .cards-container {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background-color: var(--dare-surface);
+            border: 1px solid var(--dare-border);
+            border-radius: 12px;
+            padding: 2rem;
+            width: 180px;
+            text-decoration: none;
+            color: var(--dare-text);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(135deg, var(--dare-blue), var(--dare-purple));
+            border-radius: 14px;
+            z-index: -1;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-6px);
+            border-color: transparent;
+            box-shadow: 0 12px 30px rgba(37, 99, 235, 0.15);
+        }
+
+        .card:hover::before {
+            opacity: 1;
+        }
+
+        .lang-code {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--dare-white);
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .lang-name {
+            font-size: 1rem;
+            color: var(--dare-text-muted);
+        }
+
+        .redirect-notice {
+            margin-top: 2rem;
+            font-size: 0.85rem;
+            color: var(--dare-text-muted);
+            min-height: 1.5rem;
+        }
+
+        .progress-bar-container {
+            width: 120px;
+            height: 3px;
+            background-color: var(--dare-border);
+            margin: 0.5rem auto 0;
+            border-radius: 2px;
+            overflow: hidden;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .progress-bar-container.active {
+            opacity: 1;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--dare-blue), var(--dare-teal));
+            transition: width 2s linear;
+        }
+    </style>
+</head>
+<body>
+    <div class="background"></div>
+    <div class="container">
+        <div class="logo">DARE CLI BOOK</div>
+        <div class="tagline">Select your language / Selecione o idioma</div>
+
+        <div class="cards-container">
+            <a href="./en/" class="card" id="card-en">
+                <span class="lang-code">EN</span>
+                <span class="lang-name">English</span>
+            </a>
+            <a href="./pt/" class="card" id="card-pt">
+                <span class="lang-code">PT-BR</span>
+                <span class="lang-name">Português</span>
+            </a>
+        </div>
+
+        <div class="redirect-notice" id="notice">Auto-redirecting...</div>
+        <div class="progress-bar-container" id="progress-container">
+            <div class="progress-bar" id="progress"></div>
+        </div>
+    </div>
+
+    <script>
+        const userLang = navigator.language || navigator.userLanguage;
+        const isPt = userLang.toLowerCase().startsWith('pt');
+        const targetUrl = isPt ? './pt/' : './en/';
+        const targetLang = isPt ? 'Português' : 'English';
+
+        const notice = document.getElementById('notice');
+        const progress = document.getElementById('progress');
+        const progressContainer = document.getElementById('progress-container');
+
+        notice.textContent = `Redirecting to ${targetLang}... / Redirecionando para ${targetLang}...`;
+        progressContainer.classList.add('active');
+
+        // Trigger animation
+        setTimeout(() => {
+            progress.style.width = '100%';
+        }, 50);
+
+        // Redirect timer
+        const timeoutId = setTimeout(() => {
+            window.location.href = targetUrl;
+        }, 2050);
+
+        // Cancel redirect on hover
+        const cards = document.querySelectorAll('.card');
+        cards.forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                clearTimeout(timeoutId);
+                notice.textContent = 'Auto-redirect paused.';
+                progressContainer.classList.remove('active');
+            });
+        });
+    </script>
+</body>
+</html>
