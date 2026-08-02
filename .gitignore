@@ -42,3 +42,6 @@ temp/
 
 dist/
 
+# --- mdBook build output ---
+book/book/
+

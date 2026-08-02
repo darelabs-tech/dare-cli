@@ -1,0 +1,28 @@
+[book]
+title = "Dare CLI Book"
+description = "Design. Architect. Review. Execute. — A structured methodology for AI-assisted software development."
+authors = ["DARE Labs / Dewtech"]
+language = "en"
+src = "src"
+
+[build]
+build-dir = "../book/en"
+create-missing = false
+
+[preprocessor.links]
+
+[output.html]
+site-url = "/dare-cli/en/"
+git-repository-url = "https://github.com/darelabs-tech/dare-cli"
+edit-url-template = "https://github.com/darelabs-tech/dare-cli/edit/main/book/en/src/{path}"
+additional-css = ["../theme/custom.css"]
+additional-js = []
+no-section-label = false
+fold.enable = true
+fold.level = 1
+search.enable = true
+search.limit-results = 30
+search.teaser-word-count = 30
+
+[output.html.print]
+enable = true

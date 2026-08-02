@@ -1,0 +1,395 @@
+/* =============================================
+   DARE Labs — mdBook Theme
+   Identidade Visual Oficial
+   ============================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* ---- Tokens da marca ---- */
+:root {
+  --dare-blue:       #2563EB;
+  --dare-blue-light: #3B82F6;
+  --dare-blue-dark:  #1D4ED8;
+  --dare-purple:     #7C3AED;
+  --dare-teal:       #10B9B1;
+  --dare-amber:      #F59E0B;
+  --dare-bg:         #0F172A;
+  --dare-surface:    #1E293B;
+  --dare-surface2:   #293548;
+  --dare-border:     #334155;
+  --dare-text:       #E2E8F0;
+  --dare-text-muted: #94A3B8;
+  --dare-white:      #FFFFFF;
+}
+
+/* =============================================
+   BASE — dark background DARE Labs
+   ============================================= */
+
+/* mdBook default é ~15px — elevamos para 17px para melhor legibilidade */
+html {
+  font-size: 17px !important;
+}
+
+.coal, .navy, .ayu,
+html {
+  --bg: var(--dare-bg) !important;
+  --fg: var(--dare-text) !important;
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif !important;
+  background-color: var(--dare-bg) !important;
+  color: var(--dare-text) !important;
+}
+
+/* =============================================
+   SIDEBAR
+   ============================================= */
+
+.sidebar {
+  background-color: var(--dare-surface) !important;
+  border-right: 1px solid var(--dare-border) !important;
+}
+
+.sidebar .sidebar-scrollbox {
+  padding: 0.5rem 0 !important;
+}
+
+/* Grupos de navegação */
+.chapter {
+  font-family: 'Inter', sans-serif !important;
+  font-size: 0.78rem !important;
+  color: var(--dare-text-muted) !important;
+  transition: color 0.15s ease !important;
+}
+
+.chapter li a,
+.chapter-item a {
+  font-size: 0.78rem !important;
+  color: var(--dare-text-muted) !important;
+  text-decoration: none !important;
+  padding: 0.18rem 1.2rem !important;
+  display: block !important;
+  border-left: 3px solid transparent !important;
+  transition: all 0.15s ease !important;
+}
+
+.chapter li a:hover,
+.chapter-item a:hover {
+  color: var(--dare-blue-light) !important;
+  background-color: rgba(37, 99, 235, 0.08) !important;
+  border-left-color: var(--dare-blue) !important;
+}
+
+.chapter li a.active,
+.chapter-item a.active {
+  color: var(--dare-white) !important;
+  background-color: rgba(37, 99, 235, 0.15) !important;
+  border-left: 3px solid var(--dare-blue) !important;
+  font-weight: 600 !important;
+}
+
+/* Separadores de seção */
+.part-title {
+  font-family: 'Orbitron', monospace !important;
+  font-size: 0.65rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.12em !important;
+  text-transform: uppercase !important;
+  color: var(--dare-blue) !important;
+  padding: 0.8rem 1.2rem 0.2rem !important;
+  margin-top: 0.4rem !important;
+  opacity: 0.9 !important;
+}
+
+/* =============================================
+   TOP BAR / MENU
+   ============================================= */
+
+#menu-bar {
+  background-color: var(--dare-surface) !important;
+  border-bottom: 1px solid var(--dare-border) !important;
+  box-shadow: 0 1px 12px rgba(0, 0, 0, 0.4) !important;
+}
+
+#menu-bar .menu-title {
+  font-family: 'Orbitron', monospace !important;
+  font-weight: 700 !important;
+  font-size: 1rem !important;
+  color: var(--dare-white) !important;
+  letter-spacing: 0.05em !important;
+}
+
+#menu-bar-hover-placeholder {
+  background-color: var(--dare-surface) !important;
+}
+
+/* =============================================
+   CONTEÚDO PRINCIPAL
+   ============================================= */
+
+.content {
+  background-color: var(--dare-bg) !important;
+}
+
+.content main {
+  font-family: 'Inter', sans-serif !important;
+  font-size: 1.05rem !important;
+  line-height: 1.8 !important;
+  color: var(--dare-text) !important;
+  max-width: 920px !important;
+}
+
+/* H1 — fonte Orbitron com linha azul */
+.content main h1 {
+  font-family: 'Orbitron', monospace !important;
+  font-weight: 700 !important;
+  font-size: 2rem !important;
+  color: var(--dare-white) !important;
+  letter-spacing: 0.03em !important;
+  border-bottom: 2px solid var(--dare-blue) !important;
+  padding-bottom: 0.5rem !important;
+  margin-bottom: 1.5rem !important;
+}
+
+/* H2 — Orbitron menor */
+.content main h2 {
+  font-family: 'Orbitron', monospace !important;
+  font-weight: 600 !important;
+  font-size: 1.3rem !important;
+  color: var(--dare-blue-light) !important;
+  letter-spacing: 0.04em !important;
+  margin-top: 2rem !important;
+  padding-bottom: 0.3rem !important;
+  border-bottom: 1px solid var(--dare-border) !important;
+}
+
+/* H3 — Inter semi-bold */
+.content main h3 {
+  font-family: 'Inter', sans-serif !important;
+  font-weight: 600 !important;
+  font-size: 1.15rem !important;
+  color: var(--dare-text) !important;
+  margin-top: 1.5rem !important;
+}
+
+/* H4 */
+.content main h4 {
+  font-family: 'Inter', sans-serif !important;
+  font-weight: 600 !important;
+  font-size: 1.05rem !important;
+  color: var(--dare-text-muted) !important;
+}
+
+/* Links */
+.content main a {
+  color: var(--dare-blue-light) !important;
+  text-decoration: none !important;
+  border-bottom: 1px solid rgba(59, 130, 246, 0.3) !important;
+  transition: border-color 0.15s, color 0.15s !important;
+}
+
+.content main a:hover {
+  color: var(--dare-white) !important;
+  border-bottom-color: var(--dare-blue-light) !important;
+}
+
+/* =============================================
+   CODE BLOCKS
+   ============================================= */
+
+pre {
+  background-color: var(--dare-surface) !important;
+  border: 1px solid var(--dare-border) !important;
+  border-radius: 8px !important;
+  padding: 1.25rem !important;
+  font-size: 0.97rem !important;
+  line-height: 1.65 !important;
+  overflow-x: auto !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Linha colorida no topo do code block */
+pre::before {
+  content: '' !important;
+  display: block !important;
+  height: 2px !important;
+  background: linear-gradient(90deg, var(--dare-blue), var(--dare-purple), var(--dare-teal)) !important;
+  border-radius: 2px 2px 0 0 !important;
+  margin: -1.25rem -1.25rem 1rem !important;
+}
+
+code {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace !important;
+  font-size: 0.9em !important;
+  color: var(--dare-teal) !important;
+  background-color: rgba(16, 185, 177, 0.1) !important;
+  border-radius: 4px !important;
+  padding: 0.15em 0.45em !important;
+}
+
+pre code {
+  color: var(--dare-text) !important;
+  background: none !important;
+  padding: 0 !important;
+}
+
+/* =============================================
+   TABELAS
+   ============================================= */
+
+.content main table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
+  border: 1px solid var(--dare-border) !important;
+  font-size: 1rem !important;
+  margin: 1.5rem 0 !important;
+}
+
+.content main table th {
+  background-color: rgba(37, 99, 235, 0.2) !important;
+  color: var(--dare-white) !important;
+  font-family: 'Orbitron', monospace !important;
+  font-size: 0.75rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  padding: 0.8rem 1rem !important;
+  border-bottom: 1px solid var(--dare-blue-dark) !important;
+  text-align: left !important;
+}
+
+.content main table td {
+  padding: 0.75rem 1rem !important;
+  border-bottom: 1px solid var(--dare-border) !important;
+  color: var(--dare-text) !important;
+  vertical-align: top !important;
+  line-height: 1.6 !important;
+}
+
+.content main table tr:nth-child(even) td {
+  background-color: rgba(30, 41, 59, 0.5) !important;
+}
+
+.content main table tr:hover td {
+  background-color: rgba(37, 99, 235, 0.06) !important;
+}
+
+/* =============================================
+   BLOCKQUOTE (callouts)
+   ============================================= */
+
+.content main blockquote {
+  border-left: 3px solid var(--dare-blue) !important;
+  background-color: rgba(37, 99, 235, 0.07) !important;
+  border-radius: 0 8px 8px 0 !important;
+  padding: 1rem 1.25rem !important;
+  margin: 1.5rem 0 !important;
+  color: var(--dare-text-muted) !important;
+  font-style: normal !important;
+}
+
+.content main blockquote p {
+  margin: 0 !important;
+}
+
+/* =============================================
+   BOTÕES DE NAVEGAÇÃO (prev/next)
+   ============================================= */
+
+.nav-chapters {
+  color: var(--dare-blue-light) !important;
+  font-size: 2rem !important;
+  transition: color 0.15s !important;
+}
+
+.nav-chapters:hover {
+  color: var(--dare-white) !important;
+}
+
+/* =============================================
+   BARRA DE BUSCA
+   ============================================= */
+
+#searchbar {
+  background-color: var(--dare-surface2) !important;
+  border: 1px solid var(--dare-border) !important;
+  color: var(--dare-text) !important;
+  border-radius: 6px !important;
+  font-family: 'Inter', sans-serif !important;
+}
+
+#searchbar:focus {
+  border-color: var(--dare-blue) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important;
+}
+
+#searchresults {
+  background-color: var(--dare-surface) !important;
+  border: 1px solid var(--dare-border) !important;
+  border-radius: 8px !important;
+}
+
+#searchresults li {
+  border-bottom: 1px solid var(--dare-border) !important;
+}
+
+#searchresults a {
+  color: var(--dare-text) !important;
+}
+
+#searchresults a:hover {
+  background-color: rgba(37, 99, 235, 0.08) !important;
+}
+
+/* =============================================
+   SCROLLBAR personalizada
+   ============================================= */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--dare-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--dare-border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--dare-blue);
+}
+
+/* =============================================
+   SELEÇÃO DE TEXTO
+   ============================================= */
+
+::selection {
+  background-color: rgba(37, 99, 235, 0.35) !important;
+  color: var(--dare-white) !important;
+}
+
+/* =============================================
+   BADGE DARE LABS no rodapé do sidebar
+   ============================================= */
+
+.sidebar::after {
+  content: 'DARE LABS' !important;
+  display: block !important;
+  font-family: 'Orbitron', monospace !important;
+  font-size: 0.6rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.2em !important;
+  color: var(--dare-blue) !important;
+  text-align: center !important;
+  padding: 1.5rem 0 1rem !important;
+  opacity: 0.6 !important;
+}
