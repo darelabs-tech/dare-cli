@@ -25,8 +25,8 @@
 
 <br/>
 
-[![Docs PT-BR](https://img.shields.io/badge/📖%20DOCS-PORTUGUÊS-yellow?style=for-the-badge)](https://dewtech-technologies.github.io/dare-method/pt/)
-[![Docs EN](https://img.shields.io/badge/📖%20DOCS-ENGLISH-green?style=for-the-badge)](https://dewtech-technologies.github.io/dare-method/en/)
+[![Docs PT-BR](https://img.shields.io/badge/📖%20DOCS-PORTUGUÊS-yellow?style=for-the-badge)](https://darelabs-tech.github.io/dare-cli/pt/)
+[![Docs EN](https://img.shields.io/badge/📖%20DOCS-ENGLISH-green?style=for-the-badge)](https://darelabs-tech.github.io/dare-cli/en/)
 
 </div>
 
