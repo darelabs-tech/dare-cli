@@ -23,11 +23,6 @@
 [**Ralph Loop**](https://darelabs-tech.github.io/dare-cli/) ·
 [**Comandos**](https://darelabs-tech.github.io/dare-cli/)
 
-<br/>
-
-[![Docs PT-BR](https://img.shields.io/badge/📖%20DOCS-PORTUGUÊS-yellow?style=for-the-badge)](https://darelabs-tech.github.io/dare-cli/pt/)
-[![Docs EN](https://img.shields.io/badge/📖%20DOCS-ENGLISH-green?style=for-the-badge)](https://darelabs-tech.github.io/dare-cli/en/)
-
 </div>
 
 ---
