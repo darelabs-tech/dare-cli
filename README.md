@@ -10,6 +10,7 @@
 
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Built by Dare Labs](https://img.shields.io/badge/built%20by-Dare%20Labs-0070f3)](https://darelabs.tech)
+[![Docs](https://img.shields.io/badge/docs-Dare_CLI_Book-2563eb?logo=gitbook)](https://darelabs-tech.github.io/dare-cli/)
 [![Rust](https://img.shields.io/badge/Rust-1.83+-orange.svg)](https://www.rust-lang.org/)
 [![Antigravity](https://img.shields.io/badge/Antigravity-supported-7928ca)](#)
 [![Cursor IDE](https://img.shields.io/badge/Cursor-IDE-000000?logo=cursor)](#)
@@ -17,10 +18,10 @@
 > 🚀 **v4.0.0** — **100% Native Rust CLI**. 
 > The DARE CLI has been fully rewritten in Rust. Lightning fast execution, embedded Neo4j/SQLite graph database, native AST parser, Kahn's algorithm DAG runner, and zero Node.js/npm dependencies required. 
 
-[**Quickstart**](#-quickstart) ·
-[**O Método**](#-o-método) ·
-[**Ralph Loop**](#-ralph-loop) ·
-[**Comandos**](#-comandos-principais)
+[**Quickstart**](https://darelabs-tech.github.io/dare-cli/) ·
+[**O Método**](https://darelabs-tech.github.io/dare-cli/) ·
+[**Ralph Loop**](https://darelabs-tech.github.io/dare-cli/) ·
+[**Comandos**](https://darelabs-tech.github.io/dare-cli/)
 
 </div>
 
