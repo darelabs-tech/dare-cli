@@ -132,15 +132,10 @@ impl WorktreeManager {
                 branch: format!("dare/agent-{task_id}-{attempt}"),
                 rel_path: format!("{AGENT_WORKTREES_REL}/{name}"),
             };
-            match self.remove(&spec) {
-                Ok(()) => removed += 1,
-                Err(_) => {
-                    // Best-effort: remove directory if git worktree remove fails
-                    if std::fs::remove_dir_all(&path).is_ok() {
-                        removed += 1;
-                    }
-                }
-            }
+            // Never recursively delete an unverified directory. A failed git
+            // worktree removal requires manual investigation, not a filesystem fallback.
+            self.remove(&spec)?;
+            removed += 1;
         }
         Ok(removed)
     }
@@ -329,6 +324,28 @@ mod tests {
         let spec = mgr.create("task-a", 1).unwrap();
         assert!(dir.path().join(&spec.rel_path).exists());
         mgr.remove(&spec).unwrap();
+    }
+
+    #[test]
+    fn cleanup_failure_preserves_unverified_directory() {
+        let (_tmp, root) = root_with_git();
+        let base = root.as_path().join(AGENT_WORKTREES_REL);
+        let orphan = base.join("orphan-1");
+        std::fs::create_dir_all(&orphan).unwrap();
+        std::fs::write(orphan.join("important.txt"), "preserve").unwrap();
+        let rec = Arc::new(RecordingRunner::new());
+        rec.inner.push(ProcessOutput {
+            exit_code: 1,
+            stdout: String::new(),
+            stderr: "not a registered worktree".into(),
+            stdout_truncated: false,
+            stderr_truncated: false,
+            timed_out: false,
+            cancelled: false,
+        });
+        let mgr = WorktreeManager::new(root, rec);
+        assert!(mgr.cleanup_all().is_err());
+        assert!(orphan.join("important.txt").is_file());
     }
 
     #[test]
