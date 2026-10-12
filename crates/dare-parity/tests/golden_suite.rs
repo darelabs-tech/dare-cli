@@ -7,8 +7,8 @@ use std::time::Duration;
 use assert_cmd::cargo::cargo_bin;
 use dare_core::CoreError;
 use dare_parity::{
-    load_case, run_case, run_suite, CaseStatus, DiffClass, DiffLogIndex, SkipSpec, SuiteOpts,
-    MSG_SKIP_NEEDS_CLASS, MSG_UNCLASSIFIED_DIFF, CASE_SCHEMA_VERSION, CompareAxis, CaseSpec,
+    load_case, run_case, run_suite, CaseSpec, CaseStatus, CompareAxis, DiffClass, DiffLogIndex,
+    SkipSpec, SuiteOpts, CASE_SCHEMA_VERSION, MSG_SKIP_NEEDS_CLASS, MSG_UNCLASSIFIED_DIFF,
 };
 use std::collections::BTreeMap;
 use tempfile::tempdir;
@@ -40,7 +40,10 @@ fn dare_bin() -> PathBuf {
             .current_dir(workspace_root())
             .status()
             .expect("spawn cargo build -p dare-cli");
-        assert!(status.success(), "cargo build -p dare-cli --bin dare failed");
+        assert!(
+            status.success(),
+            "cargo build -p dare-cli --bin dare failed"
+        );
     }
     assert!(bin.is_file(), "dare binary missing at {}", bin.display());
     bin
@@ -81,16 +84,11 @@ fn golden_suite_help_cases_pass() {
     assert!(report_out.is_file(), "SHOULD write last-report.json");
 
     // Spot-check key command names appear in root help expected snapshot.
-    let root_stdout = std::fs::read_to_string(
-        golden_root
-            .join("cases/help.root/expected/stdout.txt"),
-    )
-    .expect("root stdout");
+    let root_stdout =
+        std::fs::read_to_string(golden_root.join("cases/help.root/expected/stdout.txt"))
+            .expect("root stdout");
     for needle in ["welcome", "self", "mcp", "update"] {
-        assert!(
-            root_stdout.contains(needle),
-            "root help missing {needle}"
-        );
+        assert!(root_stdout.contains(needle), "root help missing {needle}");
     }
 }
 

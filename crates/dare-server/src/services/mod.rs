@@ -7,9 +7,7 @@ mod steering;
 mod task;
 
 pub use dag::dag_load_json;
-pub use graph::{
-    graph_locate, graph_map_requirement, graph_traverse, locate_defaults,
-};
+pub use graph::{graph_locate, graph_map_requirement, graph_traverse, locate_defaults};
 pub use project::{
     context_query, project_snapshot, read_blueprint, BlueprintDoc, ContextQueryResponse,
     ProjectSnapshot,

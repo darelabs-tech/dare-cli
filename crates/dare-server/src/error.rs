@@ -53,7 +53,11 @@ impl HttpError {
     }
 
     pub fn graph_unavailable(message: impl Into<String>) -> Self {
-        Self::new(StatusCode::SERVICE_UNAVAILABLE, message, "graph_unavailable")
+        Self::new(
+            StatusCode::SERVICE_UNAVAILABLE,
+            message,
+            "graph_unavailable",
+        )
     }
 
     pub fn internal(message: impl Into<String>) -> Self {

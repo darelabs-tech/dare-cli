@@ -71,7 +71,11 @@ pub fn parse_server_config_from_env(
         .map(str::trim)
         .filter(|s| !s.is_empty())
         .map(str::to_string)
-        .or_else(|| std::env::var(ENV_BIND).ok().filter(|s| !s.trim().is_empty()))
+        .or_else(|| {
+            std::env::var(ENV_BIND)
+                .ok()
+                .filter(|s| !s.trim().is_empty())
+        })
         .unwrap_or_else(|| default_bind.to_string());
     let bind = IpAddr::from_str(bind_str.trim())
         .map_err(|_| CoreError::invalid_input(format!("invalid bind address: {bind_str}")))?;

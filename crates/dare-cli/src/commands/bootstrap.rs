@@ -51,7 +51,9 @@ fn parse_toolchain(input: &str) -> CoreResult<Toolchain> {
     match input.to_ascii_lowercase().as_str() {
         "none" => Ok(Toolchain::None),
         "docker" => Ok(Toolchain::Docker),
-        other => Err(CoreError::invalid_input(format!("unknown toolchain: {other}"))),
+        other => Err(CoreError::invalid_input(format!(
+            "unknown toolchain: {other}"
+        ))),
     }
 }
 
@@ -69,9 +71,7 @@ fn load_config_value(root: &ProjectRoot) -> CoreResult<Value> {
         Err(CoreError::NotFound(_)) => return Err(CoreError::not_found(MSG_MISSING_CONFIG)),
         Err(e) => return Err(e),
     };
-    serde_json::from_str(&raw).map_err(|e| {
-        CoreError::config(format!("invalid {CONFIG_REL}: {e}"))
-    })
+    serde_json::from_str(&raw).map_err(|e| CoreError::config(format!("invalid {CONFIG_REL}: {e}")))
 }
 
 fn parse_stack_id(config: &Value) -> CoreResult<String> {
@@ -112,7 +112,9 @@ fn parse_config_frontend(config: &Value) -> CoreResult<Option<FrontendKind>> {
         Some(s) => match s.to_ascii_lowercase().as_str() {
             "react" => Ok(Some(FrontendKind::React)),
             "vue" => Ok(Some(FrontendKind::Vue)),
-            other => Err(CoreError::invalid_input(format!("unknown frontend: {other}"))),
+            other => Err(CoreError::invalid_input(format!(
+                "unknown frontend: {other}"
+            ))),
         },
         None => Ok(None),
     }
@@ -124,7 +126,9 @@ fn parse_config_transport(config: &Value) -> CoreResult<Option<Transport>> {
             "stdio" => Ok(Some(Transport::Stdio)),
             "http" => Ok(Some(Transport::Http)),
             "sse" => Ok(Some(Transport::Sse)),
-            other => Err(CoreError::invalid_input(format!("unknown transport: {other}"))),
+            other => Err(CoreError::invalid_input(format!(
+                "unknown transport: {other}"
+            ))),
         },
         None => Ok(None),
     }
@@ -203,11 +207,7 @@ pub fn run_bootstrap_cmd(opts: BootstrapCliOpts) -> CoreResult<(String, Value)> 
         .dir
         .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
 
-    let toolchain_override = opts
-        .toolchain
-        .as_deref()
-        .map(parse_toolchain)
-        .transpose()?;
+    let toolchain_override = opts.toolchain.as_deref().map(parse_toolchain).transpose()?;
 
     let req = BootstrapRequest {
         toolchain_override,

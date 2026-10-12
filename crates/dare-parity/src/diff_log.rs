@@ -6,8 +6,7 @@ use std::path::Path;
 use dare_core::{CoreError, CoreResult};
 
 /// Error when Class C skip lacks ADR / diff-log classification.
-pub const MSG_UNCLASSIFIED_DIFF: &str =
-    "unclassified parity diff; add entry to parity-diff-log.md";
+pub const MSG_UNCLASSIFIED_DIFF: &str = "unclassified parity diff; add entry to parity-diff-log.md";
 
 /// Index of `diff_id` + `surface` keys from the parity diff log markdown table.
 #[derive(Debug, Clone, Default)]
@@ -56,7 +55,9 @@ impl DiffLogIndex {
             }
             // Header / separator
             if cells[0].eq_ignore_ascii_case("diff_id")
-                || cells.iter().all(|c| c.chars().all(|ch| ch == '-' || ch == ':'))
+                || cells
+                    .iter()
+                    .all(|c| c.chars().all(|ch| ch == '-' || ch == ':'))
             {
                 in_table = true;
                 continue;

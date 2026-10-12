@@ -9,8 +9,7 @@ use crate::plan::{release_api_base, release_repo};
 use crate::verify::timeout_from_env;
 
 /// Frozen message when stable has no non-prerelease Release (exit 4).
-pub const MSG_STABLE_UNAVAILABLE: &str =
-    "stable channel has no non-prerelease GitHub Release";
+pub const MSG_STABLE_UNAVAILABLE: &str = "stable channel has no non-prerelease GitHub Release";
 
 /// Frozen message when beta has no prerelease Release (exit 4).
 pub const MSG_BETA_UNAVAILABLE: &str = "beta channel has no prerelease GitHub Release";
@@ -101,9 +100,7 @@ mod tests {
     fn stable_resolves_latest_non_prerelease() {
         let mut mock = MockHttpClient::new();
         mock.insert(
-            format!(
-                "{DEFAULT_RELEASE_API}/repos/{DEFAULT_RELEASE_REPO}/releases/latest"
-            ),
+            format!("{DEFAULT_RELEASE_API}/repos/{DEFAULT_RELEASE_REPO}/releases/latest"),
             br#"{"tag_name":"v4.0.0","prerelease":false,"draft":false}"#.as_slice(),
         );
         let tag = resolve_channel_tag(Channel::Stable, &mock).unwrap();

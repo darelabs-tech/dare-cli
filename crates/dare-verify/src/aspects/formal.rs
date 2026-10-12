@@ -14,8 +14,7 @@ use serde::{Deserialize, Serialize};
 use crate::report::{AdvancedAspect, AspectResult, AspectStatus};
 
 /// Message when the formal backend binary is not on PATH.
-pub const MSG_FORMAL_MISSING: &str =
-    "formal backend not found on PATH [FORMAL_TOOL_MISSING]";
+pub const MSG_FORMAL_MISSING: &str = "formal backend not found on PATH [FORMAL_TOOL_MISSING]";
 
 /// Max filesystem entries visited while discovering `@dare-formal` targets.
 pub const FORMAL_WALK_CAP: usize = 2000;
@@ -215,13 +214,7 @@ pub fn run_formal(
         }
     }
 
-    let mut r = check(
-        true,
-        false,
-        last_exit,
-        &combined_stdout,
-        &combined_stderr,
-    );
+    let mut r = check(true, false, last_exit, &combined_stdout, &combined_stderr);
     r.duration_ms = start.elapsed().as_millis() as u64;
     Ok(r)
 }
@@ -300,9 +293,18 @@ mod tests {
     #[test]
     fn formal_backend_parse_and_default() {
         assert_eq!(FormalBackend::default(), FormalBackend::Dafny);
-        assert_eq!("dafny".parse::<FormalBackend>().unwrap(), FormalBackend::Dafny);
-        assert_eq!("verus".parse::<FormalBackend>().unwrap(), FormalBackend::Verus);
-        assert_eq!("LEAN".parse::<FormalBackend>().unwrap(), FormalBackend::Lean);
+        assert_eq!(
+            "dafny".parse::<FormalBackend>().unwrap(),
+            FormalBackend::Dafny
+        );
+        assert_eq!(
+            "verus".parse::<FormalBackend>().unwrap(),
+            FormalBackend::Verus
+        );
+        assert_eq!(
+            "LEAN".parse::<FormalBackend>().unwrap(),
+            FormalBackend::Lean
+        );
         let err = "coq".parse::<FormalBackend>().unwrap_err();
         assert!(err.contains("unknown formal backend: coq"));
     }

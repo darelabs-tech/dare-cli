@@ -310,8 +310,8 @@ fn run_complete_inner(
     let cfg = load_config_soft(&root);
     let adv_req = build_advanced_request(task_id, verify_opts, &cfg);
     let adv_runner = SystemProcessRunner;
-    let mut verdict = run_advanced_verify(&root, &cfg, &adv_req, &adv_runner)
-        .map_err(CompleteOutcome::Other)?;
+    let mut verdict =
+        run_advanced_verify(&root, &cfg, &adv_req, &adv_runner).map_err(CompleteOutcome::Other)?;
     if let Some(n) = verify_opts.best_of {
         validate_best_of(n).map_err(CompleteOutcome::Other)?;
         let _ = verify_opts.prerank; // soft: order only; DONE still gated by verdict.ok

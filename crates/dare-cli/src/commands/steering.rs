@@ -31,10 +31,7 @@ fn resolve_root(dir: Option<PathBuf>) -> CoreResult<ProjectRoot> {
 }
 
 fn format_list_human(report: &SteeringListReport) -> String {
-    let mut lines = vec![format!(
-        "steering list: {} file(s)",
-        report.files.len()
-    )];
+    let mut lines = vec![format!("steering list: {} file(s)", report.files.len())];
     for f in &report.files {
         let glob = f.glob.as_deref().unwrap_or("-");
         lines.push(format!(

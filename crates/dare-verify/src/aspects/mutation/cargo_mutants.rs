@@ -66,9 +66,7 @@ fn trailing_number(s: &str) -> Option<u64> {
 
 fn leading_number(s: &str) -> Option<u64> {
     let s = s.trim_start_matches(|c: char| c == ':' || c == '=' || c.is_whitespace());
-    let end = s
-        .find(|c: char| !c.is_ascii_digit())
-        .unwrap_or(s.len());
+    let end = s.find(|c: char| !c.is_ascii_digit()).unwrap_or(s.len());
     let digits = &s[..end];
     if digits.is_empty() {
         None

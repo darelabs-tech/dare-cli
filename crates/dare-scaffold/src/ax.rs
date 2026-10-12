@@ -44,9 +44,7 @@ pub fn generate_ax_files(
             "openapi.json" => render_openapi(meta, project_name)?,
             "Dockerfile" => render_dockerfile(meta, project_name),
             "docker-compose.yml" => render_docker_compose(meta, project_name),
-            _ if path == meta.rate_limit_rel.as_str() => {
-                render_rate_limit(meta, project_name)
-            }
+            _ if path == meta.rate_limit_rel.as_str() => render_rate_limit(meta, project_name),
             other => {
                 return Err(CoreError::Internal(format!(
                     "unexpected AX path `{other}` for stack `{}`",
@@ -180,9 +178,8 @@ fn render_openapi(meta: &StackMetadata, project_name: &str) -> CoreResult<String
             "paths": {}
         }),
     };
-    serde_json::to_string_pretty(&doc).map_err(|e| {
-        CoreError::Internal(format!("failed to serialize openapi.json: {e}"))
-    })
+    serde_json::to_string_pretty(&doc)
+        .map_err(|e| CoreError::Internal(format!("failed to serialize openapi.json: {e}")))
 }
 
 fn render_dockerfile(meta: &StackMetadata, project_name: &str) -> String {
@@ -465,7 +462,9 @@ mod tests {
                 v["paths"]
             );
             assert!(
-                v["info"]["title"].as_str().is_some_and(|t| t.contains("demo-mcp")),
+                v["info"]["title"]
+                    .as_str()
+                    .is_some_and(|t| t.contains("demo-mcp")),
                 "title should include project name"
             );
         }

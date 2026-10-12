@@ -2,9 +2,7 @@
 
 use std::time::Instant;
 
-use dare_core::{
-    fs::atomic_write, CoreResult, ProcessRunner, ProjectRoot, SafeRelativePath,
-};
+use dare_core::{fs::atomic_write, CoreResult, ProcessRunner, ProjectRoot, SafeRelativePath};
 use serde::{Deserialize, Serialize};
 
 use crate::command_registry::sections_for_command;
@@ -55,10 +53,7 @@ pub struct RunReport {
 ///
 /// `runner` is reserved for process-backed providers; mock ignores it (providers
 /// embed their own runner via [`resolve_provider`]).
-pub fn run_enrich(
-    req: &RunEnrichRequest,
-    runner: &dyn ProcessRunner,
-) -> CoreResult<RunReport> {
+pub fn run_enrich(req: &RunEnrichRequest, runner: &dyn ProcessRunner) -> CoreResult<RunReport> {
     let _ = runner;
 
     let started = Instant::now();

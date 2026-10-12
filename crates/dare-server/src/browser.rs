@@ -4,7 +4,10 @@ use dare_core::{CoreError, CoreResult, ProcessRunner, SafeCommand};
 
 /// Allowlist: `^https?://(127\.0\.0\.1|localhost)(:\d+)?(/.*)?$`
 pub fn is_allowed_browser_url(url: &str) -> bool {
-    let rest = match url.strip_prefix("https://").or_else(|| url.strip_prefix("http://")) {
+    let rest = match url
+        .strip_prefix("https://")
+        .or_else(|| url.strip_prefix("http://"))
+    {
         Some(r) => r,
         None => return false,
     };

@@ -233,10 +233,7 @@ pub fn dispatch(
                 args.decay,
             );
             let hits = graph_locate(ctx, opts).map_err(map_core_error)?;
-            ok_result(
-                "graph_locate",
-                json!({ "schemaVersion": 1, "hits": hits }),
-            )
+            ok_result("graph_locate", json!({ "schemaVersion": 1, "hits": hits }))
         }
         "graph_traverse" => {
             let args: GraphTraverseArgs = parse_args(arguments)?;

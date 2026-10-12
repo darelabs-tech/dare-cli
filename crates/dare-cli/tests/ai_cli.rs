@@ -98,10 +98,7 @@ fn providers_json_schema() {
     assert_eq!(data["schemaVersion"], 1);
     let providers = data["providers"].as_array().expect("providers");
     assert_eq!(providers.len(), 5);
-    let ids: Vec<&str> = providers
-        .iter()
-        .filter_map(|p| p["id"].as_str())
-        .collect();
+    let ids: Vec<&str> = providers.iter().filter_map(|p| p["id"].as_str()).collect();
     assert_eq!(
         ids,
         vec![

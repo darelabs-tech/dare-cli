@@ -1,7 +1,9 @@
 //! ConflictPolicy::SkipExisting integration tests (mp047-002).
 
 use dare_core::{ProjectRoot, SafeRelativePath};
-use dare_scaffold::{apply_scaffold, plan_scaffold, ConflictPolicy, PlanAction, ScaffoldRequest, Toolchain};
+use dare_scaffold::{
+    apply_scaffold, plan_scaffold, ConflictPolicy, PlanAction, ScaffoldRequest, Toolchain,
+};
 use std::fs;
 use tempfile::tempdir;
 

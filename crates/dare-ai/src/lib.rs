@@ -1,8 +1,8 @@
 //! AI enrichment domain (microplano 024).
 
-pub mod command_registry;
 mod capabilities;
 mod codex;
+pub mod command_registry;
 mod doctor;
 mod inject;
 mod mock;
@@ -18,8 +18,8 @@ use std::time::Duration;
 
 pub use capabilities::{
     default_program, default_timeout_secs, env_override_name, is_implemented,
-    list_provider_capabilities, ProviderCapability, ProvidersReport, PROVIDER_ORDER,
-    PROVIDERS_SCHEMA_VERSION,
+    list_provider_capabilities, ProviderCapability, ProvidersReport, PROVIDERS_SCHEMA_VERSION,
+    PROVIDER_ORDER,
 };
 pub use codex::{parse_argv_override, CodexCliProvider};
 pub use command_registry::{sections_for_command, MSG_UNKNOWN_COMMAND};
@@ -31,9 +31,6 @@ pub use inject::{inject_enrichable, inject_sections};
 pub use mock::MockProvider;
 pub use prompt::{build_enrich_prompt, prompt_preview, PromptReport};
 pub use provider::{resolve_provider, AiProvider, ProviderId};
-pub use text_cli::{
-    TextCliConfig, TextCliProvider, ANTIGRAVITY_CFG, CLAUDE_CFG, CURSOR_CFG,
-};
 pub use redact_log::{redact_prompt_for_log, redact_stderr_for_error};
 pub use request::{EnrichRaw, EnrichRequest};
 pub use run::{
@@ -41,6 +38,7 @@ pub use run::{
     MSG_WRITE_NEEDS_MARKDOWN,
 };
 pub use schema::{parse_and_validate_sections, parse_and_validate_sections_with};
+pub use text_cli::{TextCliConfig, TextCliProvider, ANTIGRAVITY_CFG, CLAUDE_CFG, CURSOR_CFG};
 
 pub const ENRICH_TIMEOUT: Duration = Duration::from_secs(20 * 60);
 pub const STDOUT_CAP: usize = 1_048_576;

@@ -184,7 +184,6 @@ pub fn owners(g: &dyn KnowledgeGraph, seed: &str) -> CoreResult<Vec<String>> {
     Ok(out.into_iter().collect())
 }
 
-
 /// Caps for impact / trace BFS.
 #[derive(Debug, Clone)]
 pub struct TraverseOptions {
@@ -670,15 +669,11 @@ mod tests {
         g.add_node(stale_bool).unwrap();
 
         let mut stale_str = GraphNode::new("task:stale-str", NodeType::Task, "stale-str");
-        stale_str
-            .metadata
-            .insert("stale".into(), json!("TRUE"));
+        stale_str.metadata.insert("stale".into(), json!("TRUE"));
         g.add_node(stale_str).unwrap();
 
         let mut not_stale = GraphNode::new("task:fresh", NodeType::Task, "fresh");
-        not_stale
-            .metadata
-            .insert("stale".into(), json!("false"));
+        not_stale.metadata.insert("stale".into(), json!("false"));
         g.add_node(not_stale).unwrap();
 
         g.flush().unwrap();
@@ -704,9 +699,8 @@ mod tests {
         assert_eq!(report.threshold, 1);
         assert_eq!(
             report.violations,
-            (report.orphan_requirements.len()
-                + report.orphan_code.len()
-                + report.stale.len()) as u32
+            (report.orphan_requirements.len() + report.orphan_code.len() + report.stale.len())
+                as u32
         );
         assert!(!report.orphan_requirements.contains(&req_ok));
         assert!(!report.orphan_code.contains(&file_ok));
@@ -887,5 +881,4 @@ mod tests {
         let err = trace(&g, "A", "missing", &TraverseOptions::default()).unwrap_err();
         assert!(matches!(err, CoreError::InvalidInput(ref m) if m == "unknown node"));
     }
-
 }

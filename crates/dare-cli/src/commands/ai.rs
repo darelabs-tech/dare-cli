@@ -63,7 +63,12 @@ pub fn run_ai_providers(dir: Option<PathBuf>) -> CoreResult<(String, Value)> {
 pub fn run_ai_prompt(opts: AiEnrichCliOpts) -> CoreResult<(String, Value)> {
     let root = resolve_root(opts.dir)?;
     let provider = parse_provider(opts.provider.as_deref())?;
-    let loaded = load_facts_markdown(&root, &opts.command, opts.facts.as_deref(), opts.markdown.as_deref())?;
+    let loaded = load_facts_markdown(
+        &root,
+        &opts.command,
+        opts.facts.as_deref(),
+        opts.markdown.as_deref(),
+    )?;
     let section_ids = sections_for_command(&opts.command)?;
     let cwd_rel = SafeRelativePath::new(".")?;
     let enrich_req = EnrichRequest {
@@ -90,7 +95,12 @@ pub fn run_ai_run(opts: AiEnrichCliOpts) -> CoreResult<(String, Value)> {
     }
     let root = resolve_root(opts.dir)?;
     let provider = parse_provider(opts.provider.as_deref())?;
-    let loaded = load_facts_markdown(&root, &opts.command, opts.facts.as_deref(), opts.markdown.as_deref())?;
+    let loaded = load_facts_markdown(
+        &root,
+        &opts.command,
+        opts.facts.as_deref(),
+        opts.markdown.as_deref(),
+    )?;
     let write_rel = if opts.write {
         Some(SafeRelativePath::new(
             opts.markdown
@@ -161,9 +171,8 @@ fn load_facts_markdown(
     if let Some(facts_rel) = facts {
         let rel = SafeRelativePath::new(facts_rel)?;
         let raw = read_to_string(root, &rel)?;
-        let v: Value = serde_json::from_str(&raw).map_err(|e| {
-            CoreError::invalid_input(format!("malformed facts JSON: {e}"))
-        })?;
+        let v: Value = serde_json::from_str(&raw)
+            .map_err(|e| CoreError::invalid_input(format!("malformed facts JSON: {e}")))?;
         let obj = v.as_object().ok_or_else(|| {
             CoreError::invalid_input("facts must be a JSON object with title and description")
         })?;
@@ -209,20 +218,14 @@ fn format_doctor_human(report: &DoctorReport) -> String {
         let reason = p.reason.as_deref().unwrap_or("-");
         lines.push(format!(
             "  {}  status={:?}  program={}  reason={}",
-            p.id,
-            p.status,
-            p.program,
-            reason
+            p.id, p.status, p.program, reason
         ));
     }
     lines.join("\n")
 }
 
 fn format_providers_human(report: &dare_ai::ProvidersReport) -> String {
-    let mut lines = vec![format!(
-        "ai providers: count={}",
-        report.providers.len()
-    )];
+    let mut lines = vec![format!("ai providers: count={}", report.providers.len())];
     for p in &report.providers {
         lines.push(format!(
             "  {}  implemented={}  enrich={}",

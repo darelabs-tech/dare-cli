@@ -10,16 +10,14 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use dare_core::{
-    CoreError, CoreResult, ProcessRunner, ProjectRoot, SafeCommand, SafeRelativePath,
-};
+use dare_core::{CoreError, CoreResult, ProcessRunner, ProjectRoot, SafeCommand, SafeRelativePath};
 use globset::{Glob, GlobSetBuilder};
 
 use super::baseline::{compare_baseline, load_baseline};
 use super::suite::{load_suite, LoadedCase, LoadedSuite};
 use super::{
-    compute_fixture_fix_rate, compute_solve_rate, compute_suite_fix_rate, round_4dp,
-    BenchReport, FixtureResult, DEFAULT_SUITE_REL,
+    compute_fixture_fix_rate, compute_solve_rate, compute_suite_fix_rate, round_4dp, BenchReport,
+    FixtureResult, DEFAULT_SUITE_REL,
 };
 
 /// Bench report schema version (camelCase JSON `schemaVersion`).
@@ -148,9 +146,8 @@ fn filter_cases<'a>(
     let Some(pat) = filter.map(str::trim).filter(|s| !s.is_empty()) else {
         return Ok(loaded.cases.iter().collect());
     };
-    let glob = Glob::new(pat).map_err(|e| {
-        CoreError::invalid_input(format!("invalid --filter glob: {e}"))
-    })?;
+    let glob = Glob::new(pat)
+        .map_err(|e| CoreError::invalid_input(format!("invalid --filter glob: {e}")))?;
     let mut builder = GlobSetBuilder::new();
     builder.add(glob);
     let set = builder
@@ -198,8 +195,7 @@ fn evaluate_case(
 
     let _ = fs::remove_dir_all(&jail);
 
-    let passed_set: std::collections::HashSet<&str> =
-        passed.iter().map(String::as_str).collect();
+    let passed_set: std::collections::HashSet<&str> = passed.iter().map(String::as_str).collect();
 
     let ftp_total = ftp.len() as u32;
     let ftp_passed = ftp
@@ -225,8 +221,7 @@ fn evaluate_case(
 }
 
 fn is_executable_missing(err: &CoreError) -> bool {
-    matches!(err, CoreError::NotFound(_))
-        || err.message().contains("executable not found")
+    matches!(err, CoreError::NotFound(_)) || err.message().contains("executable not found")
 }
 
 fn apply_patch_best_effort(
@@ -311,7 +306,9 @@ fn copy_dir_recursive(src: &Path, dst: &Path) -> CoreResult<()> {
     fs::create_dir_all(dst).map_err(|e| CoreError::io(e.to_string()))?;
     for entry in fs::read_dir(src).map_err(|e| CoreError::io(e.to_string()))? {
         let entry = entry.map_err(|e| CoreError::io(e.to_string()))?;
-        let ty = entry.file_type().map_err(|e| CoreError::io(e.to_string()))?;
+        let ty = entry
+            .file_type()
+            .map_err(|e| CoreError::io(e.to_string()))?;
         let to = dst.join(entry.file_name());
         if ty.is_dir() {
             copy_dir_recursive(&entry.path(), &to)?;
@@ -379,23 +376,19 @@ mod tests {
         )
         .unwrap();
         fs::write(suite.join("cases/sample-ok/patch.diff"), "").unwrap();
-        fs::write(
-            suite.join("cases/sample-ok/fail_to_pass.txt"),
-            "tests::a\n",
-        )
-        .unwrap();
-        fs::write(
-            suite.join("cases/sample-ok/pass_to_pass.txt"),
-            "tests::b\n",
-        )
-        .unwrap();
+        fs::write(suite.join("cases/sample-ok/fail_to_pass.txt"), "tests::a\n").unwrap();
+        fs::write(suite.join("cases/sample-ok/pass_to_pass.txt"), "tests::b\n").unwrap();
         fs::write(suite.join("cases/sample-ok/stack.txt"), "rust-axum\n").unwrap();
         fs::write(
             suite.join("cases/sample-ok/repo/Cargo.toml"),
             "[package]\nname=\"t\"\nversion=\"0.1.0\"\nedition=\"2021\"\n[lib]\npath=\"src/lib.rs\"\n",
         )
         .unwrap();
-        fs::write(suite.join("cases/sample-ok/repo/src/lib.rs"), "pub fn x(){}\n").unwrap();
+        fs::write(
+            suite.join("cases/sample-ok/repo/src/lib.rs"),
+            "pub fn x(){}\n",
+        )
+        .unwrap();
 
         let root = ProjectRoot::new(tmp.path()).unwrap();
         let mock = MockProcessRunner::new();

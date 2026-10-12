@@ -95,10 +95,7 @@ fn format_list_human(report: &HooksListReport) -> String {
 }
 
 fn format_validate_human(report: &HooksValidateReport) -> String {
-    let mut lines = vec![format!(
-        "hooks validate: ok source={}",
-        report.source
-    )];
+    let mut lines = vec![format!("hooks validate: ok source={}", report.source)];
     for w in &report.warnings {
         lines.push(format!("warning: {w}"));
     }

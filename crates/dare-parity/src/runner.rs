@@ -60,7 +60,14 @@ pub fn run_case(
     fixtures_root: &Path,
     diff_log: &DiffLogIndex,
 ) -> CoreResult<CaseResult> {
-    run_case_with_timeout(spec, bin, fixtures_root, diff_log, DEFAULT_CASE_TIMEOUT, None)
+    run_case_with_timeout(
+        spec,
+        bin,
+        fixtures_root,
+        diff_log,
+        DEFAULT_CASE_TIMEOUT,
+        None,
+    )
 }
 
 fn run_case_with_timeout(
@@ -127,8 +134,7 @@ fn run_case_with_timeout(
             }
             (path, None)
         } else {
-            let tmp = tempfile::tempdir()
-                .map_err(|e| CoreError::io(format!("temp cwd: {e}")))?;
+            let tmp = tempfile::tempdir().map_err(|e| CoreError::io(format!("temp cwd: {e}")))?;
             let path = tmp.path().to_path_buf();
             (path, Some(tmp))
         };
@@ -214,8 +220,7 @@ fn run_case_with_timeout(
                         messages.push(format!("missing content file {}", item.rel));
                         continue;
                     }
-                    let expected =
-                        normalize_text(&read_utf8_lossy(&expected_path)?, &norm_ctx);
+                    let expected = normalize_text(&read_utf8_lossy(&expected_path)?, &norm_ctx);
                     let actual = normalize_text(&read_utf8_lossy(&actual_path)?, &norm_ctx);
                     if actual != expected {
                         failed.push(CompareAxis::Content);
@@ -249,15 +254,16 @@ fn run_case_with_timeout(
                     cwd.join("dare.config.json"),
                     cwd.join(".dare").join("state.json"),
                 ];
-                let actual_path = state_candidates
-                    .iter()
-                    .find(|p| p.is_file())
-                    .ok_or_else(|| {
-                        CoreError::not_found(format!(
-                            "case {}: state axis: no dare.config.json / .dare/state.json",
-                            spec.id
-                        ))
-                    })?;
+                let actual_path =
+                    state_candidates
+                        .iter()
+                        .find(|p| p.is_file())
+                        .ok_or_else(|| {
+                            CoreError::not_found(format!(
+                                "case {}: state axis: no dare.config.json / .dare/state.json",
+                                spec.id
+                            ))
+                        })?;
                 let expected = normalize_text(&read_utf8_lossy(&expected_path)?, &norm_ctx);
                 let actual = normalize_text(&read_utf8_lossy(actual_path)?, &norm_ctx);
                 if actual != expected {
@@ -407,8 +413,8 @@ fn resolve_expected(
 }
 
 fn read_utf8_lossy(path: &Path) -> CoreResult<String> {
-    let bytes = std::fs::read(path)
-        .map_err(|e| CoreError::io(format!("read {}: {e}", path.display())))?;
+    let bytes =
+        std::fs::read(path).map_err(|e| CoreError::io(format!("read {}: {e}", path.display())))?;
     Ok(String::from_utf8_lossy(&bytes).into_owned())
 }
 

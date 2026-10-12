@@ -195,7 +195,9 @@ fn resolve_fullstack(input: &str) -> CoreResult<FrontendKind> {
     match input.to_ascii_lowercase().as_str() {
         "react" => Ok(FrontendKind::React),
         "vue" => Ok(FrontendKind::Vue),
-        other => Err(CoreError::invalid_input(format!("unknown frontend: {other}"))),
+        other => Err(CoreError::invalid_input(format!(
+            "unknown frontend: {other}"
+        ))),
     }
 }
 
@@ -203,7 +205,9 @@ fn parse_toolchain(input: &str) -> CoreResult<Toolchain> {
     match input.to_ascii_lowercase().as_str() {
         "none" => Ok(Toolchain::None),
         "docker" => Ok(Toolchain::Docker),
-        other => Err(CoreError::invalid_input(format!("unknown toolchain: {other}"))),
+        other => Err(CoreError::invalid_input(format!(
+            "unknown toolchain: {other}"
+        ))),
     }
 }
 
@@ -212,7 +216,9 @@ fn parse_transport(input: &str) -> CoreResult<Transport> {
         "stdio" => Ok(Transport::Stdio),
         "http" => Ok(Transport::Http),
         "sse" => Ok(Transport::Sse),
-        other => Err(CoreError::invalid_input(format!("unknown transport: {other}"))),
+        other => Err(CoreError::invalid_input(format!(
+            "unknown transport: {other}"
+        ))),
     }
 }
 
@@ -364,7 +370,9 @@ pub fn run_init(parent: &Path, req: &InitRequest) -> CoreResult<InitReport> {
     };
 
     if target.exists() && !req.force {
-        return Err(CoreError::invalid_input(target_exists_message(&exists_label)));
+        return Err(CoreError::invalid_input(target_exists_message(
+            &exists_label,
+        )));
     }
 
     if req.check {
@@ -505,10 +513,7 @@ mod tests {
 
         let err = run_init(dir.path(), &base_init_request()).unwrap_err();
         assert_eq!(err.kind(), ErrorKind::InvalidInput);
-        assert_eq!(
-            err.message(),
-            target_exists_message("demo-app")
-        );
+        assert_eq!(err.message(), target_exists_message("demo-app"));
     }
 
     #[test]

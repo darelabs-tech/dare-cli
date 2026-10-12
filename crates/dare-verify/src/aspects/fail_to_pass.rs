@@ -13,10 +13,7 @@ use crate::report::{AdvancedAspect, AspectResult, AspectStatus};
 /// - it contains `✓` or a `PASS ` token (Jest/Vitest-ish).
 ///
 /// Missing / empty `test_ids` → [`AspectStatus::Skipped`] with reason `no_ftp_list`.
-pub fn check_fail_to_pass(
-    test_ids: Option<&[String]>,
-    combined_output: &str,
-) -> AspectResult {
+pub fn check_fail_to_pass(test_ids: Option<&[String]>, combined_output: &str) -> AspectResult {
     let Some(ids) = test_ids.filter(|s| !s.is_empty()) else {
         return AspectResult {
             aspect: AdvancedAspect::FailToPass,
@@ -98,10 +95,7 @@ mod tests {
 
     #[test]
     fn ftp_all_pass() {
-        let ids = vec![
-            "suite::was_failing".to_string(),
-            "another_test".to_string(),
-        ];
+        let ids = vec!["suite::was_failing".to_string(), "another_test".to_string()];
         let out = "\
 running 2 tests
 test suite::was_failing ... ok

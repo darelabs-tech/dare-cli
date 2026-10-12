@@ -43,12 +43,8 @@ pub fn uninstall(opts: UninstallOpts) -> CoreResult<UninstallReport> {
         )));
     }
 
-    fs::remove_file(&target).map_err(|e| {
-        CoreError::io(format!(
-            "failed to remove binary {}: {e}",
-            target.display()
-        ))
-    })?;
+    fs::remove_file(&target)
+        .map_err(|e| CoreError::io(format!("failed to remove binary {}: {e}", target.display())))?;
 
     Ok(UninstallReport {
         schema_version: 1,
@@ -92,14 +88,8 @@ mod tests {
             home.backup_dir().is_dir(),
             "SelfHome backup dir must still exist"
         );
-        assert!(
-            home.root().is_dir(),
-            "SelfHome root must still exist"
-        );
-        assert!(
-            marker.is_file(),
-            "SelfHome contents must not be purged"
-        );
+        assert!(home.root().is_dir(), "SelfHome root must still exist");
+        assert!(marker.is_file(), "SelfHome contents must not be purged");
         assert_eq!(fs::read(&marker).unwrap(), b"preserve");
     }
 }

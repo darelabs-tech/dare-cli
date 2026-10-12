@@ -60,7 +60,10 @@ fn dry_run_ok() {
     assert_eq!(data["schemaVersion"], 1);
     assert_eq!(data["mode"], "update");
     assert_eq!(data["targetTag"], "v0.1.0-alpha.2");
-    assert!(data["assetName"].as_str().unwrap().contains("dare-v0.1.0-alpha.2"));
+    assert!(data["assetName"]
+        .as_str()
+        .unwrap()
+        .contains("dare-v0.1.0-alpha.2"));
     assert!(data["actions"].as_array().unwrap().len() >= 5);
 }
 

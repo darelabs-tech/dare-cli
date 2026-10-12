@@ -5,8 +5,8 @@ use std::path::Path;
 
 use dare_core::{CoreError, CoreResult};
 use dare_self::{
-    reject_if_signing_skipped, verify_sha256, MSG_CHECKSUM_MISMATCH, MSG_SIGNING_SKIPPED,
-    RejectSkippedVerifier, SignatureVerifier,
+    reject_if_signing_skipped, verify_sha256, RejectSkippedVerifier, SignatureVerifier,
+    MSG_CHECKSUM_MISMATCH, MSG_SIGNING_SKIPPED,
 };
 
 const BAD_SUMS: &str = "bad-SHA256SUMS";
@@ -18,12 +18,10 @@ pub fn test_signature_mismatch_fixtures(dir: &Path) -> CoreResult<()> {
     let sums_path = dir.join(BAD_SUMS);
     let sig_path = dir.join(SKIPPED_SIG);
 
-    let sums_text = fs::read_to_string(&sums_path).map_err(|e| {
-        CoreError::io(format!("read {}: {e}", sums_path.display()))
-    })?;
-    let sig_bytes = fs::read(&sig_path).map_err(|e| {
-        CoreError::io(format!("read {}: {e}", sig_path.display()))
-    })?;
+    let sums_text = fs::read_to_string(&sums_path)
+        .map_err(|e| CoreError::io(format!("read {}: {e}", sums_path.display())))?;
+    let sig_bytes = fs::read(&sig_path)
+        .map_err(|e| CoreError::io(format!("read {}: {e}", sig_path.display())))?;
 
     if !sig_bytes.starts_with(b"signing skipped") {
         return Err(CoreError::invalid_input(

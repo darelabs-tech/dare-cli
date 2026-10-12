@@ -165,19 +165,19 @@ fn release_download_base(tag: &str) -> String {
 pub fn host_target_triple() -> String {
     #[cfg(all(target_arch = "x86_64", target_os = "linux", target_env = "gnu"))]
     {
-        return "x86_64-unknown-linux-gnu".to_string();
+        "x86_64-unknown-linux-gnu".to_string()
     }
     #[cfg(all(target_arch = "aarch64", target_os = "linux", target_env = "gnu"))]
     {
-        return "aarch64-unknown-linux-gnu".to_string();
+        "aarch64-unknown-linux-gnu".to_string()
     }
     #[cfg(all(target_arch = "x86_64", target_os = "macos"))]
     {
-        return "x86_64-apple-darwin".to_string();
+        "x86_64-apple-darwin".to_string()
     }
     #[cfg(all(target_arch = "aarch64", target_os = "macos"))]
     {
-        return "aarch64-apple-darwin".to_string();
+        "aarch64-apple-darwin".to_string()
     }
     // ADR-008 Windows asset is always the MSVC triple (gnu hosts still download it).
     #[cfg(all(target_arch = "x86_64", target_os = "windows"))]
@@ -266,8 +266,7 @@ mod tests {
     #[test]
     fn plan_stable_channel_via_mock() {
         let mut mock = MockHttpClient::new();
-        let url =
-            format!("{DEFAULT_RELEASE_API}/repos/{DEFAULT_RELEASE_REPO}/releases/latest");
+        let url = format!("{DEFAULT_RELEASE_API}/repos/{DEFAULT_RELEASE_REPO}/releases/latest");
         mock.insert(
             url,
             br#"{"tag_name":"v4.0.0","prerelease":false,"draft":false}"#.as_slice(),
@@ -284,10 +283,7 @@ mod tests {
         .unwrap();
         assert_eq!(plan.channel, "stable");
         assert_eq!(plan.target_tag, "v4.0.0");
-        assert_eq!(
-            plan.asset_name,
-            "dare-v4.0.0-x86_64-pc-windows-msvc.zip"
-        );
+        assert_eq!(plan.asset_name, "dare-v4.0.0-x86_64-pc-windows-msvc.zip");
         assert!(plan.asset_url.contains(DEFAULT_RELEASE_REPO));
     }
 

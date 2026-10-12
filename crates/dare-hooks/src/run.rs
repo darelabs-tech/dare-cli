@@ -3,9 +3,7 @@
 use std::time::Duration;
 
 use dare_contracts::DareConfig;
-use dare_core::{
-    CoreError, CoreResult, ProcessRunner, ProjectRoot, SafeCommand, SafeRelativePath,
-};
+use dare_core::{CoreError, CoreResult, ProcessRunner, ProjectRoot, SafeCommand, SafeRelativePath};
 
 use crate::action::{action_argv, HookAction};
 use crate::config::{hooks_enabled, hooks_trusted, MSG_HOOKS_DISABLED, MSG_HOOKS_TRUST};

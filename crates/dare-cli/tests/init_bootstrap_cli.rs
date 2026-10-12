@@ -12,15 +12,13 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 fn golden_init_dir() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../fixtures/golden/init")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/golden/init")
 }
 
 fn load_golden_paths(stack_id: &str) -> Vec<String> {
     let path = golden_init_dir().join(format!("{stack_id}.paths.txt"));
-    let raw = fs::read_to_string(&path).unwrap_or_else(|e| {
-        panic!("read golden paths `{}`: {e}", path.display())
-    });
+    let raw = fs::read_to_string(&path)
+        .unwrap_or_else(|e| panic!("read golden paths `{}`: {e}", path.display()));
     raw.lines()
         .map(str::trim)
         .filter(|line| !line.is_empty() && !line.starts_with('#'))
@@ -40,7 +38,11 @@ fn assert_golden_paths_exist(project_root: &Path, stack_id: &str) {
     assert_paths_sorted(&paths);
     for rel in &paths {
         let abs = project_root.join(rel);
-        assert!(abs.is_file(), "missing golden path `{rel}` under {}", project_root.display());
+        assert!(
+            abs.is_file(),
+            "missing golden path `{rel}` under {}",
+            project_root.display()
+        );
     }
 }
 

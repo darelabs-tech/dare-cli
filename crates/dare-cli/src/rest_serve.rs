@@ -31,8 +31,8 @@ pub fn run_rest_server(opts: RestServerOpts) -> CoreResult<()> {
 }
 
 fn serve_until_ctrl_c(mode: AppMode, cfg: dare_server::ServerConfig) -> CoreResult<()> {
-    let rt = tokio::runtime::Runtime::new()
-        .map_err(|e| CoreError::io(format!("tokio runtime: {e}")))?;
+    let rt =
+        tokio::runtime::Runtime::new().map_err(|e| CoreError::io(format!("tokio runtime: {e}")))?;
     rt.block_on(async move {
         serve(mode, cfg, async {
             let _ = tokio::signal::ctrl_c().await;

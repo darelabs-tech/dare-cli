@@ -177,15 +177,9 @@ mod tests {
             ("mcp-python", "app/rate_limit.py"),
             ("mcp-rust", "src/rate_limit.rs"),
             ("node-nestjs", "src/rate-limit.ts"),
-            (
-                "php-laravel",
-                "app/Http/Middleware/RateLimitStarter.php",
-            ),
+            ("php-laravel", "app/Http/Middleware/RateLimitStarter.php"),
             ("python-fastapi", "app/rate_limit.py"),
-            (
-                "ruby-rails-8",
-                "config/initializers/rack_attack_starter.rb",
-            ),
+            ("ruby-rails-8", "config/initializers/rack_attack_starter.rb"),
             ("rust-axum", "src/rate_limit.rs"),
         ];
         for (id, rate) in cases {

@@ -21,6 +21,7 @@ use commands::dna::run_dna_cmd;
 use commands::execute::{run_execute, CompleteVerifyOpts, ExecuteAction};
 use commands::graph::{run_graph, GraphAction};
 use commands::guard::{run_guard_cmd, GuardCliOpts};
+use commands::hooks::{run_hooks_cmd, run_hooks_list, run_hooks_validate};
 use commands::info::{collect_info, format_human, report_to_json};
 use commands::init::{run_init_cmd, InitCliOpts};
 use commands::mcp::{run_mcp_serve_cmd, McpServeCliOpts};
@@ -35,7 +36,6 @@ use commands::self_cmd::{
 };
 use commands::server::{run_server_cmd, ServerCliOpts};
 use commands::skill::{run_skill, SkillAction};
-use commands::hooks::{run_hooks_cmd, run_hooks_list, run_hooks_validate};
 use commands::steering::{run_steering_list, run_steering_show};
 use commands::update::run_update;
 use commands::validate::run_validate;
@@ -1404,18 +1404,9 @@ fn main() -> ExitCode {
                     }
                 }
             }
-            Some(Commands::Dashboard {
-                port,
-                no_open,
-                dir,
-            }) => run_dashboard_cmd(
-                DashboardCliOpts {
-                    port,
-                    no_open,
-                    dir,
-                },
-                &renderer,
-            ),
+            Some(Commands::Dashboard { port, no_open, dir }) => {
+                run_dashboard_cmd(DashboardCliOpts { port, no_open, dir }, &renderer)
+            }
             Some(Commands::Server {
                 protocol,
                 bind,

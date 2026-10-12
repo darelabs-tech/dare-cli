@@ -13,8 +13,7 @@ use crate::report::{AdvancedAspect, AspectResult, AspectStatus};
 pub const MUTATION_THRESHOLD: f64 = 0.70;
 
 /// Message when mutation tool is missing under `--full-mutation`.
-pub const MSG_MUTATION_MISSING: &str =
-    "mutation tool not found on PATH [MUTATION_TOOL_MISSING]";
+pub const MSG_MUTATION_MISSING: &str = "mutation tool not found on PATH [MUTATION_TOOL_MISSING]";
 
 /// Run mutation for `stack`. When `stdout_fixture` is set, skip spawn and parse that text.
 ///
@@ -26,12 +25,7 @@ pub fn run_mutation(
     full_mutation: bool,
     stdout_fixture: Option<&str>,
 ) -> AspectResult {
-    run_mutation_with(
-        stack,
-        full_mutation,
-        stdout_fixture,
-        &SystemProcessRunner,
-    )
+    run_mutation_with(stack, full_mutation, stdout_fixture, &SystemProcessRunner)
 }
 
 /// Like [`run_mutation`] but injects a [`ProcessRunner`] (tests / missing-tool simulation).
@@ -295,9 +289,8 @@ fn find_decimal_score(s: &str) -> Option<f64> {
     for key in ["mutation_score", "mutation score", "score"] {
         if let Some(idx) = lower.find(key) {
             let after = &s[idx + key.len()..];
-            let trimmed = after.trim_start_matches(|c: char| {
-                c == ':' || c == '=' || c.is_whitespace()
-            });
+            let trimmed =
+                after.trim_start_matches(|c: char| c == ':' || c == '=' || c.is_whitespace());
             let end = trimmed
                 .find(|c: char| !(c.is_ascii_digit() || c == '.'))
                 .unwrap_or(trimmed.len());
@@ -322,11 +315,7 @@ mod tests {
 
     #[test]
     fn threshold_boundary() {
-        let pass = run_mutation(
-            "rust",
-            false,
-            Some("Mutation Score Indicator (MSI): 70%\n"),
-        );
+        let pass = run_mutation("rust", false, Some("Mutation Score Indicator (MSI): 70%\n"));
         assert_eq!(pass.status, AspectStatus::Pass);
         assert_eq!(pass.aspect, AdvancedAspect::Mutation);
         assert!(pass.score.unwrap() >= MUTATION_THRESHOLD);
@@ -354,22 +343,24 @@ mod tests {
         let r = run_mutation_with("python", true, None, &mock);
         assert_eq!(r.status, AspectStatus::Fail);
         assert_eq!(r.reason.as_deref(), Some(MSG_MUTATION_MISSING));
-        assert!(r.reason.as_deref().unwrap().contains("MUTATION_TOOL_MISSING"));
+        assert!(r
+            .reason
+            .as_deref()
+            .unwrap()
+            .contains("MUTATION_TOOL_MISSING"));
     }
 
     #[test]
     fn parse_score_sample() {
-        let cargo = cargo_mutants::parse_score(
-            "42 mutants tested: 28 caught, 12 missed, 2 unviable\n",
-        )
-        .unwrap();
+        let cargo =
+            cargo_mutants::parse_score("42 mutants tested: 28 caught, 12 missed, 2 unviable\n")
+                .unwrap();
         assert!((cargo - 28.0 / 40.0).abs() < 1e-9);
 
         let stryker_score = stryker::parse_score("Mutation score: 91%\n").unwrap();
         assert!((stryker_score - 0.91).abs() < 1e-9);
 
-        let mutmut_score =
-            mutmut::parse_score("Killed 7 out of 10 mutants\n").unwrap();
+        let mutmut_score = mutmut::parse_score("Killed 7 out of 10 mutants\n").unwrap();
         assert!((mutmut_score - 0.7).abs() < 1e-9);
 
         let infection_score =

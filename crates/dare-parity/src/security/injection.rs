@@ -17,12 +17,8 @@ fn workspace_root() -> PathBuf {
 
 fn load_payloads() -> CoreResult<Vec<String>> {
     let path = workspace_root().join(PAYLOADS_REL);
-    let text = fs::read_to_string(&path).map_err(|e| {
-        CoreError::io(format!(
-            "read injection payloads {}: {e}",
-            path.display()
-        ))
-    })?;
+    let text = fs::read_to_string(&path)
+        .map_err(|e| CoreError::io(format!("read injection payloads {}: {e}", path.display())))?;
     let lines: Vec<String> = text
         .lines()
         .map(str::trim_end)

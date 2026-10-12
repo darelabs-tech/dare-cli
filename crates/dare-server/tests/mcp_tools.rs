@@ -75,10 +75,7 @@ fn context_bad_type_invalid_params() {
     let dir = tempfile::tempdir().unwrap();
     let handler = handler_for(&dir);
     let err = handler
-        .call_tool_now(
-            "context_query",
-            args_obj(json!({"type":"foo","query":"x"})),
-        )
+        .call_tool_now("context_query", args_obj(json!({"type":"foo","query":"x"})))
         .expect_err("bad type must be Err");
     assert_eq!(err.code, ErrorCode::INVALID_PARAMS);
     assert_eq!(err.message.as_ref(), MSG_INVALID_CONTEXT_TYPE);

@@ -3,9 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::provider::ProviderId;
-use crate::{
-    ENRICH_TIMEOUT, ENV_ANTIGRAVITY, ENV_CLAUDE, ENV_CODEX, ENV_CURSOR,
-};
+use crate::{ENRICH_TIMEOUT, ENV_ANTIGRAVITY, ENV_CLAUDE, ENV_CODEX, ENV_CURSOR};
 
 /// Frozen JSON schema version for [`ProvidersReport`].
 pub const PROVIDERS_SCHEMA_VERSION: u32 = 1;
@@ -83,7 +81,10 @@ pub fn default_timeout_secs() -> u64 {
 /// List provider capabilities in canonical order.
 pub fn list_provider_capabilities() -> ProvidersReport {
     let timeout = default_timeout_secs();
-    let commands: Vec<String> = CAPABILITY_COMMANDS.iter().map(|s| (*s).to_string()).collect();
+    let commands: Vec<String> = CAPABILITY_COMMANDS
+        .iter()
+        .map(|s| (*s).to_string())
+        .collect();
     let providers = PROVIDER_ORDER
         .iter()
         .copied()
@@ -136,7 +137,10 @@ mod tests {
         assert!(report.providers[3].implemented);
         assert!(report.providers[4].implemented);
         assert_eq!(report.providers[1].env_override.as_deref(), Some(ENV_CODEX));
-        assert_eq!(report.providers[2].env_override.as_deref(), Some(ENV_CLAUDE));
+        assert_eq!(
+            report.providers[2].env_override.as_deref(),
+            Some(ENV_CLAUDE)
+        );
         assert!(report.providers[0].env_override.is_none());
     }
 

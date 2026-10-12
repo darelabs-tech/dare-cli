@@ -48,9 +48,7 @@ fn assert_no_parent_escape(dest: &Path) -> CoreResult<()> {
         return Ok(());
     }
     for entry in walkdir_shallow(dest)? {
-        let rel = entry
-            .strip_prefix(dest)
-            .unwrap_or(entry.as_path());
+        let rel = entry.strip_prefix(dest).unwrap_or(entry.as_path());
         let s = rel.to_string_lossy();
         if s.contains("..") {
             return Err(CoreError::guard_fail(format!(

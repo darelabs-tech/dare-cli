@@ -101,10 +101,8 @@ fn iso8601_re() -> &'static Regex {
 fn uuid_v4_re() -> &'static Regex {
     static RE: OnceLock<Regex> = OnceLock::new();
     RE.get_or_init(|| {
-        Regex::new(
-            r"(?i)[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}",
-        )
-        .expect("uuid v4 regex compiles")
+        Regex::new(r"(?i)[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}")
+            .expect("uuid v4 regex compiles")
     })
 }
 
@@ -125,9 +123,7 @@ fn normalize_drive_letters(input: &str) -> String {
 
 fn drive_re() -> &'static Regex {
     static RE: OnceLock<Regex> = OnceLock::new();
-    RE.get_or_init(|| {
-        Regex::new(r"(?i)(^|[^A-Za-z0-9])[A-Za-z]:").expect("drive regex compiles")
-    })
+    RE.get_or_init(|| Regex::new(r"(?i)(^|[^A-Za-z0-9])[A-Za-z]:").expect("drive regex compiles"))
 }
 
 #[cfg(test)]

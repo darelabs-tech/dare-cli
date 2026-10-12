@@ -19,12 +19,7 @@ async fn http_force_auth_401() {
     let app = create_mcp_http_router(ctx, token, true);
 
     let response = app
-        .oneshot(
-            Request::builder()
-                .uri("/mcp")
-                .body(Body::empty())
-                .unwrap(),
-        )
+        .oneshot(Request::builder().uri("/mcp").body(Body::empty()).unwrap())
         .await
         .unwrap();
 

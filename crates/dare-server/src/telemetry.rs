@@ -15,10 +15,7 @@ pub fn build_telemetry_snapshot(root: &ProjectRoot) -> CoreResult<TelemetrySnaps
         Err(e) => return Err(e),
     };
 
-    let drift = Map::from_iter([(
-        "available".to_string(),
-        Value::Bool(graph_available(root)),
-    )]);
+    let drift = Map::from_iter([("available".to_string(), Value::Bool(graph_available(root)))]);
 
     Ok(TelemetrySnapshot {
         dag,
@@ -99,7 +96,11 @@ mod tests {
         assert!(snap.best_of_n.is_empty());
         assert!(snap.guard.is_empty());
         assert!(snap.drift.contains_key("available"));
-        assert!(snap.drift.get("available").and_then(|v| v.as_bool()).is_some());
+        assert!(snap
+            .drift
+            .get("available")
+            .and_then(|v| v.as_bool())
+            .is_some());
     }
 
     #[test]

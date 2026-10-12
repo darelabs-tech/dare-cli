@@ -128,7 +128,10 @@ mod tests {
 
         let first = acquire_lock(&home).expect("first acquire");
         let second = acquire_lock(&home);
-        assert!(second.is_err(), "second lock should fail while first is held");
+        assert!(
+            second.is_err(),
+            "second lock should fail while first is held"
+        );
         let err = second.unwrap_err();
         assert!(
             err.message().contains("lock") && err.message().contains("held"),

@@ -45,9 +45,8 @@ pub fn check_anti_tamper(unified_diff: &str) -> AspectResult {
     }
 
     let net_test_removal = test_removed - test_added;
-    let diag = format!(
-        "tests +{test_added}/-{test_removed}; asserts +{assert_added}/-{assert_removed}"
-    );
+    let diag =
+        format!("tests +{test_added}/-{test_removed}; asserts +{assert_added}/-{assert_removed}");
 
     // §0.9: remoção líquida de #[test] > 0 e zero adições de test → removed_tests
     if net_test_removal > 0 && test_added == 0 {
@@ -83,9 +82,7 @@ fn body_has_test_attr(body: &str) -> bool {
 fn body_has_assert(body: &str) -> bool {
     let lower = body.to_ascii_lowercase();
     // (?i)assert!|assert_eq!|assert_ne! — substring heuristics
-    lower.contains("assert!(")
-        || lower.contains("assert_eq!(")
-        || lower.contains("assert_ne!(")
+    lower.contains("assert!(") || lower.contains("assert_eq!(") || lower.contains("assert_ne!(")
 }
 
 #[cfg(test)]

@@ -49,7 +49,9 @@ pub async fn auth_middleware(
 
 fn extract_bearer(value: Option<&axum::http::HeaderValue>) -> Option<&str> {
     let raw = value?.to_str().ok()?;
-    let token = raw.strip_prefix("Bearer ").or_else(|| raw.strip_prefix("bearer "))?;
+    let token = raw
+        .strip_prefix("Bearer ")
+        .or_else(|| raw.strip_prefix("bearer "))?;
     if token.is_empty() {
         return None;
     }

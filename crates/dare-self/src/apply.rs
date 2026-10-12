@@ -139,12 +139,10 @@ pub fn apply_with(
         None => download_update_artifacts(client, &plan, &home)?,
     };
 
-    let asset_bytes = fs::read(&arts.asset_path).map_err(|e| {
-        CoreError::io(format!("read asset {}: {e}", arts.asset_path.display()))
-    })?;
-    let sums_text = fs::read_to_string(&arts.sums_path).map_err(|e| {
-        CoreError::io(format!("read sums {}: {e}", arts.sums_path.display()))
-    })?;
+    let asset_bytes = fs::read(&arts.asset_path)
+        .map_err(|e| CoreError::io(format!("read asset {}: {e}", arts.asset_path.display())))?;
+    let sums_text = fs::read_to_string(&arts.sums_path)
+        .map_err(|e| CoreError::io(format!("read sums {}: {e}", arts.sums_path.display())))?;
 
     verify_sha256(&asset_bytes, &sums_text, &plan.asset_name)?;
 
@@ -248,10 +246,7 @@ pub(crate) fn atomic_replace(new_bin: &Path, target: &Path) -> CoreResult<()> {
         let side_old = side_old_path(target);
         let _ = fs::remove_file(&side_old);
         fs::rename(target, &side_old).map_err(|e| {
-            CoreError::io(format!(
-                "rename current aside {}: {e}",
-                target.display()
-            ))
+            CoreError::io(format!("rename current aside {}: {e}", target.display()))
         })?;
         match fs::copy(new_bin, target) {
             Ok(_) => {
@@ -260,19 +255,15 @@ pub(crate) fn atomic_replace(new_bin: &Path, target: &Path) -> CoreResult<()> {
             }
             Err(e) => {
                 let _ = fs::rename(&side_old, target);
-                Err(CoreError::io(format!(
-                    "replace {}: {e}",
-                    target.display()
-                )))
+                Err(CoreError::io(format!("replace {}: {e}", target.display())))
             }
         }
     }
     #[cfg(not(windows))]
     {
         let staging = target.with_extension("dare-new");
-        fs::copy(new_bin, &staging).map_err(|e| {
-            CoreError::io(format!("stage new binary {}: {e}", staging.display()))
-        })?;
+        fs::copy(new_bin, &staging)
+            .map_err(|e| CoreError::io(format!("stage new binary {}: {e}", staging.display())))?;
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
@@ -343,9 +334,8 @@ fn extract_archive(asset_path: &Path, asset_name: &str, dest: &Path) -> CoreResu
     } else {
         // Raw binary payload (tests / unusual assets): copy as dare[.exe]
         let dest_bin = dest.join(backup_binary_name());
-        fs::copy(asset_path, &dest_bin).map_err(|e| {
-            CoreError::io(format!("copy raw asset to {}: {e}", dest_bin.display()))
-        })?;
+        fs::copy(asset_path, &dest_bin)
+            .map_err(|e| CoreError::io(format!("copy raw asset to {}: {e}", dest_bin.display())))?;
         Ok(())
     }
 }
@@ -489,8 +479,7 @@ pub fn write_zip_with_file(zip_path: &Path, entry_name: &str, contents: &[u8]) -
         .map_err(|e| CoreError::io(e.to_string()))?;
     zip.write_all(contents)
         .map_err(|e| CoreError::io(e.to_string()))?;
-    zip.finish()
-        .map_err(|e| CoreError::io(e.to_string()))?;
+    zip.finish().map_err(|e| CoreError::io(e.to_string()))?;
     Ok(())
 }
 
@@ -664,9 +653,7 @@ mod tests {
         builder
             .append_data(&mut header, entry_name, contents)
             .map_err(|e| CoreError::io(e.to_string()))?;
-        builder
-            .finish()
-            .map_err(|e| CoreError::io(e.to_string()))?;
+        builder.finish().map_err(|e| CoreError::io(e.to_string()))?;
         Ok(())
     }
 
@@ -742,5 +729,4 @@ mod tests {
             b"OLD-BINARY-CONTENT"
         );
     }
-
 }

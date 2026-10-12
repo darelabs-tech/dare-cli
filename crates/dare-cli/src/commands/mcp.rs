@@ -73,8 +73,8 @@ fn resolve_project_root(dir: Option<PathBuf>) -> CoreResult<ProjectRoot> {
 fn serve_stdio_blocking(dir: Option<PathBuf>) -> CoreResult<()> {
     let root = resolve_project_root(dir)?;
     let ctx = ServiceCtx::new(root);
-    let rt = tokio::runtime::Runtime::new()
-        .map_err(|e| CoreError::io(format!("tokio runtime: {e}")))?;
+    let rt =
+        tokio::runtime::Runtime::new().map_err(|e| CoreError::io(format!("tokio runtime: {e}")))?;
     rt.block_on(serve_stdio(ctx))
 }
 
@@ -90,8 +90,8 @@ fn serve_streamable_http_cli(opts: McpServeCliOpts) -> CoreResult<()> {
             t == "1" || t.eq_ignore_ascii_case("true")
         })
         .unwrap_or(false);
-    let rt = tokio::runtime::Runtime::new()
-        .map_err(|e| CoreError::io(format!("tokio runtime: {e}")))?;
+    let rt =
+        tokio::runtime::Runtime::new().map_err(|e| CoreError::io(format!("tokio runtime: {e}")))?;
     rt.block_on(serve_streamable_http(ctx, bind, port, token, force_auth))
 }
 
@@ -139,4 +139,3 @@ fn resolve_http_bind_port(
     }
     Ok((bind, port))
 }
-

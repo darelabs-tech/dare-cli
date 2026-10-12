@@ -41,10 +41,7 @@ fn over_normalize_does_not_hide_exit_code() {
     );
 
     // Exit is a contract field: helpers must still report the diff.
-    assert_eq!(
-        assert_exit_contract(0, 1).unwrap_err(),
-        MSG_OVER_NORMALIZE
-    );
+    assert_eq!(assert_exit_contract(0, 1).unwrap_err(), MSG_OVER_NORMALIZE);
     assert!(assert_exit_contract(0, 0).is_ok());
 }
 

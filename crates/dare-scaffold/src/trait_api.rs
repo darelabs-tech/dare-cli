@@ -24,7 +24,6 @@ impl GenericScaffolder {
     pub(crate) fn new(id: &'static str, metadata: StackMetadata) -> Self {
         Self { id, metadata }
     }
-
 }
 
 impl StackScaffolder for GenericScaffolder {
