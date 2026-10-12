@@ -5,6 +5,7 @@ Usage: dare [OPTIONS] [COMMAND]
 Commands:
   welcome       Show banner (TTY) and DARE quick-start guide
   info          Read-only installation / project diagnostics
+  support       Preview or export a local redacted diagnostic support report
   discover      Brownfield project detection and DARE install
   init          Greenfield init: scaffold + config + harnesses (microplano 047)
   bootstrap     Re-apply scaffold on existing greenfield project (microplano 047)
