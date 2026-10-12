@@ -90,6 +90,38 @@ mod tests {
     }
 
     #[test]
+    fn exported_report_contains_only_generated_codes() {
+        let dir = tempdir().unwrap();
+        let secret = "local_private_token_876543";
+        std::fs::write(
+            dir.path().join("dare.config.json"),
+            format!("{{invalid {secret}"),
+        )
+        .unwrap();
+        let output = tempdir().unwrap();
+        let target = output.path().join("dare-support.json");
+        export(dir.path(), &target).unwrap();
+        let body = std::fs::read_to_string(&target).unwrap();
+        assert!(body.contains("DARE_CONFIG_INVALID_JSON"));
+        assert!(!body.contains(secret));
+        assert!(!body.contains("projectRoot"));
+        assert!(!body.contains("assetsError"));
+    }
+
+    #[test]
+    fn export_refuses_nonexistent_parent_and_wrong_filename() {
+        let dir = tempdir().unwrap();
+        std::fs::write(dir.path().join("dare.config.json"), "{}").unwrap();
+        let output = tempdir().unwrap();
+        assert!(export(
+            dir.path(),
+            &output.path().join("missing/dare-support.json")
+        )
+        .is_err());
+        assert!(export(dir.path(), &output.path().join("sensitive.json")).is_err());
+    }
+
+    #[test]
     fn export_requires_explicit_outside_destination() {
         let dir = tempdir().unwrap();
         std::fs::write(dir.path().join("dare.config.json"), "{}").unwrap();
