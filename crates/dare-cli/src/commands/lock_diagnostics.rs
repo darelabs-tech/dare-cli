@@ -85,7 +85,12 @@ mod tests {
         let root = tempdir().unwrap();
         std::fs::create_dir(root.path().join(".dare")).unwrap();
         let path = root.path().join(".dare/state.json.darelock");
-        let file = OpenOptions::new().create_new(true).read(true).write(true).open(&path).unwrap();
+        let file = OpenOptions::new()
+            .create_new(true)
+            .read(true)
+            .write(true)
+            .open(&path)
+            .unwrap();
         FileExt::try_lock(&file).unwrap();
         assert_eq!(state_lock_diagnostic(root.path()).state, "held");
         FileExt::unlock(&file).unwrap();
