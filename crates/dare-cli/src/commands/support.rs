@@ -38,16 +38,28 @@ pub fn preview(root: &Path) -> CoreResult<BundlePreview> {
 /// Export only generated, fixed-schema diagnostic codes. No arbitrary file contents.
 pub fn export(root: &Path, destination: &Path) -> CoreResult<PathBuf> {
     if destination.file_name().and_then(|s| s.to_str()) != Some("dare-support.json") {
-        return Err(CoreError::invalid_input("destination filename must be dare-support.json"));
+        return Err(CoreError::invalid_input(
+            "destination filename must be dare-support.json",
+        ));
     }
-    let parent = destination.parent().ok_or_else(|| CoreError::invalid_input("destination parent required"))?;
-    let canonical_parent = parent.canonicalize().map_err(|_| CoreError::invalid_input("destination parent must exist"))?;
-    let canonical_root = root.canonicalize().map_err(|_| CoreError::invalid_input("project root must exist"))?;
+    let parent = destination
+        .parent()
+        .ok_or_else(|| CoreError::invalid_input("destination parent required"))?;
+    let canonical_parent = parent
+        .canonicalize()
+        .map_err(|_| CoreError::invalid_input("destination parent must exist"))?;
+    let canonical_root = root
+        .canonicalize()
+        .map_err(|_| CoreError::invalid_input("project root must exist"))?;
     if canonical_parent.starts_with(&canonical_root) {
-        return Err(CoreError::invalid_input("support export must be outside the project directory"));
+        return Err(CoreError::invalid_input(
+            "support export must be outside the project directory",
+        ));
     }
     if destination.exists() {
-        return Err(CoreError::invalid_input("destination already exists; refusing overwrite"));
+        return Err(CoreError::invalid_input(
+            "destination already exists; refusing overwrite",
+        ));
     }
     let data = serde_json::to_vec_pretty(&preview(root)?)
         .map_err(|_| CoreError::invalid_input("cannot serialize support report"))?;
@@ -57,7 +69,8 @@ pub fn export(root: &Path, destination: &Path) -> CoreResult<PathBuf> {
         .create_new(true)
         .open(destination)
         .map_err(|_| CoreError::invalid_input("cannot create support report"))?;
-    file.write_all(&data).map_err(|_| CoreError::invalid_input("cannot write support report"))?;
+    file.write_all(&data)
+        .map_err(|_| CoreError::invalid_input("cannot write support report"))?;
     Ok(destination.to_path_buf())
 }
 
