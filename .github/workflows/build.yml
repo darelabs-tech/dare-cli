@@ -85,7 +85,11 @@ jobs:
         run: |
           mkdir -p bin
           cp "${{ steps.bin.outputs.path }}" "bin/$(basename "${{ steps.bin.outputs.path }}")"
-          sha256sum "${{ steps.bin.outputs.path }}" > dare.sha256
+          if command -v sha256sum >/dev/null 2>&1; then
+            sha256sum "${{ steps.bin.outputs.path }}" > dare.sha256
+          else
+            shasum -a 256 "${{ steps.bin.outputs.path }}" > dare.sha256
+          fi
 
       - name: stage artifact and checksum (windows)
         if: runner.os == 'Windows'
