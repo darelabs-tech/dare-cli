@@ -11,3 +11,9 @@
 | 007 | Write operational playbook and proof | PENDING | After validation |
 
 No task is DONE until build, test, lint and applicable audit evidence passes.
+
+## Dependency graph
+
+`task-001 -> task-002 -> task-003`; `task-001 -> task-004`; `task-002 + task-004 -> task-005`; `task-003 + task-004 + task-005 -> task-006 -> task-007`.
+
+See `dare-dag.yaml`, `EXECUTION/STATUS.md`, `REGRESSION.md` and `PROOF.md` for the complete cycle. No task is marked DONE without CI verification.
