@@ -1499,7 +1499,9 @@ fn run(cli: Cli) -> Result<(String, serde_json::Value), CoreError> {
             Ok((human, data))
         }
         Some(Commands::Support { root, out_dir }) => {
-            let cwd = root.unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
+            let cwd = root.unwrap_or_else(|| {
+                std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
+            });
             let project = commands::info::find_project_root(&cwd)
                 .ok_or_else(|| CoreError::invalid_input("project root not found"))?;
             let preview = preview_support(&project)?;
@@ -1510,10 +1512,15 @@ fn run(cli: Cli) -> Result<(String, serde_json::Value), CoreError> {
                     serde_json::json!({ "written": true, "path": path }),
                 ))
             } else {
-                Ok((
-                    "Support preview only (no files written).".to_string(),
-                    serde_json::to_value(preview).map_err(|_| CoreError::invalid_input("cannot serialize preview"))?,
-                ))
+                let human = format!(
+                    "Support preview (read-only): include {}; exclude {}; state lock: {}.",
+                    preview.included.join(", "),
+                    preview.excluded.join(", "),
+                    preview.state_lock.state
+                );
+                let data = serde_json::to_value(preview)
+                    .map_err(|_| CoreError::invalid_input("cannot serialize preview"))?;
+                Ok((human, data))
             }
         }
         Some(Commands::Design {
