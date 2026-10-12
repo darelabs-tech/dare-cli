@@ -37,6 +37,7 @@ use commands::self_cmd::{
 use commands::server::{run_server_cmd, ServerCliOpts};
 use commands::skill::{run_skill, SkillAction};
 use commands::steering::{run_steering_list, run_steering_show};
+use commands::support::{export as export_support, preview as preview_support};
 use commands::update::run_update;
 use commands::validate::run_validate;
 use commands::welcome::{render_welcome, WelcomeOptions};
@@ -90,6 +91,15 @@ enum Commands {
         /// Project root hint (default: cwd, walk-up).
         #[arg(long)]
         root: Option<PathBuf>,
+    },
+    /// Preview or export a local redacted diagnostic support report.
+    Support {
+        /// Project root hint (default: cwd).
+        #[arg(long)]
+        root: Option<PathBuf>,
+        /// Write the report to an existing directory as dare-support.json.
+        #[arg(long)]
+        out_dir: Option<PathBuf>,
     },
     /// Brownfield project detection and DARE install.
     Discover {
@@ -1487,6 +1497,24 @@ fn run(cli: Cli) -> Result<(String, serde_json::Value), CoreError> {
             let human = format_human(&report);
             let data = report_to_json(&report);
             Ok((human, data))
+        }
+        Some(Commands::Support { root, out_dir }) => {
+            let cwd = root.unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
+            let project = commands::info::find_project_root(&cwd)
+                .ok_or_else(|| CoreError::invalid_input("project root not found"))?;
+            let preview = preview_support(&project)?;
+            if let Some(dir) = out_dir {
+                let path = export_support(&project, &dir.join("dare-support.json"))?;
+                Ok((
+                    "Local support report written (no upload).".to_string(),
+                    serde_json::json!({ "written": true, "path": path }),
+                ))
+            } else {
+                Ok((
+                    "Support preview only (no files written).".to_string(),
+                    serde_json::to_value(preview).map_err(|_| CoreError::invalid_input("cannot serialize preview"))?,
+                ))
+            }
         }
         Some(Commands::Design {
             description,
