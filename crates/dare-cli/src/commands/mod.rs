@@ -28,6 +28,7 @@ pub mod self_cmd;
 pub mod server;
 pub mod skill;
 pub mod steering;
+pub mod support;
 pub mod update;
 pub mod validate;
 pub mod welcome;
