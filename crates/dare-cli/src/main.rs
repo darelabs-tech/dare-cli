@@ -1499,9 +1499,8 @@ fn run(cli: Cli) -> Result<(String, serde_json::Value), CoreError> {
             Ok((human, data))
         }
         Some(Commands::Support { root, out_dir }) => {
-            let cwd = root.unwrap_or_else(|| {
-                std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
-            });
+            let cwd = root
+                .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
             let project = commands::info::find_project_root(&cwd)
                 .ok_or_else(|| CoreError::invalid_input("project root not found"))?;
             let preview = preview_support(&project)?;
