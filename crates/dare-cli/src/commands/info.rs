@@ -25,6 +25,36 @@ pub struct InfoReport {
     pub tasks: TasksProgress,
     pub dare_dir_present: bool,
     pub state_present: bool,
+    pub diagnostics: Vec<Diagnostic>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Diagnostic {
+    pub code: &'static str,
+    pub severity: &'static str,
+    pub remediation: &'static str,
+}
+
+fn json_file_diagnostic(
+    path: &Path,
+    code: &'static str,
+    remediation: &'static str,
+) -> Option<Diagnostic> {
+    if !path.is_file() {
+        return None;
+    }
+    match std::fs::read(path)
+        .ok()
+        .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
+    {
+        Some(_) => None,
+        None => Some(Diagnostic {
+            code,
+            severity: "error",
+            remediation,
+        }),
+    }
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -134,6 +164,7 @@ pub fn collect_info(cwd: &Path) -> CoreResult<InfoReport> {
     let mut dare_dir_present = false;
     let mut state_present = false;
     let mut tasks = TasksProgress::default();
+    let mut diagnostics = Vec::new();
 
     if let Some(ref root_path) = project_root {
         dare_dir_present = root_path.join("DARE").is_dir();
@@ -154,6 +185,28 @@ pub fn collect_info(cwd: &Path) -> CoreResult<InfoReport> {
             backend = read_backend(&pr);
         }
         tasks = tasks_progress(root_path);
+        if let Some(d) = json_file_diagnostic(
+            &root_path.join("dare.config.json"),
+            "DARE_CONFIG_INVALID_JSON",
+            "Repair dare.config.json syntax; no files were modified.",
+        ) {
+            diagnostics.push(d);
+        }
+        if let Some(d) = json_file_diagnostic(
+            &root_path.join(".dare/state.json"),
+            "DARE_STATE_INVALID_JSON",
+            "Restore .dare/state.json from a trusted backup before resuming execution.",
+        ) {
+            diagnostics.push(d);
+        }
+        if dare_dir_present && !root_path.join("DARE/dare-dag.yaml").is_file() {
+            diagnostics.push(Diagnostic {
+                code: "DARE_DAG_MISSING",
+                severity: "warning",
+                remediation:
+                    "Create DARE/dare-dag.yaml or use dare validate with the intended DAG path.",
+            });
+        }
     }
 
     Ok(InfoReport {
@@ -170,6 +223,7 @@ pub fn collect_info(cwd: &Path) -> CoreResult<InfoReport> {
         tasks,
         dare_dir_present,
         state_present,
+        diagnostics,
     })
 }
 
@@ -228,6 +282,12 @@ pub fn format_human(r: &InfoReport) -> String {
         ),
         "  mode:       read-only (zero mutations)".into(),
     ];
+    for diagnostic in &r.diagnostics {
+        lines.push(format!(
+            "  diagnostic: {} [{}] — {}",
+            diagnostic.code, diagnostic.severity, diagnostic.remediation
+        ));
+    }
     lines.push(String::new());
     lines.join("\n")
 }
@@ -268,6 +328,45 @@ mod tests {
         assert_eq!(before, after, "info must not create files");
         let v = report_to_json(&r);
         assert_eq!(v["schemaVersion"], 1);
+    }
+
+    #[test]
+    fn malformed_state_and_config_do_not_leak_contents() {
+        let dir = tempdir().unwrap();
+        std::fs::create_dir_all(dir.path().join(".dare")).unwrap();
+        std::fs::create_dir_all(dir.path().join("DARE")).unwrap();
+        let secret = "secret_api_key_12345";
+        std::fs::write(
+            dir.path().join("dare.config.json"),
+            format!("{{invalid {secret}"),
+        )
+        .unwrap();
+        std::fs::write(
+            dir.path().join(".dare/state.json"),
+            format!("{{invalid {secret}"),
+        )
+        .unwrap();
+        let report = collect_info(dir.path()).unwrap();
+        let json = report_to_json(&report).to_string();
+        let human = format_human(&report);
+        assert!(!json.contains(secret));
+        assert!(!human.contains(secret));
+        assert!(json.contains("DARE_CONFIG_INVALID_JSON"));
+        assert!(json.contains("DARE_STATE_INVALID_JSON"));
+        assert!(json.contains("DARE_DAG_MISSING"));
+    }
+
+    #[test]
+    fn valid_json_has_no_parse_diagnostics() {
+        let dir = tempdir().unwrap();
+        std::fs::create_dir_all(dir.path().join(".dare")).unwrap();
+        std::fs::write(dir.path().join("dare.config.json"), "{}").unwrap();
+        std::fs::write(dir.path().join(".dare/state.json"), "{}").unwrap();
+        let report = collect_info(dir.path()).unwrap();
+        assert!(!report
+            .diagnostics
+            .iter()
+            .any(|d| d.code.ends_with("INVALID_JSON")));
     }
 
     #[test]
