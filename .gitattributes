@@ -1,5 +1,6 @@
-# Rust source files must remain LF so rustfmt --check passes on all OS.
+# Rust source and lock files must remain LF so rustfmt --check passes on all OS.
 *.rs text eol=lf
+Cargo.lock text eol=lf
 
 # Asset files must stay LF so SHA-256 hashes in manifest.yml are stable across platforms.
 assets/**/*.yml text eol=lf
