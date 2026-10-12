@@ -113,11 +113,7 @@ mod tests {
         let dir = tempdir().unwrap();
         std::fs::write(dir.path().join("dare.config.json"), "{}").unwrap();
         let output = tempdir().unwrap();
-        assert!(export(
-            dir.path(),
-            &output.path().join("missing/dare-support.json")
-        )
-        .is_err());
+        assert!(export(dir.path(), &output.path().join("missing/dare-support.json")).is_err());
         assert!(export(dir.path(), &output.path().join("sensitive.json")).is_err());
     }
 
