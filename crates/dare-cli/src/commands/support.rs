@@ -5,6 +5,7 @@ use dare_core::{CoreError, CoreResult};
 use serde::Serialize;
 
 use super::info::{collect_info, Diagnostic};
+use super::lock_diagnostics::{state_lock_diagnostic, LockDiagnostic};
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -13,6 +14,7 @@ pub struct BundlePreview {
     pub included: Vec<&'static str>,
     pub excluded: Vec<&'static str>,
     pub diagnostics: Vec<Diagnostic>,
+    pub state_lock: LockDiagnostic,
 }
 
 pub fn preview(root: &Path) -> CoreResult<BundlePreview> {
@@ -29,6 +31,7 @@ pub fn preview(root: &Path) -> CoreResult<BundlePreview> {
             "raw logs",
         ],
         diagnostics: report.diagnostics,
+        state_lock: state_lock_diagnostic(root),
     })
 }
 
