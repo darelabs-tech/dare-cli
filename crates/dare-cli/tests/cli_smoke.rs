@@ -1905,8 +1905,10 @@ fn execute_agent_cleanup_worktrees() {
         .current_dir(dir.path())
         .args(["execute", "--cleanup-worktrees", "--no-color"])
         .assert()
-        .success()
-        .stdout(predicate::str::contains("Cleaned up"));
+        .failure()
+        .stderr(predicate::str::contains("git worktree remove failed"));
+    // A directory not registered with git must never be deleted automatically.
+    assert_eq!(std::fs::read(orphan.join("marker")).unwrap(), b"x");
 }
 
 #[test]
