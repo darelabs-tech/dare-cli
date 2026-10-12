@@ -17,11 +17,13 @@ pub struct LockDiagnostic {
 /// Probe only a pre-existing regular lock file. Never create, remove or truncate it.
 pub fn state_lock_diagnostic(root: &Path) -> LockDiagnostic {
     let path = root.join(".dare/state.json.darelock");
-    let unknown = || LockDiagnostic {
-        code: "DARE_STATE_LOCK_UNKNOWN",
-        state: "unknown",
-        remediation:
-            "Inspect lock ownership and filesystem permissions manually; do not delete an unverified lock.",
+    let unknown = || {
+        LockDiagnostic {
+            code: "DARE_STATE_LOCK_UNKNOWN",
+            state: "unknown",
+            remediation:
+                "Inspect lock ownership and filesystem permissions manually; do not delete an unverified lock.",
+        }
     };
     let meta = match std::fs::symlink_metadata(&path) {
         Ok(meta) => meta,
