@@ -165,19 +165,19 @@ fn release_download_base(tag: &str) -> String {
 pub fn host_target_triple() -> String {
     #[cfg(all(target_arch = "x86_64", target_os = "linux", target_env = "gnu"))]
     {
-        return "x86_64-unknown-linux-gnu".to_string();
+        "x86_64-unknown-linux-gnu".to_string()
     }
     #[cfg(all(target_arch = "aarch64", target_os = "linux", target_env = "gnu"))]
     {
-        return "aarch64-unknown-linux-gnu".to_string();
+        "aarch64-unknown-linux-gnu".to_string()
     }
     #[cfg(all(target_arch = "x86_64", target_os = "macos"))]
     {
-        return "x86_64-apple-darwin".to_string();
+        "x86_64-apple-darwin".to_string()
     }
     #[cfg(all(target_arch = "aarch64", target_os = "macos"))]
     {
-        return "aarch64-apple-darwin".to_string();
+        "aarch64-apple-darwin".to_string()
     }
     // ADR-008 Windows asset is always the MSVC triple (gnu hosts still download it).
     #[cfg(all(target_arch = "x86_64", target_os = "windows"))]
