@@ -20,7 +20,8 @@ pub fn state_lock_diagnostic(root: &Path) -> LockDiagnostic {
     let unknown = || LockDiagnostic {
         code: "DARE_STATE_LOCK_UNKNOWN",
         state: "unknown",
-        remediation: "Inspect lock ownership and filesystem permissions manually; do not delete an unverified lock.",
+        remediation:
+            "Inspect lock ownership and filesystem permissions manually; do not delete an unverified lock.",
     };
     let meta = match std::fs::symlink_metadata(&path) {
         Ok(meta) => meta,
@@ -28,7 +29,8 @@ pub fn state_lock_diagnostic(root: &Path) -> LockDiagnostic {
             return LockDiagnostic {
                 code: "DARE_STATE_LOCK_ABSENT",
                 state: "absent",
-                remediation: "No state lock file exists; absence does not validate state integrity.",
+                remediation:
+                    "No state lock file exists; absence does not validate state integrity.",
             };
         }
         Err(_) => return unknown(),
@@ -46,13 +48,15 @@ pub fn state_lock_diagnostic(root: &Path) -> LockDiagnostic {
             LockDiagnostic {
                 code: "DARE_STATE_LOCK_UNHELD",
                 state: "unheld",
-                remediation: "The lock is currently available. A residual file alone is not evidence of staleness.",
+                remediation:
+                    "The lock is currently available. A residual file alone is not evidence of staleness.",
             }
         }
         Err(TryLockError::WouldBlock) => LockDiagnostic {
             code: "DARE_STATE_LOCK_HELD",
             state: "held",
-            remediation: "Another process may hold the lock. Wait or inspect its owner; do not force-unlock.",
+            remediation:
+                "Another process may hold the lock. Wait or inspect its owner; do not force-unlock.",
         },
         Err(TryLockError::Error(_)) => unknown(),
     }
