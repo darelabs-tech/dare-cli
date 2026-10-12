@@ -15,6 +15,7 @@ pub mod graph;
 pub mod guard;
 pub mod hooks;
 pub mod info;
+pub mod lock_diagnostics;
 pub mod init;
 mod init_prompts;
 pub mod mcp;
