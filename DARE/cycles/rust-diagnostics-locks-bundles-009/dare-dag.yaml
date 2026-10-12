@@ -1,0 +1,30 @@
+version: 1
+tasks:
+  - id: task-001
+    title: Inspect canonical locks
+    prompt: Inspect execution and state locking contracts.
+    depends_on: []
+  - id: task-002
+    title: Lock diagnostics
+    prompt: Add safe lock diagnostics and tests.
+    depends_on: [task-001]
+  - id: task-003
+    title: Support bundle preview
+    prompt: Implement opt-in allowlisted preview.
+    depends_on: [task-001]
+  - id: task-004
+    title: Redacted support bundle
+    prompt: Implement local redacted export with no upload.
+    depends_on: [task-003]
+  - id: task-005
+    title: Regression tests
+    prompt: Verify lock behavior, redaction and path confinement.
+    depends_on: [task-002, task-004]
+  - id: task-006
+    title: Quality gates
+    prompt: Run build, test, fmt, clippy and audit.
+    depends_on: [task-005]
+  - id: task-007
+    title: Review and proof
+    prompt: Attach CI evidence and evaluate readiness.
+    depends_on: [task-006]
