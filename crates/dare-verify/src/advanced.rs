@@ -81,12 +81,7 @@ pub fn run_advanced_verify(
     aspects.push(run_anti_tamper_aspect(root, runner));
 
     // 3) mutation
-    aspects.push(run_mutation_with(
-        &stack,
-        req.full_mutation,
-        None,
-        runner,
-    ));
+    aspects.push(run_mutation_with(&stack, req.full_mutation, None, runner));
 
     // 4) formal (opt-in)
     if req.formal {
@@ -219,7 +214,10 @@ fn run_stack_test_output(
     }
 }
 
-fn run_anti_tamper_aspect(root: &ProjectRoot, runner: &dyn ProcessRunner) -> crate::report::AspectResult {
+fn run_anti_tamper_aspect(
+    root: &ProjectRoot,
+    runner: &dyn ProcessRunner,
+) -> crate::report::AspectResult {
     let diff = collect_git_diff(root, runner);
     check_anti_tamper(&diff)
 }
@@ -257,11 +255,7 @@ mod tests {
     }
 
     fn write_minimal_rust_project(dir: &std::path::Path) {
-        fs::write(
-            dir.join("dare.config.json"),
-            r#"{"backend":"rust-axum"}"#,
-        )
-        .unwrap();
+        fs::write(dir.join("dare.config.json"), r#"{"backend":"rust-axum"}"#).unwrap();
         fs::write(
             dir.join("Cargo.toml"),
             "[package]\nname = \"t\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
@@ -364,10 +358,7 @@ mod tests {
         let v = run_advanced_verify(&root, &cfg, &req, &mock).unwrap();
         assert!(v.ok);
         assert_eq!(v.aspects.len(), 4);
-        assert_eq!(
-            v.aspects[3].aspect,
-            crate::report::AdvancedAspect::Formal
-        );
+        assert_eq!(v.aspects[3].aspect, crate::report::AdvancedAspect::Formal);
         assert_eq!(v.aspects[3].status, AspectStatus::Skipped);
     }
 

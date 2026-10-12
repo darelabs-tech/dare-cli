@@ -4,9 +4,9 @@ use dare_core::{CoreError, CoreResult, ProjectRoot, SafeRelativePath};
 use serde::Deserialize;
 
 use crate::knowledge_graph::KnowledgeGraph;
-use crate::storage::{JsonGraph, SqliteGraph};
 #[cfg(feature = "neo4j")]
 use crate::neo4j::Neo4jGraph;
+use crate::storage::{JsonGraph, SqliteGraph};
 
 pub const GRAPH_DB_REL: &str = ".dare/graph.db";
 pub const GRAPH_JSON_REL: &str = ".dare/graph.json";
@@ -439,10 +439,7 @@ mod tests {
             let cfg = load_graph_config(&root, None).unwrap();
             assert_eq!(cfg.backend, GraphBackend::Neo4j);
             assert!(cfg.neo4j.is_some());
-            assert_eq!(
-                cfg.neo4j.as_ref().unwrap().url,
-                "http://localhost:7474"
-            );
+            assert_eq!(cfg.neo4j.as_ref().unwrap().url, "http://localhost:7474");
         }
     }
 

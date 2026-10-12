@@ -71,9 +71,7 @@ pub fn map_http_error(err: &HttpError) -> ErrorData {
         "invalid_input" | "unauthorized" => {
             ErrorData::invalid_params(msg, with_code("invalid_input"))
         }
-        "body_too_large" | "internal" => {
-            ErrorData::internal_error(msg, with_code("internal"))
-        }
+        "body_too_large" | "internal" => ErrorData::internal_error(msg, with_code("internal")),
         other => ErrorData::internal_error(msg, with_code(other)),
     }
 }

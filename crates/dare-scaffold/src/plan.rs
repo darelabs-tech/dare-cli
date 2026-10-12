@@ -199,10 +199,7 @@ mod tests {
             kinds.contains(&PlanItemKind::Template),
             "expected at least one template item"
         );
-        assert!(
-            kinds.contains(&PlanItemKind::Ax),
-            "expected AX items"
-        );
+        assert!(kinds.contains(&PlanItemKind::Ax), "expected AX items");
         assert!(
             kinds.contains(&PlanItemKind::Meta),
             "expected dare.config.json meta item"

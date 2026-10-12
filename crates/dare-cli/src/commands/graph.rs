@@ -7,14 +7,14 @@ use std::process::ExitCode;
 
 use dare_core::fs::atomic_write;
 use dare_core::{CoreError, CoreResult, ProjectRoot, SafeRelativePath};
+#[cfg(feature = "semantic")]
+use dare_graph::MSG_DOWNLOAD_CANCELLED;
 use dare_graph::{
-    drift, drift_exceeds_threshold, hybrid_query_with_warnings, impact, ingest_project, locate,
-    load_graph_config, open_graph, owners, render_mermaid_subset, semantic_doctor, trace,
+    drift, drift_exceeds_threshold, hybrid_query_with_warnings, impact, ingest_project,
+    load_graph_config, locate, open_graph, owners, render_mermaid_subset, semantic_doctor, trace,
     DriftOptions, IngestOptions, KnowledgeGraph, LocateOptions, SearchOptions, TraverseOptions,
     LOCATE_DECAY,
 };
-#[cfg(feature = "semantic")]
-use dare_graph::MSG_DOWNLOAD_CANCELLED;
 use serde_json::{json, Value};
 
 use crate::output::OutputRenderer;
@@ -216,10 +216,7 @@ fn run_graph_inner(action: GraphAction) -> CoreResult<GraphOutcome> {
             let report = semantic_doctor();
             let human = format!(
                 "semanticCompiled: {}\nmodelPresent: {}\ncacheDir: {}\nembedDim: {}",
-                report.semantic_compiled,
-                report.model_present,
-                report.cache_dir,
-                report.embed_dim
+                report.semantic_compiled, report.model_present, report.cache_dir, report.embed_dim
             );
             let data = json!({
                 "action": "graph.doctor",

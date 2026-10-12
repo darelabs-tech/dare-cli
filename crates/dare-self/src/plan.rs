@@ -266,8 +266,7 @@ mod tests {
     #[test]
     fn plan_stable_channel_via_mock() {
         let mut mock = MockHttpClient::new();
-        let url =
-            format!("{DEFAULT_RELEASE_API}/repos/{DEFAULT_RELEASE_REPO}/releases/latest");
+        let url = format!("{DEFAULT_RELEASE_API}/repos/{DEFAULT_RELEASE_REPO}/releases/latest");
         mock.insert(
             url,
             br#"{"tag_name":"v4.0.0","prerelease":false,"draft":false}"#.as_slice(),
@@ -284,10 +283,7 @@ mod tests {
         .unwrap();
         assert_eq!(plan.channel, "stable");
         assert_eq!(plan.target_tag, "v4.0.0");
-        assert_eq!(
-            plan.asset_name,
-            "dare-v4.0.0-x86_64-pc-windows-msvc.zip"
-        );
+        assert_eq!(plan.asset_name, "dare-v4.0.0-x86_64-pc-windows-msvc.zip");
         assert!(plan.asset_url.contains(DEFAULT_RELEASE_REPO));
     }
 

@@ -49,11 +49,7 @@ pub struct LoadedSuite {
     pub cases: Vec<LoadedCase>,
 }
 
-const REQUIRED_FILES: &[&str] = &[
-    "patch.diff",
-    "fail_to_pass.txt",
-    "pass_to_pass.txt",
-];
+const REQUIRED_FILES: &[&str] = &["patch.diff", "fail_to_pass.txt", "pass_to_pass.txt"];
 
 /// Load `suite.json` from `suite_dir` and validate each case directory.
 pub fn load_suite(suite_dir: &Path) -> CoreResult<LoadedSuite> {
@@ -186,10 +182,7 @@ mod tests {
         let err = load_suite(suite_dir).expect_err("must fail");
         assert!(matches!(err, CoreError::Usage(_)));
         let msg = err.message();
-        assert!(
-            msg.starts_with("invalid bench suite:"),
-            "msg={msg}"
-        );
+        assert!(msg.starts_with("invalid bench suite:"), "msg={msg}");
         assert!(msg.contains("pass_to_pass.txt"), "msg={msg}");
     }
 }

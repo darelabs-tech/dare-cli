@@ -119,9 +119,7 @@ fn frame_row(inner: &str) -> String {
 /// Colored banner: white fill + blue letter contours + blue frame (no LABS).
 fn banner_colored() -> String {
     let blank = " ".repeat(52);
-    let method = format!(
-        "  {C_MUTED}Discover · Design · Architect · Review · Execute{C_RESET}  ",
-    );
+    let method = format!("  {C_MUTED}Discover · Design · Architect · Review · Execute{C_RESET}  ",);
 
     let mut out = String::new();
     out.push_str(&format!(

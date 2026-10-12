@@ -39,10 +39,7 @@ mod tests {
     fn render_substitutes() {
         let tpl = r#"{"projectName":"{{project_name}}","stack":"{{stack_id}}"}"#;
         let out = render_template(tpl, "demo-app", "rust-axum").expect("render");
-        assert_eq!(
-            out,
-            r#"{"projectName":"demo-app","stack":"rust-axum"}"#
-        );
+        assert_eq!(out, r#"{"projectName":"demo-app","stack":"rust-axum"}"#);
         assert!(!out.contains("{{project_name}}"));
         assert!(!out.contains("{{stack_id}}"));
     }

@@ -41,12 +41,9 @@ fn run_dashboard(opts: DashboardCliOpts) -> CoreResult<()> {
 }
 
 /// Block the current thread on `serve` until Ctrl+C / shutdown.
-pub(crate) fn serve_until_ctrl_c(
-    mode: AppMode,
-    cfg: dare_server::ServerConfig,
-) -> CoreResult<()> {
-    let rt = tokio::runtime::Runtime::new()
-        .map_err(|e| CoreError::io(format!("tokio runtime: {e}")))?;
+pub(crate) fn serve_until_ctrl_c(mode: AppMode, cfg: dare_server::ServerConfig) -> CoreResult<()> {
+    let rt =
+        tokio::runtime::Runtime::new().map_err(|e| CoreError::io(format!("tokio runtime: {e}")))?;
     rt.block_on(async move {
         serve(mode, cfg, async {
             let _ = tokio::signal::ctrl_c().await;

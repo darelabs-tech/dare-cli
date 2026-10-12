@@ -125,7 +125,11 @@ fn regression_exit_1() {
         "fixtures/bench/cases/fail-case/pass_to_pass.txt",
         "tests::always_passes\n",
     );
-    write_file(root, "fixtures/bench/cases/fail-case/stack.txt", "rust-axum\n");
+    write_file(
+        root,
+        "fixtures/bench/cases/fail-case/stack.txt",
+        "rust-axum\n",
+    );
     write_file(
         root,
         "fixtures/bench/cases/fail-case/repo/Cargo.toml",

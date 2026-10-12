@@ -167,9 +167,9 @@ fn program_resolves(program: &str) -> bool {
                 .extension()
                 .and_then(|e| e.to_str())
                 .is_some_and(|e| {
-                    extensions
-                        .iter()
-                        .any(|ext| ext.eq_ignore_ascii_case(&format!(".{e}")) || ext.eq_ignore_ascii_case(e))
+                    extensions.iter().any(|ext| {
+                        ext.eq_ignore_ascii_case(&format!(".{e}")) || ext.eq_ignore_ascii_case(e)
+                    })
                 });
             if !has_ext {
                 for ext in &extensions {
@@ -202,10 +202,7 @@ mod tests {
     #[test]
     fn claude_missing_when_override_points_nowhere() {
         crate::with_env_lock(|| {
-            std::env::set_var(
-                ENV_CLAUDE,
-                "dare-ai-doctor-missing-claude-xyzzy-9f3a2c1b",
-            );
+            std::env::set_var(ENV_CLAUDE, "dare-ai-doctor-missing-claude-xyzzy-9f3a2c1b");
             let entry = diagnose_provider(ProviderId::ClaudeCode).expect("diagnose");
             std::env::remove_var(ENV_CLAUDE);
             assert!(entry.implemented);
@@ -293,10 +290,7 @@ mod tests {
     #[test]
     fn codex_missing_when_override_points_nowhere() {
         crate::with_env_lock(|| {
-            std::env::set_var(
-                ENV_CODEX,
-                "dare-ai-doctor-missing-bin-xyzzy-9f3a2c1b",
-            );
+            std::env::set_var(ENV_CODEX, "dare-ai-doctor-missing-bin-xyzzy-9f3a2c1b");
             let entry = diagnose_provider(ProviderId::Codex).expect("diagnose");
             std::env::remove_var(ENV_CODEX);
             assert_eq!(entry.status, DoctorStatus::Missing);

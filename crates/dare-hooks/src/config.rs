@@ -4,15 +4,11 @@ use dare_contracts::DareConfig;
 
 pub const MSG_HOOKS_TRUST: &str =
     "hooks run requires trust (pass --trust or set hooks.trusted: true) [HOOKS_TRUST]";
-pub const MSG_HOOKS_DISABLED: &str =
-    "hooks are disabled (hooks.enabled: false) [HOOKS_DISABLED]";
+pub const MSG_HOOKS_DISABLED: &str = "hooks are disabled (hooks.enabled: false) [HOOKS_DISABLED]";
 
 /// Whether hooks are enabled. Default `true` if `hooks` or `enabled` omitted.
 pub fn hooks_enabled(cfg: &DareConfig) -> bool {
-    cfg.hooks
-        .as_ref()
-        .and_then(|h| h.enabled)
-        .unwrap_or(true)
+    cfg.hooks.as_ref().and_then(|h| h.enabled).unwrap_or(true)
 }
 
 /// Whether hooks are trusted. Default `false`; reads `hooks.extra["trusted"]`.

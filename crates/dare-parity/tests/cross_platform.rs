@@ -44,10 +44,7 @@ fn drive_letter_upper_and_lower_rejected() {
 #[test]
 fn unc_and_rooted_backslash_rejected() {
     for raw in [r"\\server\share", r"\abs", "/abs"] {
-        assert!(
-            SafeRelativePath::new(raw).is_err(),
-            "must reject {raw:?}"
-        );
+        assert!(SafeRelativePath::new(raw).is_err(), "must reject {raw:?}");
     }
 }
 

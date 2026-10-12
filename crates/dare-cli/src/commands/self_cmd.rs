@@ -4,12 +4,10 @@
 
 use std::io::{self, IsTerminal, Write};
 
-use dare_core::{
-    CoreError, CoreResult, SystemProcessRunner,
-};
+use dare_core::{CoreError, CoreResult, SystemProcessRunner};
 use dare_self::{
-    apply_update, plan_update, rollback, uninstall, Channel, CosignCliVerifier, DEFAULT_CHANNEL,
-    RollbackOpts, UninstallOpts, UpdateOpts, UpdatePlan,
+    apply_update, plan_update, rollback, uninstall, Channel, CosignCliVerifier, RollbackOpts,
+    UninstallOpts, UpdateOpts, UpdatePlan, DEFAULT_CHANNEL,
 };
 use serde_json::{json, Value};
 
@@ -119,8 +117,16 @@ pub fn run_self_uninstall(opts: SelfUninstallCliOpts) -> CoreResult<(String, Val
 }
 
 fn build_update_opts(opts: &SelfUpdateCliOpts) -> CoreResult<UpdateOpts> {
-    let channel_flag = opts.channel.as_deref().map(str::trim).filter(|s| !s.is_empty());
-    let version_flag = opts.version.as_deref().map(str::trim).filter(|s| !s.is_empty());
+    let channel_flag = opts
+        .channel
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
+    let version_flag = opts
+        .version
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
 
     match (channel_flag, version_flag) {
         (Some(_), Some(_)) => Err(CoreError::usage(

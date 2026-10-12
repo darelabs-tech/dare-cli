@@ -20,9 +20,7 @@ const CASE_FILE: &str = "case.yaml";
 
 fn case_id_re() -> &'static Regex {
     static RE: OnceLock<Regex> = OnceLock::new();
-    RE.get_or_init(|| {
-        Regex::new(r"^[a-z0-9]+(\.[a-z0-9_-]+)+$").expect("case id regex compiles")
-    })
+    RE.get_or_init(|| Regex::new(r"^[a-z0-9]+(\.[a-z0-9_-]+)+$").expect("case id regex compiles"))
 }
 
 /// Intentional-diff classification (A|B|C|D).
@@ -376,9 +374,6 @@ skip:
         assert_eq!(spec.id, "golden.welcome.help");
         assert_eq!(spec.axes, vec![CompareAxis::Exit, CompareAxis::Stdout]);
         assert_eq!(spec.expected_exit, Some(0));
-        assert_eq!(
-            spec.skip.as_ref().map(|s| s.class),
-            Some(DiffClass::C)
-        );
+        assert_eq!(spec.skip.as_ref().map(|s| s.class), Some(DiffClass::C));
     }
 }

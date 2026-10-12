@@ -88,11 +88,7 @@ fn backup_file(
 ) -> CoreResult<()> {
     let dest = SafeRelativePath::new(dest_rel)?;
     let bytes = read_file_bytes(root, &dest)?;
-    let bak = SafeRelativePath::new(&format!(
-        "{}/{}",
-        journal_root.as_str(),
-        dest_rel
-    ))?;
+    let bak = SafeRelativePath::new(&format!("{}/{}", journal_root.as_str(), dest_rel))?;
     atomic_write(root, &bak, &bytes)?;
     journal
         .backed_up
@@ -201,9 +197,8 @@ fn resolve_item_bytes(
             } else {
                 embedded_asset_key(stack_id, dest_path)?
             };
-            let file = EmbeddedAssets::get(&key).ok_or_else(|| {
-                CoreError::not_found(format!("embedded asset missing: {key}"))
-            })?;
+            let file = EmbeddedAssets::get(&key)
+                .ok_or_else(|| CoreError::not_found(format!("embedded asset missing: {key}")))?;
             let text = std::str::from_utf8(file.data.as_ref()).map_err(|e| {
                 CoreError::Internal(format!("invalid UTF-8 in template `{key}`: {e}"))
             })?;
@@ -356,10 +351,7 @@ pub(crate) fn apply_scaffold_with_failpoint(
 }
 
 /// Plan then apply; `req.check` performs a dry-run with zero filesystem writes.
-pub fn run_scaffold(
-    root: &ProjectRoot,
-    req: &ScaffoldRequest,
-) -> CoreResult<ScaffoldApplyReport> {
+pub fn run_scaffold(root: &ProjectRoot, req: &ScaffoldRequest) -> CoreResult<ScaffoldApplyReport> {
     let plan = plan_scaffold(root, req)?;
     if req.check {
         let mut skipped: Vec<String> = plan.items.iter().map(|i| i.path.clone()).collect();
@@ -460,7 +452,8 @@ mod tests {
 
         let req = sample_req("go-gin", true, false);
         let plan = plan_scaffold(&root, &req).expect("plan");
-        let err = apply_scaffold_with_failpoint(&root, &plan, 2).expect_err("must fail at failpoint");
+        let err =
+            apply_scaffold_with_failpoint(&root, &plan, 2).expect_err("must fail at failpoint");
         assert!(
             err.to_string().contains("failpoint"),
             "expected failpoint error, got {err}"

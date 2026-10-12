@@ -36,15 +36,27 @@ fn frontend_compose_react_paths() {
     assert!(paths.contains(&"frontend/src/main.tsx"));
     assert!(paths.contains(&"frontend/README.md"));
 
-    for path in ["frontend/package.json", "frontend/src/main.tsx", "frontend/README.md"] {
-        let item = plan.items.iter().find(|i| i.path == path).expect("plan item");
+    for path in [
+        "frontend/package.json",
+        "frontend/src/main.tsx",
+        "frontend/README.md",
+    ] {
+        let item = plan
+            .items
+            .iter()
+            .find(|i| i.path == path)
+            .expect("plan item");
         assert_eq!(item.kind, PlanItemKind::Template);
         assert_eq!(item.action, PlanAction::Create);
     }
 
     let report = apply_scaffold(&root, &plan).expect("apply frontend");
-    assert!(report.created.contains(&"frontend/package.json".to_string()));
-    assert!(report.created.contains(&"frontend/src/main.tsx".to_string()));
+    assert!(report
+        .created
+        .contains(&"frontend/package.json".to_string()));
+    assert!(report
+        .created
+        .contains(&"frontend/src/main.tsx".to_string()));
     assert!(report.created.contains(&"frontend/README.md".to_string()));
 
     let pkg = fs::read_to_string(dir.path().join("frontend/package.json")).expect("package.json");

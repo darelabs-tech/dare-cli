@@ -41,13 +41,12 @@ fn dare_bin() -> PathBuf {
             .current_dir(workspace_root())
             .status()
             .expect("spawn cargo build -p dare-cli");
-        assert!(status.success(), "cargo build -p dare-cli --bin dare failed");
+        assert!(
+            status.success(),
+            "cargo build -p dare-cli --bin dare failed"
+        );
     }
-    assert!(
-        bin.is_file(),
-        "dare binary missing at {}",
-        bin.display()
-    );
+    assert!(bin.is_file(), "dare binary missing at {}", bin.display());
     bin
 }
 
@@ -56,7 +55,11 @@ struct ArgvEchoRunner;
 
 impl ProcessRunner for ArgvEchoRunner {
     fn run(&self, cmd: &SafeCommand) -> CoreResult<ProcessOutput> {
-        assert_eq!(cmd.program(), "echo", "injection must use bare echo program");
+        assert_eq!(
+            cmd.program(),
+            "echo",
+            "injection must use bare echo program"
+        );
         assert_eq!(
             cmd.arg_list().len(),
             1,

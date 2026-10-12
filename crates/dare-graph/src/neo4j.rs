@@ -173,12 +173,11 @@ impl Neo4jGraph {
                 let mut guard = scripted
                     .lock()
                     .map_err(|_| HttpAttemptError::fatal("scripted lock poisoned"))?;
-                guard
-                    .hits
-                    .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-                let outcome = guard.outcomes.pop_front().ok_or_else(|| {
-                    HttpAttemptError::fatal("scripted HTTP exhausted")
-                })?;
+                guard.hits.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                let outcome = guard
+                    .outcomes
+                    .pop_front()
+                    .ok_or_else(|| HttpAttemptError::fatal("scripted HTTP exhausted"))?;
                 match outcome {
                     ScriptedOutcome::Status(code) if code >= 500 => {
                         Err(HttpAttemptError::retryable(format!("neo4j HTTP {code}")))
@@ -295,9 +294,7 @@ pub fn validate_neo4j_url(url: &str) -> CoreResult<()> {
         hostport.split(':').next().unwrap_or("")
     };
     if host.is_empty() {
-        return Err(CoreError::invalid_input(
-            "neo4j url host must not be empty",
-        ));
+        return Err(CoreError::invalid_input("neo4j url host must not be empty"));
     }
     Ok(())
 }
@@ -507,10 +504,7 @@ impl KnowledgeGraph for Neo4jGraph {
                 "limit": lim as i64,
             }),
         )?;
-        Ok(extract_rows(&resp)
-            .iter()
-            .filter_map(row_to_node)
-            .collect())
+        Ok(extract_rows(&resp).iter().filter_map(row_to_node).collect())
     }
 
     fn delete_node(&mut self, _id: &str) -> CoreResult<()> {
@@ -544,10 +538,7 @@ impl KnowledgeGraph for Neo4jGraph {
             }
         };
         let resp = self.tx_commit(stmt, json!({ "id": node_id }))?;
-        Ok(extract_rows(&resp)
-            .iter()
-            .filter_map(row_to_edge)
-            .collect())
+        Ok(extract_rows(&resp).iter().filter_map(row_to_edge).collect())
     }
 
     fn load_vectors(&self) -> CoreResult<Vec<VectorRow>> {
@@ -591,10 +582,7 @@ impl KnowledgeGraph for Neo4jGraph {
             r.weight AS weight, r.metadata AS metadata \
             ORDER BY r.id";
         let resp = self.tx_commit(STMT, json!({}))?;
-        let edges = extract_rows(&resp)
-            .iter()
-            .filter_map(row_to_edge)
-            .collect();
+        let edges = extract_rows(&resp).iter().filter_map(row_to_edge).collect();
         Ok(GraphStoreDocument { nodes, edges })
     }
 

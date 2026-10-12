@@ -163,12 +163,13 @@ pub fn pareto_front_ids(cands: &[CandidateMetrics]) -> Vec<u32> {
 
 /// Winner id: Pareto front sorted by aspectsPassed↓, mutationScore↓, durationMs↑, id↑.
 pub fn pareto_select(cands: &[CandidateMetrics]) -> u32 {
-    assert!(!cands.is_empty(), "pareto_select requires at least one candidate");
+    assert!(
+        !cands.is_empty(),
+        "pareto_select requires at least one candidate"
+    );
     let front = pareto_front_ids(cands);
-    let mut front_cands: Vec<&CandidateMetrics> = cands
-        .iter()
-        .filter(|c| front.contains(&c.id))
-        .collect();
+    let mut front_cands: Vec<&CandidateMetrics> =
+        cands.iter().filter(|c| front.contains(&c.id)).collect();
     front_cands.sort_by(|a, b| {
         b.aspects_passed
             .cmp(&a.aspects_passed)
@@ -193,12 +194,7 @@ pub fn metrics_from_verdict(id: u32, verdict: &LoopVerdict) -> CandidateMetrics 
     let mutation_score = verdict
         .aspects
         .iter()
-        .find(|a| {
-            matches!(
-                a.aspect,
-                crate::report::AdvancedAspect::Mutation
-            )
-        })
+        .find(|a| matches!(a.aspect, crate::report::AdvancedAspect::Mutation))
         .and_then(|a| a.score)
         .unwrap_or(0.0);
     let duration_ms = verdict.aspects.iter().map(|a| a.duration_ms).sum();

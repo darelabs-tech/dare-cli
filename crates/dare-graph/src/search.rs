@@ -236,10 +236,7 @@ pub fn hybrid_query_with_warnings(
                     .strip_prefix(MSG_SEMANTIC_UNAVAILABLE)
                     .or_else(|| reason.strip_prefix(semantic::MSG_SEMANTIC_UNAVAILABLE))
                     .unwrap_or(reason.as_str());
-                warnings.push(format!(
-                    "{MSG_SEMANTIC_UNAVAILABLE}{}",
-                    redact(clean)
-                ));
+                warnings.push(format!("{MSG_SEMANTIC_UNAVAILABLE}{}", redact(clean)));
             }
         }
     }
@@ -342,7 +339,8 @@ fn try_real_vector_ranking(
         max_candidates: MAX_CANDIDATES,
     };
     let handle = semantic::ensure_model(&opts).map_err(|e| e.message().to_string())?;
-    let candidates = semantic_candidates(graph, kw_ids, bfs_ids).map_err(|e| e.message().to_string())?;
+    let candidates =
+        semantic_candidates(graph, kw_ids, bfs_ids).map_err(|e| e.message().to_string())?;
     semantic::vector_rank(&handle, query, &candidates).map_err(|e| e.message().to_string())
 }
 
@@ -370,9 +368,7 @@ fn with_test_vector_ranking<R>(
     value: Option<Result<Vec<String>, String>>,
     f: impl FnOnce() -> R,
 ) -> R {
-    let _serial = TEST_VECTOR_LOCK
-        .lock()
-        .unwrap_or_else(|e| e.into_inner());
+    let _serial = TEST_VECTOR_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     set_test_vector_ranking(value);
     let out = f();
     set_test_vector_ranking(None);
@@ -560,7 +556,10 @@ mod tests {
                 ..SearchOptions::default()
             };
             let (hits, warnings) = hybrid_query_with_warnings(&g, "alpha", &opts).unwrap();
-            assert!(warnings.is_empty(), "no_semantic must not emit skip warnings");
+            assert!(
+                warnings.is_empty(),
+                "no_semantic must not emit skip warnings"
+            );
             let ids: Vec<String> = hits.iter().map(|h| h.id.clone()).collect();
             assert_eq!(ids, golden_041_ids());
         });
@@ -643,8 +642,8 @@ mod tests {
         let a = canonical_file_node_id("src/alpha.rs");
         let b = "code_symbol:src/alpha.rs::helper".to_string();
         let c = canonical_file_node_id("src/other.rs");
-        let cands = semantic_candidates(&g, &[c.clone(), a.clone()], &[b.clone(), a.clone()])
-            .unwrap();
+        let cands =
+            semantic_candidates(&g, &[c.clone(), a.clone()], &[b.clone(), a.clone()]).unwrap();
         let ids: Vec<_> = cands.iter().map(|(id, _)| id.clone()).collect();
         let mut expected = vec![a, b, c];
         expected.sort();

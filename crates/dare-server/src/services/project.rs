@@ -97,8 +97,7 @@ pub fn read_blueprint(ctx: &ServiceCtx) -> CoreResult<BlueprintDoc> {
     if meta.len() > BLUEPRINT_MAX_BYTES {
         return Err(CoreError::invalid_input("blueprint exceeds size limit"));
     }
-    let content =
-        std::fs::read_to_string(path).map_err(|e| CoreError::io(e.to_string()))?;
+    let content = std::fs::read_to_string(path).map_err(|e| CoreError::io(e.to_string()))?;
     let bytes = content.len();
     Ok(BlueprintDoc {
         path: BLUEPRINT_REL.to_string(),
@@ -216,8 +215,7 @@ fn search_dependency(
 }
 
 fn try_graph_locate(root: &ProjectRoot, query: &str) -> CoreResult<Vec<ContextHit>> {
-    let cfg = load_graph_config(root, None)
-        .map_err(|_| CoreError::internal(MSG_GRAPH_DISABLED))?;
+    let cfg = load_graph_config(root, None).map_err(|_| CoreError::internal(MSG_GRAPH_DISABLED))?;
     let g = open_graph(root, &cfg).map_err(|_| CoreError::internal(MSG_GRAPH_DISABLED))?;
     let opts = LocateOptions {
         query: query.to_string(),

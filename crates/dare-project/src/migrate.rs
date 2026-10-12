@@ -297,9 +297,8 @@ fn load_module_ids(project_root: &Path) -> CoreResult<Vec<String>> {
 
     if facts_path.is_file() {
         let text = fs::read_to_string(&facts_path).map_err(|e| CoreError::io(e.to_string()))?;
-        let lite: ReverseFactsLite = serde_json::from_str(&text).map_err(|e| {
-            CoreError::invalid_input(format!("invalid reverse-facts.json: {e}"))
-        })?;
+        let lite: ReverseFactsLite = serde_json::from_str(&text)
+            .map_err(|e| CoreError::invalid_input(format!("invalid reverse-facts.json: {e}")))?;
         for m in lite.modules {
             let id = m.id.trim();
             if !id.is_empty() {
@@ -392,12 +391,7 @@ fn render_migration_md(report: &MigrateReport) -> String {
 
     out.push_str("## Phases\n\n");
     for (i, phase) in report.phases.iter().enumerate() {
-        out.push_str(&format!(
-            "{}. **{}** — {}\n",
-            i + 1,
-            phase.id,
-            phase.title
-        ));
+        out.push_str(&format!("{}. **{}** — {}\n", i + 1, phase.id, phase.title));
         if !phase.modules.is_empty() {
             out.push_str(&format!("   - modules: {}\n", phase.modules.join(", ")));
         }
@@ -493,8 +487,12 @@ pub fn run_migrate(root: &Path, opts: &MigrateOptions) -> CoreResult<MigrateRepo
     let has_stack_conflicts = !conflicts.is_empty();
 
     let mut phases = build_phases(&module_ids, &from_stacks, &to_stack);
-    let mut blocking_gaps =
-        build_blocking_gaps(&comparison, has_project_dna, has_patterns, has_stack_conflicts);
+    let mut blocking_gaps = build_blocking_gaps(
+        &comparison,
+        has_project_dna,
+        has_patterns,
+        has_stack_conflicts,
+    );
     redact_phases(&mut phases);
     redact_gaps(&mut blocking_gaps);
 
@@ -603,8 +601,11 @@ mod tests {
 
     fn fixture_with_reverse(module_ids: &[&str]) -> tempfile::TempDir {
         let dir = tempfile::tempdir().unwrap();
-        fs::write(dir.path().join("Cargo.toml"), "[package]\nname=\"demo\"\nedition=\"2021\"\n")
-            .unwrap();
+        fs::write(
+            dir.path().join("Cargo.toml"),
+            "[package]\nname=\"demo\"\nedition=\"2021\"\n",
+        )
+        .unwrap();
         fs::create_dir_all(dir.path().join("DARE/REVERSE")).unwrap();
         fs::write(dir.path().join("DARE/IDEIA.md"), "# IDEIA\n\nlegacy\n").unwrap();
         let modules_json: Vec<String> = module_ids
@@ -678,23 +679,14 @@ mod tests {
 
     #[test]
     fn compare_families_same_cross_unknown() {
-        assert_eq!(
-            compare_migration(&["rust".into()], "rust"),
-            "same_family"
-        );
+        assert_eq!(compare_migration(&["rust".into()], "rust"), "same_family");
         assert_eq!(
             compare_migration(&["node".into(), "python".into()], "node"),
             "same_family"
         );
-        assert_eq!(
-            compare_migration(&["rust".into()], "node"),
-            "cross_stack"
-        );
+        assert_eq!(compare_migration(&["rust".into()], "node"), "cross_stack");
         assert_eq!(compare_migration(&[], "rust"), "unknown_origin");
-        assert_eq!(
-            target_family("node-nestjs"),
-            Some("node")
-        );
+        assert_eq!(target_family("node-nestjs"), Some("node"));
         assert_eq!(target_family("rust"), Some("rust"));
         assert_eq!(target_family("go-gin"), Some("go"));
         assert_eq!(target_family("rails"), Some("ruby"));
@@ -859,14 +851,13 @@ mod tests {
     #[test]
     fn run_migrate_missing_ideia() {
         let dir = tempfile::tempdir().unwrap();
-        fs::write(dir.path().join("Cargo.toml"), "[package]\nname=\"x\"\nedition=\"2021\"\n")
-            .unwrap();
-        fs::create_dir_all(dir.path().join("DARE/REVERSE")).unwrap();
         fs::write(
-            dir.path().join("DARE/REVERSE/module-a.md"),
-            "# a\n",
+            dir.path().join("Cargo.toml"),
+            "[package]\nname=\"x\"\nedition=\"2021\"\n",
         )
         .unwrap();
+        fs::create_dir_all(dir.path().join("DARE/REVERSE")).unwrap();
+        fs::write(dir.path().join("DARE/REVERSE/module-a.md"), "# a\n").unwrap();
         let err = run_migrate(
             dir.path(),
             &MigrateOptions {
@@ -887,8 +878,11 @@ mod tests {
     #[test]
     fn run_migrate_no_modules() {
         let dir = tempfile::tempdir().unwrap();
-        fs::write(dir.path().join("Cargo.toml"), "[package]\nname=\"x\"\nedition=\"2021\"\n")
-            .unwrap();
+        fs::write(
+            dir.path().join("Cargo.toml"),
+            "[package]\nname=\"x\"\nedition=\"2021\"\n",
+        )
+        .unwrap();
         fs::create_dir_all(dir.path().join("DARE")).unwrap();
         fs::write(dir.path().join("DARE/IDEIA.md"), "# IDEIA\n").unwrap();
         // empty reverse facts / no module-*.md

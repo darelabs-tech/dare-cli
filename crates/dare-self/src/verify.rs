@@ -3,9 +3,7 @@
 use std::path::Path;
 use std::time::Duration;
 
-use dare_core::{
-    CoreError, CoreResult, ProcessRunner, SafeCommand, SystemProcessRunner,
-};
+use dare_core::{CoreError, CoreResult, ProcessRunner, SafeCommand, SystemProcessRunner};
 use sha2::{Digest, Sha256};
 
 /// Frozen message when asset digest does not match `SHA256SUMS` (BLUEPRINT-053).
@@ -59,9 +57,8 @@ pub trait SignatureVerifier {
 
 /// Reject `.sig` files whose contents start with [`SIGNING_SKIPPED_PREFIX`].
 pub fn reject_if_signing_skipped(sig: &Path) -> CoreResult<()> {
-    let bytes = std::fs::read(sig).map_err(|e| {
-        CoreError::io(format!("read signature {}: {e}", sig.display()))
-    })?;
+    let bytes = std::fs::read(sig)
+        .map_err(|e| CoreError::io(format!("read signature {}: {e}", sig.display())))?;
     if bytes.starts_with(SIGNING_SKIPPED_PREFIX.as_bytes()) {
         return Err(CoreError::guard_fail(MSG_SIGNING_SKIPPED));
     }
@@ -306,9 +303,7 @@ mod tests {
         let sums = dir.path().join("SHA256SUMS");
         fs::write(&sums, b"deadbeef").unwrap();
 
-        let err = RejectSkippedVerifier
-            .verify_sums(&sums, &sig)
-            .unwrap_err();
+        let err = RejectSkippedVerifier.verify_sums(&sums, &sig).unwrap_err();
         assert_eq!(err.kind(), dare_core::ErrorKind::GuardFail);
         assert_eq!(err.message(), MSG_SIGNING_SKIPPED);
 

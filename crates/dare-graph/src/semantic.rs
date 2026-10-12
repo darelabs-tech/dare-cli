@@ -123,9 +123,7 @@ pub fn validate_model_id_segment(model_id: &str) -> CoreResult<()> {
         match c {
             Component::Normal(_) => {}
             Component::CurDir => {}
-            Component::ParentDir
-            | Component::RootDir
-            | Component::Prefix(_) => {
+            Component::ParentDir | Component::RootDir | Component::Prefix(_) => {
                 return Err(CoreError::invalid_input(
                     "model cache path escapes jail or contains invalid characters",
                 ));
@@ -213,7 +211,8 @@ pub fn model_files_present(cache_dir: &Path) -> bool {
 /// Doctor snapshot — works with or without feature `semantic`.
 pub fn semantic_doctor() -> SemanticDoctorReport {
     let cache_dir = cache_dir_for_doctor();
-    let model_present = Path::new(&cache_dir).is_dir() && model_files_present(Path::new(&cache_dir));
+    let model_present =
+        Path::new(&cache_dir).is_dir() && model_files_present(Path::new(&cache_dir));
     #[cfg_attr(feature = "semantic", allow(unused_mut))]
     let mut warnings = Vec::new();
     #[cfg(not(feature = "semantic"))]
@@ -383,9 +382,9 @@ pub fn vector_rank(
         .collect();
 
     let q_vecs = embed_texts(handle, &[q])?;
-    let q_vec = q_vecs.first().ok_or_else(|| {
-        CoreError::internal("embed_texts returned empty for query")
-    })?;
+    let q_vec = q_vecs
+        .first()
+        .ok_or_else(|| CoreError::internal("embed_texts returned empty for query"))?;
     if q_vec.len() != EMBED_DIM {
         return Err(CoreError::internal(format!(
             "embedding dim mismatch: got {}, expected {EMBED_DIM}",
@@ -465,10 +464,7 @@ mod tests {
         let home = Path::new("/tmp/fake-home");
         let dir = resolve_model_cache_dir(home, SEMANTIC_MODEL_ID).expect("ok");
         let s = dir.to_string_lossy().replace('\\', "/");
-        assert!(
-            s.ends_with(".dare/models/all-minilm-l6-v2"),
-            "got {s}"
-        );
+        assert!(s.ends_with(".dare/models/all-minilm-l6-v2"), "got {s}");
     }
 
     #[test]

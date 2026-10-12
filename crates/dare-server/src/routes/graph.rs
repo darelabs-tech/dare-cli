@@ -8,8 +8,8 @@ use serde::{Deserialize, Serialize};
 use crate::error::HttpError;
 use crate::routes::map_service_error;
 use crate::services::{
-    graph_locate as svc_locate, graph_map_requirement as svc_map,
-    graph_traverse as svc_traverse, locate_defaults, ServiceCtx,
+    graph_locate as svc_locate, graph_map_requirement as svc_map, graph_traverse as svc_traverse,
+    locate_defaults, ServiceCtx,
 };
 use crate::state::AppState;
 
@@ -74,8 +74,7 @@ pub async fn graph_traverse(
     let nodes = svc_traverse(
         &ctx,
         &body.seeds,
-        body.max_hops
-            .unwrap_or(dare_graph::DEFAULT_MAX_HOPS),
+        body.max_hops.unwrap_or(dare_graph::DEFAULT_MAX_HOPS),
         body.fanout.unwrap_or(dare_graph::DEFAULT_FANOUT),
     )
     .map_err(map_service_error)?;

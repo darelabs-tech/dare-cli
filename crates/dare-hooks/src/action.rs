@@ -80,10 +80,7 @@ mod tests {
 
         assert_eq!(action_argv(HookAction::DareValidate), &["validate"]);
         assert_eq!(action_argv(HookAction::DareReview), &["review"]);
-        assert_eq!(
-            action_argv(HookAction::GraphRegister),
-            &["graph", "ingest"]
-        );
+        assert_eq!(action_argv(HookAction::GraphRegister), &["graph", "ingest"]);
         assert_eq!(action_argv(HookAction::Lint), &["guard"]);
         assert_eq!(action_argv(HookAction::Test), &["info"]);
 

@@ -9,9 +9,6 @@ use dare_agent::{
     apply_fixed, failure_signature, resolve_driver, AgentRequest, AgentRunStatus, BudgetTracker,
     FixedDecision, WorktreeManager, MAX_AGENT_ATTEMPTS,
 };
-use dare_verify::{
-    apply_decay, msg_policy_unknown, validate_best_of, BestOfWorktreeManager, DecayAction,
-};
 use dare_contracts::{load_dag, load_runtime_state, save_runtime_state, DagDocument};
 use dare_core::{
     CancelFlag, CoreError, CoreResult, ProjectRoot, SafeRelativePath, SystemProcessRunner,
@@ -21,6 +18,9 @@ use dare_dag::{
     DEFAULT_DAG_REL, STATE_REL,
 };
 use dare_project::find_project_root;
+use dare_verify::{
+    apply_decay, msg_policy_unknown, validate_best_of, BestOfWorktreeManager, DecayAction,
+};
 use serde_json::{json, Value};
 
 use crate::commands::execute::{
@@ -283,12 +283,7 @@ fn run_agent_inner(dag: Option<PathBuf>, opts: AgentOpts) -> CoreResult<AgentOut
 
             if use_decay {
                 let sig = failure_signature("agent", &result.stderr);
-                let action = apply_decay(
-                    result.status,
-                    attempt,
-                    &recent_signatures,
-                    &sig,
-                );
+                let action = apply_decay(result.status, attempt, &recent_signatures, &sig);
                 if result.status == AgentRunStatus::Failure {
                     recent_signatures.push(sig);
                 }

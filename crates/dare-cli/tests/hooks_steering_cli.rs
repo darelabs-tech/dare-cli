@@ -77,14 +77,7 @@ fn validate_ok_json() {
     let dir_str = dir.path().to_str().expect("utf8 path");
 
     let assert = Command::new(cargo_bin("dare"))
-        .args([
-            "hooks",
-            "validate",
-            "--json",
-            "-d",
-            dir_str,
-            "--no-color",
-        ])
+        .args(["hooks", "validate", "--json", "-d", dir_str, "--no-color"])
         .assert()
         .success();
 
@@ -102,14 +95,7 @@ fn steering_list_json() {
     let dir_str = dir.path().to_str().expect("utf8 path");
 
     let assert = Command::new(cargo_bin("dare"))
-        .args([
-            "steering",
-            "list",
-            "--json",
-            "-d",
-            dir_str,
-            "--no-color",
-        ])
+        .args(["steering", "list", "--json", "-d", dir_str, "--no-color"])
         .assert()
         .success();
 
@@ -186,10 +172,7 @@ fn steering_show_blocks() {
         blocks.len() >= 2,
         "expected DNA + glob block, got {blocks:?}"
     );
-    let paths: Vec<&str> = blocks
-        .iter()
-        .filter_map(|b| b["path"].as_str())
-        .collect();
+    let paths: Vec<&str> = blocks.iter().filter_map(|b| b["path"].as_str()).collect();
     assert!(paths.contains(&"DARE/PROJECT-DNA.md"));
     assert!(paths.contains(&".dare/steering/x.md"));
 }

@@ -31,12 +31,13 @@ pub const ENV_MCP_HTTP_PORT: &str = "DARE_MCP_HTTP_PORT";
 /// Auth mirrors 051: loopback exempt unless `force_auth`; non-loopback / force
 /// requires Bearer. Unauthorized responses use Class A `{error,code}` JSON via
 /// [`crate::auth::auth_middleware`].
-pub fn create_mcp_http_router(
-    ctx: ServiceCtx,
-    token: Arc<str>,
-    force_auth: bool,
-) -> Router {
-    create_mcp_http_router_with_config(ctx, token, force_auth, StreamableHttpServerConfig::default())
+pub fn create_mcp_http_router(ctx: ServiceCtx, token: Arc<str>, force_auth: bool) -> Router {
+    create_mcp_http_router_with_config(
+        ctx,
+        token,
+        force_auth,
+        StreamableHttpServerConfig::default(),
+    )
 }
 
 fn create_mcp_http_router_with_config(

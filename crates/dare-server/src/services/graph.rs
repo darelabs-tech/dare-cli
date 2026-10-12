@@ -10,8 +10,7 @@ use crate::http_map::MSG_GRAPH_DISABLED;
 use crate::services::ServiceCtx;
 
 fn open_project_graph(root: &dare_core::ProjectRoot) -> CoreResult<GraphHandle> {
-    let cfg = load_graph_config(root, None)
-        .map_err(|_| CoreError::internal(MSG_GRAPH_DISABLED))?;
+    let cfg = load_graph_config(root, None).map_err(|_| CoreError::internal(MSG_GRAPH_DISABLED))?;
     open_graph(root, &cfg).map_err(|_| CoreError::internal(MSG_GRAPH_DISABLED))
 }
 
@@ -51,19 +50,12 @@ pub fn graph_traverse(
     bfs_expand(&g, seeds, max_hops, fanout)
 }
 
-pub fn graph_map_requirement(
-    ctx: &ServiceCtx,
-    opts: LocateOptions,
-) -> CoreResult<Vec<RankedHit>> {
+pub fn graph_map_requirement(ctx: &ServiceCtx, opts: LocateOptions) -> CoreResult<Vec<RankedHit>> {
     validate_locate_query(&opts)?;
     let g = open_project_graph(&ctx.root)?;
     let all = locate(&g, &opts)?;
     let req = NodeType::Requirement.as_str();
-    let filtered: Vec<RankedHit> = all
-        .iter()
-        .filter(|h| h.node_type == req)
-        .cloned()
-        .collect();
+    let filtered: Vec<RankedHit> = all.iter().filter(|h| h.node_type == req).cloned().collect();
     Ok(if filtered.is_empty() { all } else { filtered })
 }
 

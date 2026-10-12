@@ -45,12 +45,8 @@ async fn dashboard_html() -> Response {
             );
             (StatusCode::OK, headers, file.data.to_vec()).into_response()
         }
-        None => HttpError::new(
-            StatusCode::NOT_FOUND,
-            "dashboard not found",
-            "not_found",
-        )
-        .into_response(),
+        None => HttpError::new(StatusCode::NOT_FOUND, "dashboard not found", "not_found")
+            .into_response(),
     }
 }
 
@@ -69,19 +65,18 @@ async fn serve_asset(Path(path): Path<String>) -> Response {
             );
             (StatusCode::OK, headers, file.data.to_vec()).into_response()
         }
-        None => HttpError::new(StatusCode::NOT_FOUND, "asset not found", "not_found")
-            .into_response(),
+        None => {
+            HttpError::new(StatusCode::NOT_FOUND, "asset not found", "not_found").into_response()
+        }
     }
 }
 
-async fn api_telemetry(State(state): State<AppState>) -> Result<Json<dare_contracts::TelemetrySnapshot>, HttpError> {
-    build_telemetry_snapshot(state.root.as_ref()).map(Json).map_err(|e| {
-        HttpError::new(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            e.to_string(),
-            "internal",
-        )
-    })
+async fn api_telemetry(
+    State(state): State<AppState>,
+) -> Result<Json<dare_contracts::TelemetrySnapshot>, HttpError> {
+    build_telemetry_snapshot(state.root.as_ref())
+        .map(Json)
+        .map_err(|e| HttpError::new(StatusCode::INTERNAL_SERVER_ERROR, e.to_string(), "internal"))
 }
 
 fn validate_asset_path(path: &str) -> Result<(), HttpError> {
@@ -99,14 +94,8 @@ fn validate_asset_path(path: &str) -> Result<(), HttpError> {
             "path_escape",
         ));
     }
-    let ext = path
-        .rsplit_once('.')
-        .map(|(_, e)| e)
-        .unwrap_or("");
-    if !matches!(
-        ext,
-        "js" | "css" | "svg" | "png" | "ico" | "woff2" | "map"
-    ) {
+    let ext = path.rsplit_once('.').map(|(_, e)| e).unwrap_or("");
+    if !matches!(ext, "js" | "css" | "svg" | "png" | "ico" | "woff2" | "map") {
         return Err(HttpError::new(
             StatusCode::FORBIDDEN,
             "forbidden",

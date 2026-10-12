@@ -7,9 +7,7 @@ use globset::Glob;
 
 use crate::env_deny::is_env_excluded;
 use crate::frontmatter::{parse_steering_markdown, ParseOutcome, ParsedSteering};
-use crate::report::{
-    SteeringBlock, SteeringListItem, SteeringListReport, SteeringShowReport,
-};
+use crate::report::{SteeringBlock, SteeringListItem, SteeringListReport, SteeringShowReport};
 use crate::{
     MSG_ENV_EXCLUDED, MSG_PATH_ESCAPE, PATTERNS_REL, PROJECT_DNA_REL, STEERING_DIR_REL,
     STEERING_LIST_SCHEMA, STEERING_SHOW_SCHEMA,
@@ -51,10 +49,7 @@ pub fn show_steering(root: &ProjectRoot, target_rel: &str) -> CoreResult<Steerin
         .map_err(|_| CoreError::invalid_input(MSG_PATH_ESCAPE))?;
     let target = safe.as_str().to_string();
 
-    let basename = target
-        .rsplit('/')
-        .next()
-        .unwrap_or(target.as_str());
+    let basename = target.rsplit('/').next().unwrap_or(target.as_str());
     if is_env_excluded(basename) {
         return Err(CoreError::invalid_input(MSG_ENV_EXCLUDED));
     }
@@ -115,20 +110,8 @@ fn load_candidates(
     let mut out: Vec<Candidate> = Vec::new();
     let mut warnings: Vec<String> = Vec::new();
 
-    try_push_base(
-        root,
-        PROJECT_DNA_REL,
-        0,
-        include_body,
-        &mut out,
-    )?;
-    try_push_base(
-        root,
-        PATTERNS_REL,
-        1,
-        include_body,
-        &mut out,
-    )?;
+    try_push_base(root, PROJECT_DNA_REL, 0, include_body, &mut out)?;
+    try_push_base(root, PATTERNS_REL, 1, include_body, &mut out)?;
 
     let steering_rel = SafeRelativePath::new(STEERING_DIR_REL)
         .map_err(|_| CoreError::invalid_input(MSG_PATH_ESCAPE))?;
@@ -155,8 +138,8 @@ fn load_candidates(
                 continue;
             }
             let rel_path = format!("{STEERING_DIR_REL}/{name_str}").replace('\\', "/");
-            let text = fs::read_to_string(entry.path())
-                .map_err(|e| CoreError::io(e.to_string()))?;
+            let text =
+                fs::read_to_string(entry.path()).map_err(|e| CoreError::io(e.to_string()))?;
             match parse_steering_markdown(&text) {
                 ParseOutcome::Ok(parsed) => {
                     push_parsed(rel_path, parsed, include_body, &mut out);
@@ -178,15 +161,13 @@ fn try_push_base(
     include_body: bool,
     out: &mut Vec<Candidate>,
 ) -> CoreResult<()> {
-    let safe = SafeRelativePath::new(rel)
-        .map_err(|_| CoreError::invalid_input(MSG_PATH_ESCAPE))?;
+    let safe = SafeRelativePath::new(rel).map_err(|_| CoreError::invalid_input(MSG_PATH_ESCAPE))?;
     let abs = root.resolve(&safe)?;
     if !abs.as_path().is_file() {
         return Ok(());
     }
     let body = if include_body {
-        fs::read_to_string(abs.as_path().as_std_path())
-            .map_err(|e| CoreError::io(e.to_string()))?
+        fs::read_to_string(abs.as_path().as_std_path()).map_err(|e| CoreError::io(e.to_string()))?
     } else {
         String::new()
     };
