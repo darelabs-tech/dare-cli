@@ -1,0 +1,9 @@
+- Creating project demo-mcp...
+
+📦 Scaffolding mcp-python (DARE-shaped) in <case-root>/demo-mcp
+
+
+✓ Stack scaffold complete.
+
+✔ Project demo-mcp created.
+  Stack: mcp-python

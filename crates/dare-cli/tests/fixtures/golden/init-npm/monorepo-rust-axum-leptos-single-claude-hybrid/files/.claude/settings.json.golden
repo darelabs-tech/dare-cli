@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git:*)",
+      "Bash(cargo leptos build --release)",
+      "Bash(cargo test --workspace)",
+      "Bash(cargo clippy --all-features -- -D warnings)",
+      "Read(DARE/**)",
+      "Write(DARE/**)",
+      "Read(src/**)",
+      "Write(src/**)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"âœ… File saved. Remember to run Ralph Loop: cargo leptos build --release && cargo test --workspace && cargo clippy --all-features -- -D warnings\""
+          }
+        ]
+      }
+    ]
+  }
+}

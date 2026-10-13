@@ -1,0 +1,112 @@
+# DARE v3.1 — CI/CD Pipeline for Rails 8 stack
+# Runs on every push and pull_request
+# Validates: bundle audit + rubocop + rspec + dare:metrics (M-01 to M-04)
+
+name: DARE CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  audit:
+    name: Audit dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+      - name: bundle audit
+        run: |
+          gem install bundler-audit
+          bundle audit check --update
+
+  lint:
+    name: Lint (RuboCop)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+      - name: rubocop
+        run: bundle exec rubocop
+
+  test:
+    name: Test (Ruby ${{ matrix.ruby }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        ruby: ["3.3"]
+
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_USER:     postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB:       app_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    env:
+      RAILS_ENV:    test
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/app_test
+      REDIS_URL:    redis://localhost:6379/0
+      RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby ${{ matrix.ruby }}
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
+          bundler-cache: true
+
+      - name: Set up database
+        run: bundle exec rails db:create db:migrate RAILS_ENV=test
+
+      - name: Run RSpec
+        run: bundle exec rspec --format progress --format RspecJunitFormatter --out tmp/rspec.xml
+        continue-on-error: false
+
+      - name: Run DARE metrics validation
+        run: bundle exec rake dare:metrics
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rspec-results
+          path: tmp/rspec.xml
+
+      - name: Upload DARE metrics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dare-metrics
+          path: tmp/dare_metrics.json

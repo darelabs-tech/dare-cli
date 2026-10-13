@@ -1,0 +1,25 @@
+import { PrismaClient } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
+
+const prisma = new PrismaClient();
+
+async function main(): Promise<void> {
+  const cost = Number(process.env.BCRYPT_COST ?? 12);
+  await prisma.user.upsert({
+    where: { email: 'admin@{{projectName}}.local' },
+    update: {},
+    create: {
+      email: 'admin@{{projectName}}.local',
+      password: await bcrypt.hash('Admin0Pass', cost),
+      role: 'ADMIN',
+    },
+  });
+  console.log('[seed] admin user ready');
+}
+
+main()
+  .catch((err) => {
+    console.error(err);
+    process.exit(1);
+  })
+  .finally(() => prisma.$disconnect());

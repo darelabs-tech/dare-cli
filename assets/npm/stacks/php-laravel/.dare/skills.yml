@@ -1,0 +1,11 @@
+version: 1
+skills:
+  - id: skill-laravel-api
+    source: skill-laravel-api
+    description: Laravel 11 + Sanctum + Reverb + Pail + Layered Design
+  - id: dare-ax
+    source: dare-ax
+    description: Agent eXperience invariants (llms.txt, OpenAPI, --json, rate limit)
+  - id: dare-layered-design
+    source: dare-layered-design
+    description: Controller → Service → Repository → Model 4-layer architecture

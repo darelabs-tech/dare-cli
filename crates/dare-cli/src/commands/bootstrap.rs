@@ -1,14 +1,25 @@
-//! `dare bootstrap` — re-apply scaffold on existing greenfield project (microplano 047).
+//! `dare bootstrap` — re-run the stack scaffold on an existing project.
+//!
+//! Projects created by the npm-parity `dare init` (cycle 011, `structure` key
+//! in `dare.config.json`) follow npm `commands/bootstrap.ts`. Projects created
+//! by Rust 4.0 init (`stack` key) keep the microplano 047 skeleton re-apply.
 
 use std::path::PathBuf;
 
 use dare_core::fs::{atomic_write, read_to_string};
 use dare_core::{CoreError, CoreResult, ProjectRoot, SafeRelativePath};
+use dare_scaffold::project::bootstrap::{
+    bootstrap_backend, bootstrap_frontend, bootstrap_mcp, BootstrapCtx,
+};
+use dare_scaffold::project::console::{Console, StdConsole, Tone};
+use dare_scaffold::project::tools::SystemToolRunner;
+use dare_scaffold::project::writer::ProjectWriter;
+use dare_scaffold::project::{BackendStack, FrontendStack, McpLanguage, ToolchainMode};
 use dare_scaffold::{
     run_scaffold, ConflictPolicy, FrontendKind, ScaffoldRequest, Toolchain, Transport,
 };
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{json, Value};
 
 pub const BOOTSTRAP_REPORT_SCHEMA: u32 = 1;
 const CONFIG_REL: &str = "dare.config.json";
@@ -45,6 +56,8 @@ pub struct BootstrapCliOpts {
     pub toolchain: Option<String>,
     pub force: bool,
     pub check: bool,
+    pub json: bool,
+    pub color: bool,
 }
 
 fn parse_toolchain(input: &str) -> CoreResult<Toolchain> {
@@ -202,10 +215,181 @@ pub fn bootstrap_report_to_json(report: &BootstrapReport) -> CoreResult<String> 
         .map_err(|e| CoreError::io(format!("serialize bootstrap report: {e}")))
 }
 
+// ─── npm-parity path (`structure` in dare.config.json) ───────────────────────
+
+/// npm `detectConflicts` sentinels.
+const CONFLICT_SENTINELS: &[&str] = &[
+    "vendor",
+    "composer.lock",
+    "node_modules",
+    "package-lock.json",
+    "pnpm-lock.yaml",
+    "yarn.lock",
+    "Cargo.lock",
+    "target",
+];
+
+fn str_field<'a>(config: &'a Value, key: &str) -> Option<&'a str> {
+    config.get(key).and_then(Value::as_str)
+}
+
+fn parse_frontend_id(f: &str) -> CoreResult<FrontendStack> {
+    FrontendStack::parse(f)
+        .ok_or_else(|| CoreError::invalid_input(format!("Unknown frontend stack: {f}")))
+}
+
+/// Port of npm `bootstrap.ts` action body.
+pub fn run_npm_bootstrap(
+    root: &std::path::Path,
+    config: &Value,
+    toolchain_flag: Option<&str>,
+    force: bool,
+    check: bool,
+    console: &mut dyn Console,
+) -> CoreResult<Value> {
+    let mut toolchain = str_field(config, "toolchain")
+        .and_then(ToolchainMode::parse)
+        .unwrap_or(ToolchainMode::Auto);
+    if let Some(flag) = toolchain_flag {
+        toolchain = ToolchainMode::parse(flag).ok_or_else(|| {
+            CoreError::invalid_input(format!(
+                "❌ Invalid --toolchain \"{flag}\". Use: auto | native | docker."
+            ))
+        })?;
+    }
+    let project_name = str_field(config, "name")
+        .map(str::to_string)
+        .unwrap_or_else(|| {
+            root.file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_else(|| "project".into())
+        });
+    if !force {
+        let conflicts: Vec<&str> = CONFLICT_SENTINELS
+            .iter()
+            .copied()
+            .filter(|f| root.join(f).exists())
+            .collect();
+        if !conflicts.is_empty() {
+            let list: String = conflicts.iter().map(|f| format!("\n   - {f}")).collect();
+            return Err(CoreError::invalid_input(format!(
+                "❌ Refusing to run — found framework artifacts that the scaffold would overwrite:{list}\n\n  Use --force to run anyway (may overwrite existing files)."
+            )));
+        }
+    }
+    let structure = str_field(config, "structure").unwrap_or_default();
+    let backend = str_field(config, "backend");
+    let frontend = str_field(config, "frontend");
+    let mcp_language = str_field(config, "mcpLanguage");
+    let label = backend.or(frontend).or(mcp_language).unwrap_or("undefined");
+    let data = json!({
+        "schemaVersion": BOOTSTRAP_REPORT_SCHEMA,
+        "mode": "bootstrap",
+        "projectRoot": root.to_string_lossy().replace('\\', "/"),
+        "structure": structure,
+        "backend": backend,
+        "frontend": frontend,
+        "mcpLanguage": mcp_language,
+        "toolchain": toolchain.as_str(),
+        "check": check,
+    });
+    if check {
+        return Ok(data);
+    }
+    console.log(
+        Tone::BlueBold,
+        &format!("\n🚀 Running scaffold for {structure}/{label}\n"),
+    );
+
+    let mut writer = ProjectWriter::new();
+    let mut runner = SystemToolRunner;
+    let mut cx = BootstrapCtx {
+        writer: &mut writer,
+        runner: &mut runner,
+        console,
+        rails_offline: std::env::var("DARE_RAILS_OFFLINE").as_deref() == Ok("1"),
+    };
+    let result = match (structure, backend, frontend) {
+        ("mcp-server", _, _) => McpLanguage::parse(mcp_language.unwrap_or("node-ts"))
+            .ok_or_else(|| CoreError::invalid_input("Unknown MCP language"))
+            // npm bootstrap passes no transport → scaffolder default stdio.
+            .and_then(|lang| bootstrap_mcp(&mut cx, lang, root, &project_name, "stdio")),
+        ("frontend", _, Some(f)) => parse_frontend_id(f)
+            .and_then(|f| bootstrap_frontend(&mut cx, f, root, &project_name, toolchain, false)),
+        ("backend" | "monorepo" | "mvc", Some(b), _) => {
+            let run = |cx: &mut BootstrapCtx<'_>| -> CoreResult<()> {
+                let stack = BackendStack::parse(b).ok_or_else(|| {
+                    CoreError::invalid_input(format!("Unknown backend stack: {b}"))
+                })?;
+                let dir = if structure == "monorepo" {
+                    root.join("backend")
+                } else {
+                    root.to_path_buf()
+                };
+                cx.writer.ensure_dir(&dir)?;
+                bootstrap_backend(
+                    cx,
+                    stack,
+                    &dir,
+                    &project_name,
+                    toolchain,
+                    false,
+                    structure == "mvc",
+                )?;
+                if let (true, Some(f)) = (structure == "monorepo", frontend) {
+                    let fdir = root.join("frontend");
+                    cx.writer.ensure_dir(&fdir)?;
+                    bootstrap_frontend(
+                        cx,
+                        parse_frontend_id(f)?,
+                        &fdir,
+                        &project_name,
+                        toolchain,
+                        false,
+                    )?;
+                }
+                Ok(())
+            };
+            run(&mut cx)
+        }
+        _ => {
+            return Err(CoreError::invalid_input(
+                "❌ dare.config.json has no stack to bootstrap.",
+            ))
+        }
+    };
+    result
+        .map(|()| data)
+        .map_err(|e| CoreError::invalid_input(format!("❌ Bootstrap failed: {}", e.message())))
+}
+
 pub fn run_bootstrap_cmd(opts: BootstrapCliOpts) -> CoreResult<(String, Value)> {
     let start = opts
         .dir
         .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
+
+    let npm_config = std::fs::read_to_string(start.join(CONFIG_REL))
+        .ok()
+        .and_then(|raw| serde_json::from_str::<Value>(&raw).ok())
+        .filter(|c| c.get("structure").is_some());
+    if let Some(config) = npm_config {
+        let mut console = StdConsole::new(opts.color, opts.json);
+        let data = run_npm_bootstrap(
+            &start,
+            &config,
+            opts.toolchain.as_deref(),
+            opts.force,
+            opts.check,
+            &mut console,
+        )?;
+        let human = if opts.check {
+            "bootstrap --check: plan only (no writes)".to_string()
+        } else {
+            "\n✅ Bootstrap complete. Your DARE artifacts (.cursor/, DARE/, etc.) were preserved.\n"
+                .to_string()
+        };
+        return Ok((human, data));
+    }
 
     let toolchain_override = opts.toolchain.as_deref().map(parse_toolchain).transpose()?;
 
@@ -306,6 +490,29 @@ mod tests {
             !readme.contains("stale content"),
             "force should replace stale AX content"
         );
+    }
+
+    #[test]
+    fn npm_bootstrap_backend_and_conflicts() {
+        use dare_scaffold::project::console::MemoryConsole;
+        let dir = tempdir().expect("tempdir");
+        let config = serde_json::json!({
+            "name": "shop", "structure": "backend", "backend": "go-gin", "toolchain": "auto"
+        });
+        let mut c = MemoryConsole::default();
+        run_npm_bootstrap(dir.path(), &config, None, false, false, &mut c).expect("bootstrap");
+        assert!(dir.path().join("cmd/server/main.go").is_file());
+        assert!(c
+            .lines
+            .iter()
+            .any(|l| l.contains("Running scaffold for backend/go-gin")));
+
+        fs::create_dir_all(dir.path().join("vendor")).unwrap();
+        let err = run_npm_bootstrap(dir.path(), &config, None, false, false, &mut c).unwrap_err();
+        assert!(err.message().contains("   - vendor"), "{}", err.message());
+        let err =
+            run_npm_bootstrap(dir.path(), &config, Some("none"), true, false, &mut c).unwrap_err();
+        assert!(err.message().contains("Invalid --toolchain"));
     }
 
     #[test]

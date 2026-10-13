@@ -1,0 +1,6 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Importmap-based apps don't need a JS build step, so `bin/dev` just boots the
+# Rails server. Swap in foreman + Procfile.dev if you add a CSS/JS bundler.
+exec "./bin/rails", "server", *ARGV

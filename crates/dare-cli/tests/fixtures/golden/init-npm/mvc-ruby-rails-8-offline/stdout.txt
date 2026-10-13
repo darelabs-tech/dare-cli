@@ -1,0 +1,11 @@
+- Creating project demo-mvc...
+
+📦 Bootstrapping Rails 8 (full-stack) in <case-root>/demo-mvc
+
+⚠  --toolchain=native selected but `rails` is not on PATH — using DARE's offline Rails templates (less complete than `rails new`).
+   Install Ruby+Rails or Docker, or re-run with --toolchain docker, for a full app.
+
+✓ Stack scaffold complete.
+
+✔ Project demo-mvc created.
+  Stack: ruby-rails-8

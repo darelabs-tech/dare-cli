@@ -1,0 +1,15 @@
+<% content_for :title, "<%= app_name %>" %>
+
+<main class="dare-home">
+  <h1><%= app_name %></h1>
+  <p>
+    Rails 8 full-stack application scaffolded with the DARE method.
+    Controllers render server-side views; business logic stays in
+    <code>app/services/</code> and data access in <code>app/repositories/</code>.
+  </p>
+  <ul>
+    <li>Edit this page at <code>app/views/home/index.html.erb</code></li>
+    <li>API docs (rswag): <code>/api-docs</code></li>
+    <li>DARE metrics: <code>bundle exec rake dare:metrics</code></li>
+  </ul>
+</main>

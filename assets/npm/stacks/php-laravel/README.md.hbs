@@ -1,0 +1,36 @@
+# {{projectName}}
+
+DARE-shaped Laravel 11 API. Layered Design (Controller → Service → Repository → Model).
+
+## Setup
+
+```bash
+cp .env.example .env
+composer install
+php artisan key:generate
+docker compose up -d postgres
+php artisan migrate --seed
+php artisan l5-swagger:generate
+php artisan serve
+```
+
+## Endpoints
+
+- `POST /api/auth/login` — exchange email/password for Sanctum token
+- `GET /api/auth/me` — current user (Bearer)
+- `GET /api/users` — list users (paginated)
+- `POST /api/users` — create user (admin only)
+- `GET /openapi.json` — OpenAPI 3.x surface
+- `GET /api/documentation` — Swagger UI (l5-swagger)
+
+## Commands
+
+- `php artisan serve` — dev server (port 8000)
+- `php artisan pail` — tail logs
+- `pest` (or `php artisan test`) — run tests
+- `vendor/bin/phpstan analyse` — static analysis
+- `composer audit` — dependency audit
+
+## DARE Method
+
+See `.dare/skills.yml` for installed skills, `llms.txt` for agent context.

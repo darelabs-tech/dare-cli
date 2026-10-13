@@ -1,0 +1,39 @@
+{
+  "slug": "backend-rust-axum",
+  "description": "Backend only, rust-axum, non-interactive (ide=cursor, graphrag=sqlite, mcp=false).",
+  "mode": "cli",
+  "command": [
+    "dare",
+    "init",
+    "demo-api",
+    "--stack",
+    "rust-axum",
+    "--toolchain",
+    "native"
+  ],
+  "generator_config": {
+    "name": "demo-api",
+    "structure": "backend",
+    "backend": "rust-axum",
+    "ide": "cursor",
+    "graphrag": "sqlite",
+    "mcp": false,
+    "toolchain": "native",
+    "outputDir": "<case-root>/demo-api"
+  },
+  "toolchain": "native",
+  "env": {},
+  "cwd": "<case-root>",
+  "project_dir": "demo-api",
+  "covers": [],
+  "exit_code": 0,
+  "stored_files": [
+    ".cursor/rules/skill-rust-axum.mdc",
+    ".cursorrules",
+    ".gitignore",
+    "Cargo.toml",
+    "DARE/README.md",
+    "dare-graph.yml",
+    "dare.config.json"
+  ]
+}

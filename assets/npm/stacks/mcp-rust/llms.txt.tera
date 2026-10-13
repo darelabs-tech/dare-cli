@@ -1,0 +1,60 @@
+# {{ projectName }}
+
+DARE-shaped MCP server (Rust, rmcp SDK). Default transport: **{{ defaultTransport }}**. BETA.
+
+## Setup
+
+```bash
+cp .env.example .env
+cargo build
+cargo run
+```
+
+## Commands
+
+- `cargo run` — start server (transport via --transport or MCP_TRANSPORT env)
+- `cargo test` — tests
+- `cargo clippy -- -D warnings` — lint
+- `cargo audit` — RustSec advisory audit
+- `npx @modelcontextprotocol/inspector cargo run` — MCP Inspector
+
+## Tools (registered in src/server.rs)
+
+| Name | Input | Output | Description |
+|---|---|---|---|
+| `echo` | `text: String` | `String` | Returns input verbatim. Smoke test. |
+
+## Prompts
+
+| Name | Args | Description |
+|---|---|---|
+| `summarize` | `text` | Summarize the input text. Placeholder. |
+
+## Transports
+
+Choose with `--transport stdio|sse|http` or `MCP_TRANSPORT`:
+
+- `stdio` (default) — local agents. No port.
+- `sse` — SSE-over-HTTP on MCP_PORT (default 3001), served by axum.
+- `http` — Streamable HTTP on MCP_PORT, served by axum.
+
+## Architecture
+
+- `src/main.rs` — tokio entrypoint, parses args, dispatches transport.
+- `src/server.rs` — builds the rmcp service with tools + prompts.
+- `src/cli.rs` — clap arg parser + Transport enum + --list-tools.
+- `src/transports/{stdio,sse,http}.rs` — one runner per transport.
+- `src/tools/`, `src/prompts/` — pure functions, unit-tested.
+
+## CLI inventory
+
+`cargo run -- --json --list-tools` prints the tool registry as JSON (M-03).
+
+## Note on beta status
+
+`rmcp` is the official Rust MCP SDK but its API is pre-1.0. If a `cargo build`
+fails after a dependency update, pin `rmcp` to a known-good version in Cargo.toml.
+
+## DARE skills
+
+See `.dare/skills.yml`.

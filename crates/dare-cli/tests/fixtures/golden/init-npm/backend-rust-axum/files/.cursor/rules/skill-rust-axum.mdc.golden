@@ -1,0 +1,8 @@
+---
+description: Rust/Axum API development skill
+---
+# Rust/Axum Skill
+- Use Axum for HTTP routing
+- Use Tokio for async runtime
+- Use SQLx for database
+- Run clippy and cargo test

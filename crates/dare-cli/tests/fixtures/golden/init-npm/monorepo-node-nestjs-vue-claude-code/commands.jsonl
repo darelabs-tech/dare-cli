@@ -1,0 +1,2 @@
+{"cwd":"api-nest-validations/frontend","argv":["npx","-y","degit","vitejs/vite/packages/create-vite/template-vue-ts",".","--force"]}
+{"cwd":"api-nest-validations/frontend","argv":["npm","install"]}

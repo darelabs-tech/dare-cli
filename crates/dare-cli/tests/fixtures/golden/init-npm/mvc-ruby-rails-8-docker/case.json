@@ -1,0 +1,39 @@
+{
+  "slug": "mvc-ruby-rails-8-docker",
+  "description": "Rails full-stack MVC via the ruby:3.3 Docker plan (records docker argv; overlay on top).",
+  "mode": "cli",
+  "command": [
+    "dare",
+    "init",
+    "demo-mvc",
+    "--stack",
+    "ruby-rails-8",
+    "--fullstack",
+    "--toolchain",
+    "docker"
+  ],
+  "generator_config": {
+    "name": "demo-mvc",
+    "structure": "mvc",
+    "backend": "ruby-rails-8",
+    "ide": "cursor",
+    "graphrag": "sqlite",
+    "mcp": false,
+    "toolchain": "docker",
+    "outputDir": "<case-root>/demo-mvc"
+  },
+  "toolchain": "docker",
+  "env": {},
+  "cwd": "<case-root>",
+  "project_dir": "demo-mvc",
+  "covers": [],
+  "exit_code": 0,
+  "stored_files": [
+    ".cursor/rules/skill-ruby-rails-8.mdc",
+    ".cursorrules",
+    ".gitignore",
+    "DARE/README.md",
+    "dare-graph.yml",
+    "dare.config.json"
+  ]
+}

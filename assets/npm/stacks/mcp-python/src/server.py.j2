@@ -1,0 +1,28 @@
+"""FastMCP server — tools and prompts registered here."""
+from mcp.server.fastmcp import FastMCP
+
+from src.tools.echo import echo as echo_impl
+from src.prompts.summarize import summarize as summarize_impl
+
+
+mcp = FastMCP("{{ projectName }}")
+
+
+@mcp.tool()
+async def echo(text: str) -> str:
+    """Returns its input. Canonical smoke test for an MCP server.
+
+    Args:
+        text: Text to echo back (required, non-empty).
+    """
+    return await echo_impl(text)
+
+
+@mcp.prompt()
+def summarize(text: str) -> str:
+    """Summarize the given text in 1-2 sentences.
+
+    Args:
+        text: Text to summarize.
+    """
+    return summarize_impl(text)

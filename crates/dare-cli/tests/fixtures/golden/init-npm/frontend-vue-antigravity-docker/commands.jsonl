@@ -1,0 +1,2 @@
+{"cwd":"web-portal","argv":["docker","run","--rm","-v","<case-root>/web-portal:/app","-w","/app","--user","<uid>:<gid>","node:20-alpine","npx","-y","degit","vitejs/vite/packages/create-vite/template-vue-ts",".","--force"]}
+{"cwd":"web-portal","argv":["docker","run","--rm","-v","<case-root>/web-portal:/app","-w","/app","--user","<uid>:<gid>","node:20-alpine","npm","install"]}

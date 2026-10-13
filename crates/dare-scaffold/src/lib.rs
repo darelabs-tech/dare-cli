@@ -3,6 +3,7 @@
 mod apply;
 mod ax;
 mod plan;
+pub mod project;
 mod registry;
 mod render;
 mod trait_api;

@@ -1,0 +1,39 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "{{projectName}}",
+    "version": "0.1.0",
+    "description": "MCP server JSON-RPC surface. MCP itself is not a REST API; this document describes the HTTP/SSE transport envelope. Stdio transport is out of band."
+  },
+  "paths": {
+    "/mcp/v1/sse": {
+      "get": {
+        "summary": "MCP SSE transport — long-lived event stream",
+        "responses": {
+          "200": { "description": "text/event-stream with MCP JSON-RPC frames" }
+        }
+      }
+    },
+    "/mcp/v1/messages": {
+      "post": {
+        "summary": "MCP JSON-RPC message (HTTP transport)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "type": "object", "description": "JSON-RPC 2.0 request" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JSON-RPC 2.0 response",
+            "content": {
+              "application/json": { "schema": { "type": "object" } }
+            }
+          }
+        }
+      }
+    }
+  }
+}

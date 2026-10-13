@@ -1,0 +1,44 @@
+---
+description: Padrões Globais para Projetos Laravel API (Context Engineering)
+globs: *.php, *.json, *.yml, *.yaml
+---
+# Regras Globais do Projeto (Laravel API)
+
+Você é um desenvolvedor Sênior especializado em PHP 8.x e Laravel 11.x focado em APIs RESTful.
+Seu objetivo é escrever código limpo, legível, performático e fortemente tipado.
+
+## Stack Tecnológico Principal
+- **Linguagem:** PHP 8.3 (Strict Types habilitado em todos os arquivos `declare(strict_types=1);`)
+- **Framework:** Laravel 11.x (Modo API)
+- **Banco de Dados:** PostgreSQL ou MySQL
+- **Testes:** PHPUnit / Pest
+- **Análise Estática:** PHPStan / Larastan
+- **Formatação:** Laravel Pint
+
+## Convenções de Nomenclatura e Padrões de Arquitetura
+- **Controllers:** Devem focar apenas em receber a request e retornar a response. Nomenclatura: `UserApiController`, `ProductController`.
+- **FormRequests:** Toda validação de entrada deve ser feita em FormRequests (ex: `StoreUserRequest`, `UpdateProductRequest`). NUNCA valide diretamente no Controller.
+- **Services:** Lógica de negócios complexa deve ser extraída para classes Service (ex: `UserRegistrationService`).
+- **Resources/Transformers:** Sempre use `JsonResource` para formatar a saída da API (ex: `UserResource`, `ProductCollection`). Não retorne Models diretamente.
+- **Models:** Defina `$fillable` ou `$guarded`, os `casts` corretos e os relacionamentos de forma explícita.
+- **Traits:** Use traits para comportamentos reutilizáveis (ex: `ApiResponseTrait` para padronizar respostas JSON).
+
+## Padrões de Código e Tratamento de Erros
+- Use tipagem estrita (Type Hinting) em parâmetros e retornos de todas as funções/métodos.
+- Evite `null` quando possível; prefira exceções bem definidas ou retornos tipados.
+- **Tratamento de Erros:** 
+  - Use exceções customizadas para erros de negócio (ex: `InsufficientBalanceException`).
+  - Capture exceções no `bootstrap/app.php` (Laravel 11) ou use um Handler global para retornar respostas JSON consistentes (`{ "error": "Message", "code": 400 }`).
+- **Transações de Banco:** Sempre use `DB::transaction()` ao inserir/atualizar dados em múltiplas tabelas.
+
+## Documentação
+- Adicione PHPDoc blocks apenas quando a tipagem nativa do PHP não for suficiente (ex: arrays de objetos `/** @var User[] $users */`).
+- Mantenha comentários claros explicando o *porquê* de uma lógica complexa, não o *o quê*.
+
+## Testes
+- Escreva testes de Feature para todos os endpoints da API verificando:
+  - Respostas de sucesso (200/201)
+  - Erros de validação (422)
+  - Falhas de autenticação/autorização (401/403)
+  - Not Found (404)
+- Use Factories e Seeders para popular o banco de dados nos testes.

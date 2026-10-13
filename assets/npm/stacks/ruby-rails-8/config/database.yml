@@ -1,0 +1,23 @@
+# PostgreSQL — credentials come from the environment (see .env.example).
+# Rails evaluates this file as ERB at runtime; the ENV.fetch calls below are
+# resolved when the app boots, not when DARE scaffolds the project.
+default: &default
+  adapter: postgresql
+  encoding: unicode
+  host: <%= ENV.fetch("DATABASE_HOST", "localhost") %>
+  port: <%= ENV.fetch("DATABASE_PORT", 5432) %>
+  username: <%= ENV.fetch("DATABASE_USERNAME", "postgres") %>
+  password: <%= ENV.fetch("DATABASE_PASSWORD", "postgres") %>
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS", 5) %>
+
+development:
+  <<: *default
+  database: <%= app_database %>_development
+
+test:
+  <<: *default
+  database: <%= app_database %>_test
+
+production:
+  <<: *default
+  database: <%= ENV.fetch("DATABASE_NAME", "<%= app_database %>_production") %>

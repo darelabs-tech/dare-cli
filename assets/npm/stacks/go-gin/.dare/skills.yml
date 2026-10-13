@@ -1,0 +1,11 @@
+version: 1
+skills:
+  - id: skill-go-gin-api
+    source: skill-go-gin-api
+    description: Gin + sqlc + swag + pgx Layered Design
+  - id: dare-ax
+    source: dare-ax
+    description: Agent eXperience invariants (llms.txt, OpenAPI, --json, rate limit)
+  - id: dare-layered-design
+    source: dare-layered-design
+    description: Handler → Service → Repository → Model 4-layer architecture

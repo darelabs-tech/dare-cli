@@ -1,0 +1,68 @@
+"""CLI entrypoint — picks transport from --transport or MCP_TRANSPORT env."""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+from typing import Literal
+
+from src.server import mcp
+from src.transports import http as http_transport
+from src.transports import sse as sse_transport
+from src.transports import stdio as stdio_transport
+
+Transport = Literal["stdio", "sse", "http"]
+
+
+def parse_args(argv: list[str]) -> tuple[Transport, bool]:
+    env_default = os.environ.get("MCP_TRANSPORT", "{{ defaultTransport }}")
+    parser = argparse.ArgumentParser(description="DARE-shaped MCP server")
+    parser.add_argument(
+        "--transport",
+        choices=["stdio", "sse", "http"],
+        default=env_default,
+        help="Transport (default: %(default)s)",
+    )
+    parser.add_argument("--json", action="store_true", help="Emit JSON output (use with --list-tools)")
+    parser.add_argument("--list-tools", action="store_true", help="List registered tools as JSON and exit")
+    ns = parser.parse_args(argv)
+    return ns.transport, bool(ns.json and ns.list_tools)
+
+
+def list_tools_json() -> None:
+    # FastMCP keeps an in-memory registry; surface it as a stable JSON shape.
+    tools = [
+        {
+            "name": name,
+            "description": (t.description or "").strip(),
+            # FastMCP's Tool exposes the JSON schema as `parameters`.
+            "inputSchema": t.parameters,
+        }
+        for name, t in mcp._tool_manager._tools.items()  # type: ignore[attr-defined]
+    ]
+    sys.stdout.write(json.dumps({"tools": tools}, indent=2) + "\n")
+
+
+def main(argv: list[str] | None = None) -> None:
+    transport, want_list = parse_args(sys.argv[1:] if argv is None else argv)
+
+    if want_list:
+        list_tools_json()
+        return
+
+    port = int(os.environ.get("MCP_PORT", "3001"))
+    host = os.environ.get("MCP_HOST", "0.0.0.0")
+
+    if transport == "stdio":
+        stdio_transport.run(mcp)
+    elif transport == "sse":
+        sse_transport.run(mcp, host=host, port=port)
+    elif transport == "http":
+        http_transport.run(mcp, host=host, port=port)
+    else:  # pragma: no cover — argparse guarantees one of the above
+        raise SystemExit(f"invalid transport: {transport}")
+
+
+if __name__ == "__main__":
+    main()

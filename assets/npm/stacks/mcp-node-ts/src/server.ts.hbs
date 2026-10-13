@@ -1,0 +1,45 @@
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import {
+  CallToolRequestSchema,
+  GetPromptRequestSchema,
+  ListPromptsRequestSchema,
+  ListToolsRequestSchema,
+} from '@modelcontextprotocol/sdk/types.js';
+
+import { TOOLS, callTool } from './tools/index.js';
+import { PROMPTS, getPrompt } from './prompts/index.js';
+
+export function createServer(): Server {
+  const server = new Server(
+    {
+      name: '{{projectName}}',
+      version: '0.1.0',
+    },
+    {
+      capabilities: {
+        tools: {},
+        prompts: {},
+      },
+    },
+  );
+
+  server.setRequestHandler(ListToolsRequestSchema, async () => ({
+    tools: TOOLS,
+  }));
+
+  server.setRequestHandler(CallToolRequestSchema, async (req) => {
+    const { name, arguments: args } = req.params;
+    return callTool(name, args ?? {});
+  });
+
+  server.setRequestHandler(ListPromptsRequestSchema, async () => ({
+    prompts: PROMPTS,
+  }));
+
+  server.setRequestHandler(GetPromptRequestSchema, async (req) => {
+    const { name, arguments: args } = req.params;
+    return getPrompt(name, args ?? {});
+  });
+
+  return server;
+}

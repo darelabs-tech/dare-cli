@@ -1,0 +1,41 @@
+
+🚀 DARE Framework - Project Initialization
+
+- Creating project arsenal-web...
+
+📦 Scaffolding rust-axum (DARE-shaped) in <case-root>/arsenal-web/crates/ars-server
+
+
+📦 Bootstrapping Leptos CSR (WASM + trunk) in <case-root>/arsenal-web/crates/ars-web
+
+🔧 Using native cargo — toolchain=native
+  $ cargo fetch
+
+🦀 Creating unified Cargo workspace (rust-axum + rust-leptos-csr, multi)...
+
+  ✓ Cargo workspace root created
+    crates/ars-core/
+    crates/ars-server/
+    crates/ars-web/
+    crates/ars-cli/
+
+  ⚠  Cargo.lock gitignored — commit it for binary deployments.
+
+
+✓ Stack scaffold complete.
+
+✔ Project arsenal-web created successfully!
+
+📋 Next steps:
+
+  1. cd arsenal-web
+  2. dare design "Describe your project here"
+  3. dare blueprint
+  4. dare execute --parallel
+
+🦀 Rust workspace created!
+   crates/arsenal-web-core  |  crates/arsenal-web-server  |  crates/arsenal-web-web  |  crates/arsenal-web-cli
+   See .cargo/config.toml — do NOT add a global [build] target (breaks WASM + native crates).
+
+   Tip: /dare-rust-leptos for Leptos idioms · /dare-rust-workspace for workspace decisions.
+

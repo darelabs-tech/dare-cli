@@ -1,0 +1,41 @@
+{
+  "slug": "frontend-vue-antigravity-docker",
+  "description": "Frontend only, Vue at the root, Antigravity, toolchain=docker (records node:20-alpine argv).",
+  "mode": "interactive",
+  "command": [
+    "dare",
+    "init",
+    "web-portal"
+  ],
+  "answers": {
+    "structure": "frontend",
+    "frontend": "vue",
+    "ide": "antigravity",
+    "graphrag": "sqlite",
+    "mcp": true,
+    "toolchain": "docker"
+  },
+  "generator_config": {
+    "name": "web-portal",
+    "structure": "frontend",
+    "frontend": "vue",
+    "ide": "antigravity",
+    "graphrag": "sqlite",
+    "mcp": true,
+    "toolchain": "docker",
+    "outputDir": "<case-root>/web-portal"
+  },
+  "toolchain": "docker",
+  "env": {},
+  "cwd": "<case-root>",
+  "project_dir": "web-portal",
+  "covers": [],
+  "exit_code": 0,
+  "stored_files": [
+    ".antigravityrules",
+    ".gitignore",
+    "DARE/README.md",
+    "dare-graph.yml",
+    "dare.config.json"
+  ]
+}

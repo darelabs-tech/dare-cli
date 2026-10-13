@@ -1,0 +1,49 @@
+use leptos::prelude::*;
+use leptos_meta::*;
+use leptos_router::{components::Router, path};
+
+pub fn shell(options: LeptosOptions) -> impl IntoView {
+    view! {
+        <!DOCTYPE html>
+        <html lang="en">
+            <head>
+                <meta charset="UTF-8"/>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+                <AutoReload options=options.clone()/>
+                <HydrationScripts options=options.clone()/>
+                <MetaTags/>
+            </head>
+            <body>
+                <App/>
+            </body>
+        </html>
+    }
+}
+
+#[component]
+pub fn App() -> impl IntoView {
+    provide_meta_context();
+
+    view! {
+        <Title text="web"/>
+        <Router>
+            <main>
+                <Routes fallback=|| view! { <p>"Not found."</p> }>
+                    <Route path=path!("/") view=HomePage/>
+                </Routes>
+            </main>
+        </Router>
+    }
+}
+
+#[component]
+fn HomePage() -> impl IntoView {
+    let (count, set_count) = signal(0);
+
+    view! {
+        <h1>"web"</h1>
+        <button on:click=move |_| set_count.update(|n| *n += 1)>
+            "Count: " {count}
+        </button>
+    }
+}

@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git:*)",
+      "Bash(python -m py_compile main.py)",
+      "Bash(pytest)",
+      "Bash(ruff check .)",
+      "Read(DARE/**)",
+      "Write(DARE/**)",
+      "Read(src/**)",
+      "Write(src/**)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"âœ… File saved. Remember to run Ralph Loop: python -m py_compile main.py && pytest && ruff check .\""
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -119,44 +119,44 @@ enum Commands {
         #[arg(long)]
         strict_conflicts: bool,
     },
-    /// Greenfield init: scaffold + config + harnesses (microplano 047).
+    /// Initialize a new DARE project with interactive setup
     Init {
-        /// Project name (directory name under parent).
+        /// Project name.
         name: Option<String>,
-        /// Backend stack id (alias: rails → ruby-rails-8).
+        /// Backend stack id (skips the interactive prompt).
         #[arg(long)]
         stack: Option<String>,
-        /// MCP language alias (mutually exclusive with --stack).
+        /// With --stack ruby-rails-8|php-laravel: full-stack MVC (structure=mvc) instead of API-only.
+        #[arg(long, num_args = 0..=1, default_missing_value = "")]
+        fullstack: Option<String>,
+        /// MCP server language: node-ts | python | rust | go.
         #[arg(long)]
         mcp: Option<String>,
-        /// Fullstack frontend companion (react|vue; requires --stack).
-        #[arg(long)]
-        fullstack: Option<String>,
-        /// MCP transport (stdio|http|sse; MCP stacks only).
+        /// MCP transport: stdio | sse | http (default: stdio).
         #[arg(long)]
         transport: Option<String>,
-        /// Toolchain overlay (none|docker).
+        /// native | docker | auto (default: auto).
         #[arg(long)]
         toolchain: Option<String>,
-        /// Non-interactive mode (requires name + --stack or --mcp).
+        /// Fail instead of prompting; requires --stack or --mcp.
         #[arg(long)]
         non_interactive: bool,
-        /// Overwrite when target exists.
+        /// Reuse a non-empty target directory (skips the empty-dir guard).
         #[arg(long)]
         force: bool,
-        /// Plan only — zero writes.
+        /// Resolve answers and print the plan — zero writes.
         #[arg(long)]
         check: bool,
         /// Parent directory (default: cwd); target = {dir}/{name}.
         #[arg(long, short = 'd')]
         dir: Option<PathBuf>,
     },
-    /// Re-apply scaffold on existing greenfield project (microplano 047).
+    /// Run the official scaffold for the current project's stack (uses dare.config.json)
     Bootstrap {
-        /// Overwrite existing scaffold files (Replace policy).
+        /// Run even if framework artifacts already exist (may overwrite files).
         #[arg(long)]
         force: bool,
-        /// Toolchain overlay (none|docker).
+        /// Toolchain for this run: auto | native | docker (4.0 projects: none | docker).
         #[arg(long)]
         toolchain: Option<String>,
         /// Plan only — zero writes.
@@ -1564,29 +1564,39 @@ fn run(cli: Cli) -> Result<(String, serde_json::Value), CoreError> {
             force,
             check,
             dir,
-        }) => run_init_cmd(InitCliOpts {
-            name,
-            dir,
-            stack,
-            mcp,
-            fullstack,
-            transport,
-            toolchain,
-            non_interactive,
-            force,
-            check,
-        }),
+        }) => {
+            let ctx = ExecutionContext::from_cli(cli.json, cli.no_color);
+            run_init_cmd(InitCliOpts {
+                name,
+                dir,
+                stack,
+                mcp,
+                fullstack,
+                transport,
+                toolchain,
+                non_interactive,
+                force,
+                check,
+                json: cli.json,
+                color: ctx.color_enabled_for_stdout(),
+            })
+        }
         Some(Commands::Bootstrap {
             force,
             toolchain,
             check,
             dir,
-        }) => run_bootstrap_cmd(BootstrapCliOpts {
-            dir,
-            toolchain,
-            force,
-            check,
-        }),
+        }) => {
+            let ctx = ExecutionContext::from_cli(cli.json, cli.no_color);
+            run_bootstrap_cmd(BootstrapCliOpts {
+                dir,
+                toolchain,
+                force,
+                check,
+                json: cli.json,
+                color: ctx.color_enabled_for_stdout(),
+            })
+        }
         Some(Commands::Reverse {
             dir,
             check,

@@ -1,0 +1,38 @@
+{
+  "slug": "mvc-php-laravel",
+  "description": "Laravel full-stack MVC, non-interactive.",
+  "mode": "cli",
+  "command": [
+    "dare",
+    "init",
+    "demo-mvc",
+    "--stack",
+    "php-laravel",
+    "--fullstack",
+    "--toolchain",
+    "native"
+  ],
+  "generator_config": {
+    "name": "demo-mvc",
+    "structure": "mvc",
+    "backend": "php-laravel",
+    "ide": "cursor",
+    "graphrag": "sqlite",
+    "mcp": false,
+    "toolchain": "native",
+    "outputDir": "<case-root>/demo-mvc"
+  },
+  "toolchain": "native",
+  "env": {},
+  "cwd": "<case-root>",
+  "project_dir": "demo-mvc",
+  "covers": [],
+  "exit_code": 0,
+  "stored_files": [
+    ".cursorrules",
+    ".gitignore",
+    "DARE/README.md",
+    "dare-graph.yml",
+    "dare.config.json"
+  ]
+}

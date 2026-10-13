@@ -1,183 +1,115 @@
 # CLI init and bootstrap (`dare init` / `dare bootstrap`)
 
-> **DEC-048** · Microplano 047 · Source: `crates/dare-cli/src/commands/init.rs`, `bootstrap.rs` · Library: [`scaffold-contracts.md`](scaffold-contracts.md) (DEC-047)
+> **DEC-058** (supersedes DEC-048) · Cycle `rust-init-npm-parity-011` · Source:
+> `crates/dare-cli/src/commands/{init,init_prompts,bootstrap}.rs`,
+> `crates/dare-scaffold/src/project/` · Reference: npm `@dewtech/dare-cli@3.18.1`
 
-## Purpose
+## Contract
 
-Greenfield project creation and idempotent re-application of scaffold artefacts on an existing DARE project.
+`dare init` in Rust shows **the same menus** and generates **the same scaffold**
+as the npm `dare init` 3.18.1 for the same answers or flags. The only
+differences are the bug fixes B-01..B-10 below and the Rust-only additions.
 
-| Command | Role |
-|---------|------|
-| `dare init` | Create `{dir}/{name}`: stack scaffold + `dare.config.json` + **four** IDE harnesses (claude, cursor, codex, antigravity) |
-| `dare bootstrap` | Re-run scaffold from existing `dare.config.json`; **does not** reinstall harnesses |
+Parity is enforced by `crates/dare-cli/src/commands/init_npm_parity_tests.rs`
+against goldens recorded from the published npm package
+(`crates/dare-cli/tests/fixtures/golden/init-npm/`, 27 cases — see its README).
+Each case compares the question tree, resolved config, file tree (incl. empty
+dirs), every file hash, code-generated file contents, external commands and
+console output.
 
-## Commands / flags
+## Interactive flow
 
-### `dare init`
+Same questions, order, conditions, labels, values and defaults as npm
+`commands/init.ts`:
 
-```bash
-dare init [NAME]
-  [--stack <ID>] [--mcp <LANG>] [--fullstack <react|vue>]
-  [--transport <stdio|http|sse>] [--toolchain <none|docker>]
-  [--non-interactive] [--force] [--check]
-  [-d|--dir <PATH>]
-  [--json] [--no-color]
-```
+1. `Project name:` (only without a positional name; default `my-dare-project`)
+2. `Project structure:` — Monorepo / Backend only / Frontend only / MVC / MCP Server
+3. `MVC framework:` (mvc) — Rails 8 / Laravel
+4. `MCP server language:`, `Transport type:`, `MCP capabilities to include:` (mcp-server)
+5. `Backend stack:` (monorepo, backend) — 7 stacks
+6. `Frontend stack:` (monorepo, frontend) — React / Vue / Leptos SSR / Leptos CSR / None
+7. `Cargo workspace layout:` + `Short crate prefix` (monorepo rust-axum + Leptos)
+8. `Primary IDE / Agent:` — 6 options
+9. `GraphRAG backend:` — SQLite / JSON / Neo4j
+10. `Enable DARE MCP Server for context queries?` (default yes)
+11. `Toolchain for scaffolding …` — auto / native / docker (default auto)
 
-| Flag | Effect |
-|------|--------|
-| `NAME` | Project name (directory under parent); required in `--non-interactive` |
-| `--stack <ID>` | Backend stack id; alias `rails` → `ruby-rails-8` (mutually exclusive with `--mcp`) |
-| `--mcp <LANG>` | MCP language alias → canonical stack id (see table below) |
-| `--fullstack <react\|vue>` | Backend only; embeds companion under `frontend/` |
-| `--transport` | MCP stacks only (`stdio`, `http`, `sse`) |
-| `--toolchain` | `none` (default) or `docker` |
-| `--non-interactive` | Skip dialoguer prompts; requires `NAME` + (`--stack` or `--mcp`) |
-| `--force` | Overwrite when target directory or scaffold paths exist |
-| `--check` | Plan/report only — **zero writes** (no directory creation) |
-| `-d` / `--dir` | Parent directory (default: cwd); target = `{dir}/{NAME}` |
+Interactive mode needs a TTY; otherwise use the non-interactive flags.
 
-**Interactive mode:** when `--non-interactive` is omitted, missing flags are collected via `dialoguer`. Non-TTY stdin without `--non-interactive` → InvalidInput exit **4**: `interactive mode requires a TTY (use --non-interactive)`.
-
-#### `--mcp` language map (case-insensitive)
-
-| Input | Stack id |
-|-------|----------|
-| `ts`, `node`, `typescript`, `mcp-node-ts` | `mcp-node-ts` |
-| `python`, `py`, `mcp-python` | `mcp-python` |
-| `rust`, `mcp-rust` | `mcp-rust` |
-| `go`, `mcp-go` | `mcp-go` |
-| other | InvalidInput `unknown mcp language: {input}` |
-
-### `dare bootstrap`
+## Non-interactive flags (npm-identical)
 
 ```bash
-dare bootstrap [--force] [--toolchain <none|docker>] [--check] [-d|--dir <PATH>] [--json]
+dare init [NAME] [--stack <id>] [--fullstack] [--mcp <node-ts|python|rust|go>]
+          [--transport <stdio|sse|http>] [--toolchain <auto|native|docker>]
+          [--non-interactive]
 ```
 
-| Flag | Effect |
-|------|--------|
-| `--force` | Replace existing scaffold files (`ConflictPolicy` → Replace) |
-| `--toolchain` | Override config toolchain; persisted on disk when not `--check` |
-| `--check` | Plan only — zero writes |
-| `-d` / `--dir` | Project root (default: cwd) |
+- Triggered by `--non-interactive`, `--stack` or `--mcp`. Defaults: name
+  `my-dare-project`, `ide=cursor`, `graphrag=sqlite`, `mcp=false`, toolchain `auto`.
+- `--fullstack` (flag) only with `ruby-rails-8` / `php-laravel` → structure `mvc`.
+- Error texts match npm (`Error: unknown stack '…'. Valid: …`, etc.).
 
-## ConflictPolicy and SkipExisting
+Rust-only additions: `-d/--dir <parent>`, `--force` (reuse a non-empty target),
+`--check` (resolve + plan, zero writes), global `--json` / `--no-color`, the
+`rails` stack alias, the Rust 4.0 `--mcp` aliases (`ts`, `node`, `py`, …), and
+validation of `--transport` / `--toolchain` values (npm passes unknown values
+through).
 
-| Context | Policy | Behavior |
-|---------|--------|----------|
-| `dare init` (default) | `FailFast` | Existing planned path without `--force` → InvalidInput |
-| `dare init --force` | Replace | Backups + overwrite via scaffold journal |
-| `dare bootstrap` (default) | **`SkipExisting`** | Present files → `skipped`; missing → `created` |
-| `dare bootstrap --force` | Replace | Same as init force |
+**Breaking vs Rust 4.0:** `--fullstack react|vue` is rejected with a message
+pointing to the interactive Monorepo option; `--toolchain none` is gone
+(use `auto|native|docker`).
 
-Second bootstrap on an unchanged tree: `created=[]`, `skipped` non-empty (idempotent).
+## Layout
 
-## Fullstack `frontend/`
+| Structure | Backend | Frontend |
+|---|---|---|
+| backend / mvc / mcp-server | project root | — |
+| frontend | — | project root |
+| monorepo | `backend/` | `frontend/` |
+| monorepo rust-axum + Leptos | `crates/server` or `crates/<prefix>-server` | `crates/web` or `crates/<prefix>-web` (+ workspace root, `-core`/`-cli` in multi) |
 
-Requires `--stack` on a **backend** stack (not MCP). Templates from `assets/stacks/_frontend/{react,vue}/`:
+Scaffolds: registry templates from npm `templates/stacks/<id>/` (embedded in
+`assets/npm/`, synced with `scripts/sync-npm-templates.py`); Rails runs
+`rails new` (native / `ruby:3.3` Docker) + DARE overlay, or the offline
+templates; Vite runs `npx degit … template-<react|vue>-ts` + `npm install`
+(native / `node:20-alpine`); Leptos writes the crate and runs `cargo fetch`
+(native / `ghcr.io/dewtech-technologies/dare-rust-leptos:1`).
 
-| Path | Content |
-|------|---------|
-| `frontend/package.json` | name `{project_name}-web`, `private: true` |
-| `frontend/src/main.tsx` (react) / `frontend/src/main.ts` (vue) | stub entry |
-| `frontend/README.md` | companion line + stack id |
+Common files: `DARE/README.md`, `DARE/EXECUTION/`, `dare.config.json` (npm
+schema and key order; `version` = Rust binary version), `.gitignore` merge,
+`templates/` (6 method templates), `dare-graph.yml`, and IDE files **only for
+the chosen IDE**. No `Dockerfile` / `docker-compose.yml` at init — containers
+are produced in blueprint phase 1 (`/dare-docker`), as in npm.
 
-`dare.config.json` includes `"frontend": "react"` or `"vue"` when set.
+## Bug fixes vs npm 3.18.1
 
-## Harnesses ×4 (init only)
+| # | npm 3.18.1 | Rust |
+|---|---|---|
+| B-01 | `claude-hybrid` installs only Claude files | Claude **and** Cursor |
+| B-02 | MCP `.claude/settings.json` always uses python commands | MCP language's commands |
+| B-03 | Mojibake (`âœ…`, `â†’`, `â€”`) in generated text | UTF-8 (`✅`, `→`, `—`) |
+| B-04 | `hasCommand` misses `.cmd` shims on Windows → `auto` always uses Docker | PATH + PATHEXT lookup |
+| B-05 | Frontend `none` writes `skill-none.mdc` | not written |
+| B-06 | MCP rust/go next steps print npm commands | cargo / go commands |
+| B-07 | Multi-crate next steps show the name slug | show the crate prefix |
+| B-08 | Empty `.cargo/` inside Leptos monorepo members | not created |
+| B-09 | (Rust 4.0) failed `init --force` deleted the pre-existing dir | rollback removes only created paths |
+| B-10 | `Short crate prefix` default is always `app` with a positional name | initials of the project name |
 
-Always installed on successful init (order in report ASC):
+## `dare bootstrap`
 
-1. **antigravity** — `.antigravityrules`, workflows, commands
-2. **claude** — `CLAUDE.md`, `.claude/commands`
-3. **codex** — `AGENTS.md`, `.codex/skills`
-4. **cursor** — `.cursorrules`, `.cursor/commands`
+- Configs with `structure` (created by this init) follow npm `bootstrap.ts`:
+  refuses when `vendor`, `node_modules`, lockfiles, `Cargo.lock` or `target`
+  exist (unless `--force`), honors `--toolchain auto|native|docker`, re-runs the
+  backend / frontend / MCP bootstrap, never touches DARE artifacts.
+- Configs with `stack` (created by Rust 4.0) keep the microplano 047 skeleton
+  re-apply (`SkipExisting`, `--toolchain none|docker`).
+- `--check` reports the plan without writing.
 
-Bootstrap **never** re-runs harness install (scope minimal).
+## Reports (`--json`, schemaVersion 1)
 
-## Init pipeline (side effects, `!check`)
-
-1. `create_dir_all(target)`
-2. `run_scaffold` (`FailFast` or force)
-3. Atomic write `dare.config.json` (`schemaVersion` 1)
-4. Install four harnesses (`force` from init flags)
-5. `validate_stack_output` — must `ok`
-
-On failure after directory creation: scaffold rollback + `remove_dir_all(target)` best-effort.
-
-## Reports (schemaVersion 1, camelCase)
-
-### InitReport
-
-`schemaVersion`, `mode` (`"init"`), `projectRoot`, `projectName`, `stackId`, `frontend`, `toolchain`, `transport`, `created`, `replaced`, `skipped`, `harnessesInstalled`, `rolledBack`, `check`.
-
-Human line: `init: {projectName} stack={stackId} check={check}`.
-
-### BootstrapReport
-
-`schemaVersion`, `mode` (`"bootstrap"`), `projectRoot`, `stackId`, `toolchain`, `created`, `replaced`, `skipped`, `rolledBack`, `check`.
-
-Human line: `bootstrap: stack={stackId} check={check}`.
-
-## Exit codes (DEC-005)
-
-| Code | When |
-|------|------|
-| 0 | Ok (including `--check`) |
-| 1 | Internal / severe rollback failure |
-| 2 | Usage (e.g. `--stack` + `--mcp`, incomplete `--non-interactive`) |
-| 3 | NotFound (`dare.config.json` missing on bootstrap) |
-| 4 | InvalidInput (validation, path exists, TTY, unknown stack/frontend/mcp) |
-| 5 | Io |
-
-## Edge cases
-
-| Case | Result |
-|------|--------|
-| `--non-interactive` without name | Usage 2 |
-| `--non-interactive` without `--stack`/`--mcp` | Usage 2 |
-| `--stack` + `--mcp` | Usage 2 |
-| `--fullstack` without `--stack` | InvalidInput 4 |
-| `--fullstack` + MCP | InvalidInput 4 |
-| backend + `--transport` | InvalidInput 4 |
-| target exists, no `--force` | InvalidInput `target directory already exists: {name}` |
-| `init --check` | zero writes; `created=[]` |
-| bootstrap ×2 without `--force` | second run `created=[]` |
-| bootstrap `--force` | `replaced` non-empty; toolchain override persisted |
-
-## Examples
-
-```bash
-dare init demo-app --stack rust-axum --non-interactive --json
-dare init mcp-svc --mcp ts --transport stdio --non-interactive
-dare init shop --stack node-nestjs --fullstack react --non-interactive
-dare init demo-app --stack go-gin --check --non-interactive
-cd demo-app && dare bootstrap && dare bootstrap
-dare bootstrap --force --toolchain docker
-```
-
-## Diff vs TypeScript 3.18.1
-
-| Area | Class | Note |
-|------|-------|------|
-| inquirer → dialoguer | B | Stable flags; TTY gate |
-| Exit codes (DEC-005) | B | Rust table above |
-| Bootstrap SkipExisting | B/C | TS may differ on idempotent re-apply |
-| Init 4 harnesses always | B | vs detect-only legacy paths |
-| Paths `frontend/` | C | Frozen layout |
-| `--check` on init/bootstrap | C | Agent/CI extension |
-
-## Ralph (047 close)
-
-```bash
-cargo test -p dare-cli -p dare-scaffold
-cargo clippy -p dare-cli -p dare-scaffold --all-targets -- -D warnings
-cargo audit
-```
-
-## Related
-
-- **[DEC-048](../DECISION-LOG.md)** — init/bootstrap CLI contracts
-- **[DEC-047](../DECISION-LOG.md)** / [`scaffold-contracts.md`](scaffold-contracts.md) — `dare-scaffold` library
-- [`cli-output-and-errors.md`](cli-output-and-errors.md) — global JSON envelope and exit codes
+`init`: `mode`, `check`, `projectRoot`, `projectName`, `structure`, `backend`,
+`frontend`, `mcpLanguage`, `mcpTransport`, `ide`, `graphrag`, `mcp`,
+`toolchain`, `created` (relative paths). `bootstrap` (npm path): `mode`,
+`projectRoot`, `structure`, `backend`, `frontend`, `mcpLanguage`, `toolchain`,
+`check`. Under `--json`, live progress goes to stderr.

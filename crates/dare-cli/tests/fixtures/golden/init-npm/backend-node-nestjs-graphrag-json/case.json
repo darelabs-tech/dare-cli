@@ -1,0 +1,42 @@
+{
+  "slug": "backend-node-nestjs-graphrag-json",
+  "description": "Backend NestJS with GraphRAG json (otherwise like backend-node-nestjs).",
+  "mode": "interactive",
+  "command": [
+    "dare",
+    "init",
+    "demo-api"
+  ],
+  "answers": {
+    "structure": "backend",
+    "backend": "node-nestjs",
+    "ide": "cursor",
+    "graphrag": "json",
+    "mcp": false,
+    "toolchain": "native"
+  },
+  "generator_config": {
+    "name": "demo-api",
+    "structure": "backend",
+    "backend": "node-nestjs",
+    "ide": "cursor",
+    "graphrag": "json",
+    "mcp": false,
+    "toolchain": "native",
+    "outputDir": "<case-root>/demo-api"
+  },
+  "toolchain": "native",
+  "env": {},
+  "cwd": "<case-root>",
+  "project_dir": "demo-api",
+  "covers": [],
+  "exit_code": 0,
+  "stored_files": [
+    ".cursor/rules/skill-node-nestjs.mdc",
+    ".cursorrules",
+    ".gitignore",
+    "DARE/README.md",
+    "dare-graph.yml",
+    "dare.config.json"
+  ]
+}

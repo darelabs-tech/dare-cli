@@ -1,0 +1,56 @@
+# {{ projectName }}
+
+DARE-shaped MCP server (Python 3.11+). Default transport: **{{ defaultTransport }}**.
+
+## Setup
+
+```bash
+cp .env.example .env
+python -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+python -m src.cli
+```
+
+## Commands
+
+- `python -m src.cli` — start server (transport via --transport or MCP_TRANSPORT env)
+- `pytest` — pytest suite
+- `ruff check .` — lint
+- `pip-audit` — dependency audit
+- `npx @modelcontextprotocol/inspector python -m src.cli` — MCP Inspector
+
+## Tools (registered in src/server.py via FastMCP)
+
+| Name | Input | Output | Description |
+|---|---|---|---|
+| `echo` | `text: str` | `str` | Returns input verbatim. Smoke test. |
+
+## Prompts
+
+| Name | Args | Description |
+|---|---|---|
+| `summarize` | `text` | Summarize the input text. Placeholder. |
+
+## Transports
+
+Choose with `--transport stdio|sse|http` or `MCP_TRANSPORT`:
+
+- `stdio` (default) — local agents. No port.
+- `sse` — SSE-over-HTTP on `MCP_PORT` (default 3001).
+- `http` — Streamable HTTP on `MCP_PORT` (default 3001).
+
+## Architecture
+
+- `src/server.py` — FastMCP instance, tools and prompts registered with @mcp.tool() / @mcp.prompt().
+- `src/cli.py` — argparse entrypoint, transport dispatch.
+- `src/transports/` — wrappers around mcp.run() calls for the 3 transports.
+- `src/tools/`, `src/prompts/` — module per tool/prompt for organization.
+
+## CLI inventory
+
+`python -m src.cli --json --list-tools` returns the tool registry as JSON (M-03).
+
+## DARE skills
+
+See `.dare/skills.yml`.

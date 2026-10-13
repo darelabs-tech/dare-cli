@@ -1,0 +1,13 @@
+//! Smoke integration test. Exercises pure functions that don't need a DB.
+//!
+//! Full HTTP tests require a Postgres instance and live binding — keep those
+//! gated behind `#[ignore]` so `cargo test` stays fast in CI without infra.
+
+#[test]
+fn config_defaults_are_sane() {
+    std::env::set_var("DATABASE_URL", "postgres://user:pass@localhost:5432/x");
+    let cfg = {{ crateName }}::config::Config::from_env().expect("config");
+    assert_eq!(cfg.app_port, 8000);
+    assert!(cfg.rate_limit_per_sec > 0);
+    assert!(cfg.rate_limit_burst >= cfg.rate_limit_per_sec as u32);
+}

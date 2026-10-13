@@ -1,0 +1,50 @@
+# DARE v3.0 — Skills manifest
+# Lists which DARE skills are active in this project.
+# Used by: dare validate, rake dare:metrics, CI checks
+
+version: "3.0"
+stack: ruby-rails-8
+
+skills:
+  dare-ax:
+    version: "1.0"
+    enabled: true
+    artifacts:
+      - llms.txt
+      - public/openapi.json
+
+  dare-layered-design:
+    version: "1.0"
+    enabled: true
+    directories:
+      - app/handlers
+      - app/services
+      - app/repositories
+      - app/models
+      - app/presenters
+
+  dare-llm-integration:
+    version: "1.0"
+    enabled: true
+    directories:
+      - lib/llm/providers
+      - lib/llm/prompts
+      - lib/llm/validators
+      - lib/llm/cache
+      - lib/llm/rate_limit
+
+  dare-realtime:
+    version: "1.0"
+    enabled: true
+    directories:
+      - app/channels
+
+  dare-quality-telemetry:
+    version: "1.0"
+    enabled: true
+    rake_task: dare:metrics
+    metrics:
+      - M-01  # llms.txt exists
+      - M-02  # OpenAPI spec exists
+      - M-03  # CLI --json support
+      - M-04  # Rate limiting configured

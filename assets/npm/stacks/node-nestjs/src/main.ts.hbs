@@ -1,0 +1,44 @@
+import { NestFactory } from '@nestjs/core';
+import { ValidationPipe } from '@nestjs/common';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { Logger } from 'nestjs-pino';
+import { writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { AppModule } from './app.module.js';
+import { ProblemDetailsFilter } from './common/filters/problem-details.filter.js';
+
+async function bootstrap(): Promise<void> {
+  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  app.useLogger(app.get(Logger));
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
+  app.useGlobalFilters(new ProblemDetailsFilter());
+
+  const config = new DocumentBuilder()
+    .setTitle('{{projectName}}')
+    .setDescription('DARE-shaped NestJS API')
+    .setVersion('0.1.0')
+    .addBearerAuth()
+    .build();
+  const doc = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api', app, doc);
+
+  // Persist openapi.json so M-02 (machine-readable surface) is met without
+  // requiring the server to be running.
+  try {
+    writeFileSync(join(process.cwd(), 'openapi.json'), JSON.stringify(doc, null, 2));
+  } catch {
+    /* non-fatal */
+  }
+
+  const port = Number(process.env.PORT ?? 3000);
+  await app.listen(port);
+}
+
+void bootstrap();

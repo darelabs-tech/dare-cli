@@ -138,6 +138,25 @@ fn banner_colored() -> String {
     out
 }
 
+/// Banner + tagline shown before `dare init` prompts (npm prints its banner
+/// for `init`). Caller decides TTY / `DARE_NO_BANNER` eligibility.
+pub fn render_banner(no_color: bool) -> Option<String> {
+    if env_no_banner() {
+        return None;
+    }
+    let opts = WelcomeOptions {
+        no_color,
+        ..WelcomeOptions::default()
+    };
+    let mut out = if color_allowed(&opts) {
+        banner_colored()
+    } else {
+        BANNER_PLAIN.to_string()
+    };
+    out.push_str(TAGLINE);
+    Some(out)
+}
+
 /// Render welcome text (human). Never mentions nonexistent `dare new`.
 pub fn render_welcome(opts: &WelcomeOptions) -> String {
     let mut out = String::new();

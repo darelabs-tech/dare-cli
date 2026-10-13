@@ -1,175 +1,62 @@
-//! `dare init` — greenfield project bootstrap (microplano 047).
+//! `dare init` — npm-parity greenfield bootstrap (cycle rust-init-npm-parity-011).
+//!
+//! Same prompts, flags, layout and generated files as npm
+//! `@dewtech/dare-cli@3.18.1` `commands/init.ts`, minus the documented B-xx bug
+//! fixes. Rust-only additions: `--dir`, `--force`, `--check`, `--json`.
 
-use std::fs;
+use std::io::IsTerminal;
 use std::path::{Path, PathBuf};
 
-use dare_config::DEFAULT_CONFIG_REL;
-use dare_core::fs::atomic_write;
-use dare_core::{CoreError, CoreResult, ProjectRoot, SafeRelativePath};
-use dare_harness::{
-    ensure_workflows_dir, generate_agents_md, generate_antigravityrules, generate_claude_md,
-    generate_cursorrules, install_antigravity, install_codex_skills, install_commands,
-    install_cursor_commands, write_settings_json,
+use dare_core::{CoreError, CoreResult};
+use dare_scaffold::project::console::{Console, StdConsole, Tone};
+use dare_scaffold::project::generator::{generate_project_structure, GenerateEnv};
+use dare_scaffold::project::tools::{SystemToolRunner, ToolRunner};
+use dare_scaffold::project::{
+    npm_slug, resolve_project_output_dir, validate_npm_project_name, BackendStack, FrontendStack,
+    GraphragBackend, Ide, McpLanguage, McpTransport, ProjectConfig, RustWorkspaceLayout, Structure,
+    ToolchainMode,
 };
-use dare_scaffold::{
-    run_scaffold, validate_project_name, validate_stack_output, ConflictPolicy, FrontendKind,
-    ScaffoldApplyReport, ScaffoldRequest, Toolchain, Transport,
-};
-
-use crate::commands::init_prompts::prepare_init_flags;
-use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+
+use crate::commands::init_prompts::{
+    prompt_init_answers, DialoguerPrompter, InitAnswers, Prompter, MSG_INTERACTIVE_REQUIRES_TTY,
+};
 
 pub const INIT_REPORT_SCHEMA: u32 = 1;
 
-pub const MSG_STACK_AND_MCP: &str = "--stack and --mcp are mutually exclusive";
-pub const MSG_NEED_STACK_OR_MCP: &str = "--non-interactive requires --stack or --mcp";
-pub const MSG_FULLSTACK_NEEDS_STACK: &str = "--fullstack requires --stack";
-pub const MSG_TRANSPORT_BACKEND: &str = "transport is only valid for mcp stacks";
-pub const MSG_FULLSTACK_BACKEND_ONLY: &str = "fullstack is only valid with backend stacks";
-pub const MSG_TARGET_EXISTS: &str = "target directory already exists: {name}";
+pub const MSG_NEED_STACK_OR_MCP: &str =
+    "Error: --non-interactive requires --stack <id> or --mcp <language>";
+pub const MSG_LEGACY_FULLSTACK: &str = "Error: --fullstack no longer takes a frontend value (react|vue). It is a flag for MVC frameworks (ruby-rails-8, php-laravel). For backend + frontend, run `dare init` interactively and choose Monorepo.";
 
-pub const HARNESS_IDS: &[&str] = &["antigravity", "claude", "codex", "cursor"];
+const BACKEND_STACK_IDS: &[&str] = &[
+    "go-gin",
+    "go-stdlib",
+    "node-nestjs",
+    "php-laravel",
+    "python-fastapi",
+    "ruby-rails-8",
+    "rust-axum",
+];
 
-/// Raw CLI flags before resolution (testable without clap).
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct InitFlags {
-    pub name: Option<String>,
-    pub stack: Option<String>,
-    pub mcp: Option<String>,
-    pub fullstack: Option<String>,
-    pub transport: Option<String>,
-    pub toolchain: Option<String>,
-    pub non_interactive: bool,
-    pub force: bool,
-    pub check: bool,
-}
-
-/// Resolved init domain request (BLUEPRINT-047 §4).
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct InitRequest {
-    pub project_name: String,
-    pub stack_id: String,
-    pub toolchain: Toolchain,
-    pub transport: Option<Transport>,
-    pub frontend: Option<FrontendKind>,
-    pub force: bool,
-    pub check: bool,
-    pub non_interactive: bool,
-}
-
-/// Init execution report (schemaVersion 1, camelCase JSON).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct InitReport {
-    pub schema_version: u32,
-    pub mode: String,
-    pub project_root: String,
-    pub project_name: String,
-    pub stack_id: String,
-    pub frontend: Option<FrontendKind>,
-    pub toolchain: Toolchain,
-    pub transport: Option<Transport>,
-    pub created: Vec<String>,
-    pub replaced: Vec<String>,
-    pub skipped: Vec<String>,
-    pub harnesses_installed: Vec<String>,
-    pub rolled_back: bool,
-    pub check: bool,
-}
-
+/// CLI options (clap → domain).
+#[derive(Debug, Clone, Default)]
 pub struct InitCliOpts {
     pub name: Option<String>,
     pub dir: Option<PathBuf>,
     pub stack: Option<String>,
     pub mcp: Option<String>,
+    /// `Some("")` = bare `--fullstack`; `Some(v)` = legacy `--fullstack <v>`.
     pub fullstack: Option<String>,
     pub transport: Option<String>,
     pub toolchain: Option<String>,
     pub non_interactive: bool,
     pub force: bool,
     pub check: bool,
+    pub json: bool,
+    pub color: bool,
 }
 
-/// Resolve CLI flags into an [`InitRequest`] (pure — no filesystem).
-pub fn resolve_init_flags(flags: &InitFlags) -> CoreResult<InitRequest> {
-    if flags.stack.is_some() && flags.mcp.is_some() {
-        return Err(CoreError::usage(MSG_STACK_AND_MCP));
-    }
-
-    if flags.non_interactive {
-        if flags.name.is_none() {
-            return Err(CoreError::usage("--non-interactive requires project name"));
-        }
-        if flags.stack.is_none() && flags.mcp.is_none() {
-            return Err(CoreError::usage(MSG_NEED_STACK_OR_MCP));
-        }
-    }
-
-    if let Some(ref fullstack) = flags.fullstack {
-        match (&flags.stack, &flags.mcp) {
-            (None, Some(_)) => {
-                return Err(CoreError::invalid_input(MSG_FULLSTACK_BACKEND_ONLY));
-            }
-            (None, None) => {
-                return Err(CoreError::invalid_input(MSG_FULLSTACK_NEEDS_STACK));
-            }
-            (Some(stack), _) => {
-                let stack_id = resolve_stack_alias(stack);
-                if is_mcp_stack_id(&stack_id) {
-                    return Err(CoreError::invalid_input(MSG_FULLSTACK_BACKEND_ONLY));
-                }
-                let _ = fullstack;
-            }
-        }
-    }
-
-    let stack_id = match (&flags.stack, &flags.mcp) {
-        (Some(stack), None) => resolve_stack_alias(stack),
-        (None, Some(mcp)) => resolve_mcp_language(mcp)?,
-        (None, None) if flags.non_interactive => {
-            return Err(CoreError::usage(MSG_NEED_STACK_OR_MCP));
-        }
-        (None, None) => String::new(),
-        (Some(_), Some(_)) => unreachable!("stack/mcp mutual exclusion checked above"),
-    };
-
-    if flags.transport.is_some() && !is_mcp_stack_id(&stack_id) {
-        return Err(CoreError::invalid_input(MSG_TRANSPORT_BACKEND));
-    }
-
-    let frontend = flags
-        .fullstack
-        .as_deref()
-        .map(resolve_fullstack)
-        .transpose()?;
-
-    let transport = flags
-        .transport
-        .as_deref()
-        .map(parse_transport)
-        .transpose()?;
-
-    let toolchain = flags
-        .toolchain
-        .as_deref()
-        .map(parse_toolchain)
-        .transpose()?
-        .unwrap_or(Toolchain::None);
-
-    Ok(InitRequest {
-        project_name: flags.name.clone().unwrap_or_default(),
-        stack_id,
-        toolchain,
-        transport,
-        frontend,
-        force: flags.force,
-        check: flags.check,
-        non_interactive: flags.non_interactive,
-    })
-}
-
-/// Map `--stack` value; `rails` → `ruby-rails-8`.
+/// Map `--stack`; Rust keeps the `rails` alias.
 pub fn resolve_stack_alias(input: &str) -> String {
     if input == "rails" {
         "ruby-rails-8".to_string()
@@ -178,414 +65,480 @@ pub fn resolve_stack_alias(input: &str) -> String {
     }
 }
 
-/// Map `--mcp` language alias (case-insensitive) → canonical stack id.
-pub fn resolve_mcp_language(input: &str) -> CoreResult<String> {
+/// `--mcp` language: npm values plus Rust 4.0 aliases (case-insensitive).
+pub fn resolve_mcp_language(input: &str) -> CoreResult<McpLanguage> {
     match input.to_ascii_lowercase().as_str() {
-        "ts" | "node" | "typescript" | "mcp-node-ts" => Ok("mcp-node-ts".to_string()),
-        "python" | "py" | "mcp-python" => Ok("mcp-python".to_string()),
-        "rust" | "mcp-rust" => Ok("mcp-rust".to_string()),
-        "go" | "mcp-go" => Ok("mcp-go".to_string()),
-        other => Err(CoreError::invalid_input(format!(
-            "unknown mcp language: {other}"
+        "node-ts" | "ts" | "node" | "typescript" | "mcp-node-ts" => Ok(McpLanguage::NodeTs),
+        "python" | "py" | "mcp-python" => Ok(McpLanguage::Python),
+        "rust" | "mcp-rust" => Ok(McpLanguage::Rust),
+        "go" | "mcp-go" => Ok(McpLanguage::Go),
+        _ => Err(CoreError::usage(format!(
+            "Error: unknown mcp language '{input}'. Valid: go, node-ts, python, rust"
         ))),
     }
 }
 
-fn resolve_fullstack(input: &str) -> CoreResult<FrontendKind> {
-    match input.to_ascii_lowercase().as_str() {
-        "react" => Ok(FrontendKind::React),
-        "vue" => Ok(FrontendKind::Vue),
-        other => Err(CoreError::invalid_input(format!(
-            "unknown frontend: {other}"
+fn parse_toolchain(input: Option<&str>) -> CoreResult<ToolchainMode> {
+    match input {
+        None => Ok(ToolchainMode::Auto),
+        Some(v) => ToolchainMode::parse(v).ok_or_else(|| {
+            CoreError::usage(format!(
+                "Error: invalid --toolchain '{v}'. Valid: auto, docker, native"
+            ))
+        }),
+    }
+}
+
+fn parse_transport(input: Option<&str>) -> CoreResult<McpTransport> {
+    match input.unwrap_or("stdio") {
+        "stdio" => Ok(McpTransport::Stdio),
+        "sse" => Ok(McpTransport::Sse),
+        "http" | "http-stream" => Ok(McpTransport::HttpStream),
+        other => Err(CoreError::usage(format!(
+            "Error: invalid --transport '{other}'. Valid: http, sse, stdio"
         ))),
     }
 }
 
-fn parse_toolchain(input: &str) -> CoreResult<Toolchain> {
-    match input.to_ascii_lowercase().as_str() {
-        "none" => Ok(Toolchain::None),
-        "docker" => Ok(Toolchain::Docker),
-        other => Err(CoreError::invalid_input(format!(
-            "unknown toolchain: {other}"
-        ))),
-    }
+pub(crate) fn is_non_interactive(opts: &InitCliOpts) -> bool {
+    opts.non_interactive || opts.stack.is_some() || opts.mcp.is_some()
 }
 
-fn parse_transport(input: &str) -> CoreResult<Transport> {
-    match input.to_ascii_lowercase().as_str() {
-        "stdio" => Ok(Transport::Stdio),
-        "http" => Ok(Transport::Http),
-        "sse" => Ok(Transport::Sse),
-        other => Err(CoreError::invalid_input(format!(
-            "unknown transport: {other}"
-        ))),
+/// npm `runNonInteractive` → `ProjectConfig`.
+pub fn resolve_non_interactive(opts: &InitCliOpts, parent: &Path) -> CoreResult<ProjectConfig> {
+    if opts.fullstack.as_deref().is_some_and(|v| !v.is_empty()) {
+        return Err(CoreError::usage(MSG_LEGACY_FULLSTACK));
     }
+    let raw_name = opts.name.as_deref().unwrap_or("my-dare-project");
+    let name = validate_npm_project_name(raw_name)?;
+    let output_dir = resolve_project_output_dir(parent, &name)?;
+
+    if opts.stack.is_none() && opts.mcp.is_none() {
+        return Err(CoreError::usage(MSG_NEED_STACK_OR_MCP));
+    }
+    let backend = match opts.stack.as_deref().map(resolve_stack_alias) {
+        Some(id) => Some(BackendStack::parse(&id).ok_or_else(|| {
+            CoreError::usage(format!(
+                "Error: unknown stack '{id}'. Valid: {}",
+                BACKEND_STACK_IDS.join(", ")
+            ))
+        })?),
+        None => None,
+    };
+    let fullstack = opts.fullstack.is_some();
+    if fullstack && backend.is_some_and(|b| !b.is_mvc_capable()) {
+        return Err(CoreError::usage(
+            "Error: --fullstack only applies to MVC frameworks: php-laravel, ruby-rails-8",
+        ));
+    }
+    let mcp_language = opts.mcp.as_deref().map(resolve_mcp_language).transpose()?;
+    let toolchain = parse_toolchain(opts.toolchain.as_deref())?;
+
+    let base = ProjectConfig {
+        name,
+        structure: Structure::Backend,
+        backend: None,
+        frontend: None,
+        mcp_transport: None,
+        mcp_language: None,
+        mcp_features: None,
+        ide: Ide::Cursor,
+        graphrag: GraphragBackend::Sqlite,
+        mcp: false,
+        toolchain,
+        rust_workspace_layout: None,
+        crate_prefix: None,
+        output_dir,
+    };
+    if let Some(lang) = mcp_language {
+        return Ok(ProjectConfig {
+            structure: Structure::McpServer,
+            mcp_language: Some(lang),
+            mcp_transport: Some(parse_transport(opts.transport.as_deref())?),
+            ..base
+        });
+    }
+    Ok(ProjectConfig {
+        structure: if fullstack {
+            Structure::Mvc
+        } else {
+            Structure::Backend
+        },
+        backend,
+        ..base
+    })
 }
 
-pub(crate) fn is_mcp_stack_id(stack_id: &str) -> bool {
-    matches!(
-        stack_id,
-        "mcp-go" | "mcp-node-ts" | "mcp-python" | "mcp-rust"
+pub(crate) fn config_from_answers(a: InitAnswers, parent: &Path) -> CoreResult<ProjectConfig> {
+    let name = validate_npm_project_name(&a.name)?;
+    let output_dir = resolve_project_output_dir(parent, &name)?;
+    Ok(ProjectConfig {
+        name,
+        structure: a.structure,
+        backend: a.backend,
+        frontend: a.frontend,
+        mcp_transport: a.mcp_transport,
+        mcp_language: a.mcp_language,
+        mcp_features: a.mcp_features,
+        ide: a.ide,
+        graphrag: a.graphrag,
+        mcp: a.mcp,
+        toolchain: a.toolchain,
+        rust_workspace_layout: a.rust_workspace_layout,
+        crate_prefix: a.crate_prefix,
+        output_dir,
+    })
+}
+
+/// Interactive flow with an injectable prompter (tests drive it directly).
+pub fn resolve_interactive(
+    opts: &InitCliOpts,
+    parent: &Path,
+    prompter: &mut dyn Prompter,
+) -> CoreResult<ProjectConfig> {
+    if let Some(n) = opts.name.as_deref() {
+        // npm validates the positional name after the prompts; fail early instead
+        // of asking every question first.
+        validate_npm_project_name(n)?;
+    }
+    let answers = prompt_init_answers(prompter, opts.name.as_deref())?;
+    config_from_answers(answers, parent)
+}
+
+/// npm "Next steps" block (interactive path), with fixes B-06 / B-07.
+pub fn next_steps(cfg: &ProjectConfig) -> String {
+    let mut out = String::from("\n📋 Next steps:\n\n");
+    out.push_str(&format!("  1. cd {}\n", cfg.name));
+    if cfg.structure == Structure::McpServer {
+        let (install, dev, inspect) = match cfg.mcp_language.unwrap_or(McpLanguage::NodeTs) {
+            McpLanguage::Python => (
+                "pip install -r requirements.txt",
+                "python main.py",
+                "npx @modelcontextprotocol/inspector python main.py",
+            ),
+            McpLanguage::NodeTs => ("npm install", "npm run dev", "npm run inspect"),
+            // B-06: npm prints the Node commands for Rust and Go servers.
+            McpLanguage::Rust => (
+                "cargo build",
+                "cargo run",
+                "npx @modelcontextprotocol/inspector cargo run",
+            ),
+            McpLanguage::Go => (
+                "go mod tidy",
+                "go run ./cmd/server",
+                "npx @modelcontextprotocol/inspector go run ./cmd/server",
+            ),
+        };
+        out.push_str(&format!("  2. {install}\n"));
+        out.push_str("  3. dare design \"Describe what this MCP server exposes\"\n");
+        out.push_str("  4. dare blueprint\n");
+        out.push_str("  5. dare execute --parallel\n");
+        out.push_str(&format!("  6. {inspect}  ← test with MCP Inspector\n"));
+        out.push_str(&format!("  7. {dev}\n\n"));
+    } else {
+        out.push_str("  2. dare design \"Describe your project here\"\n");
+        out.push_str("  3. dare blueprint\n");
+        out.push_str("  4. dare execute --parallel\n\n");
+    }
+    if matches!(cfg.ide, Ide::ClaudeCode | Ide::ClaudeHybrid) {
+        out.push_str(
+            "  Claude Code tip: use /dare-design, /dare-blueprint, /dare-execute as slash commands\n\n",
+        );
+    }
+    let is_rust_monorepo = cfg.is_rust_monorepo();
+    if is_rust_monorepo {
+        out.push_str("🦀 Rust workspace created!\n");
+        match cfg.layout() {
+            RustWorkspaceLayout::Single => out.push_str(&format!(
+                "   crates/server/  (rust-axum)  +  crates/web/  ({})\n",
+                cfg.frontend.map_or("", |f| f.as_str())
+            )),
+            RustWorkspaceLayout::Multi => {
+                // B-07: npm shows the name slug instead of the chosen prefix.
+                let p = cfg
+                    .crate_prefix
+                    .as_deref()
+                    .map(str::trim)
+                    .filter(|s| !s.is_empty())
+                    .map(str::to_string)
+                    .unwrap_or_else(|| npm_slug(&cfg.name));
+                out.push_str(&format!(
+                    "   crates/{p}-core  |  crates/{p}-server  |  crates/{p}-web  |  crates/{p}-cli\n"
+                ));
+            }
+        }
+        out.push_str(
+            "   See .cargo/config.toml — do NOT add a global [build] target (breaks WASM + native crates).\n\n",
+        );
+        out.push_str(
+            "   Tip: /dare-rust-leptos for Leptos idioms · /dare-rust-workspace for workspace decisions.\n\n",
+        );
+    }
+    if cfg.frontend.is_some_and(FrontendStack::is_leptos) && !is_rust_monorepo {
+        out.push_str(
+            "  Leptos tip: use /dare-rust-leptos for component patterns, server functions and workspace config.\n\n",
+        );
+    }
+    out
+}
+
+fn report(cfg: &ProjectConfig, created: &[PathBuf], check: bool) -> Value {
+    let root = &cfg.output_dir;
+    let mut rel: Vec<String> = created
+        .iter()
+        .filter_map(|p| p.strip_prefix(root).ok())
+        .map(|p| p.to_string_lossy().replace('\\', "/"))
+        .collect();
+    rel.sort();
+    json!({
+        "schemaVersion": INIT_REPORT_SCHEMA,
+        "mode": "init",
+        "check": check,
+        "projectRoot": root.to_string_lossy().replace('\\', "/"),
+        "projectName": cfg.name,
+        "structure": cfg.structure.as_str(),
+        "backend": cfg.backend.map(|b| b.as_str()),
+        "frontend": cfg.frontend.map(|f| f.as_str()),
+        "mcpLanguage": cfg.mcp_language.map(|l| l.as_str()),
+        "mcpTransport": cfg.mcp_transport.map(|t| t.as_str()),
+        "ide": cfg.ide.as_str(),
+        "graphrag": cfg.graphrag.as_str(),
+        "mcp": cfg.mcp,
+        "toolchain": cfg.toolchain.as_str(),
+        "created": rel,
+    })
+}
+
+/// Header printed before the interactive prompts.
+pub(crate) const INIT_HEADER: &str = "\n🚀 DARE Framework - Project Initialization\n";
+
+/// Generate the project for a resolved config (real external tools).
+pub fn execute_init(
+    cfg: &ProjectConfig,
+    parent: &Path,
+    force: bool,
+    console: &mut dyn Console,
+) -> CoreResult<Vec<PathBuf>> {
+    let rails_offline = std::env::var("DARE_RAILS_OFFLINE").as_deref() == Ok("1");
+    execute_init_with(
+        cfg,
+        parent,
+        force,
+        rails_offline,
+        &mut SystemToolRunner,
+        console,
     )
 }
 
-fn init_target(parent: &Path, req: &InitRequest) -> PathBuf {
-    if req.project_name.is_empty() {
-        parent.to_path_buf()
+/// Same as [`execute_init`] with an injectable tool runner (parity tests).
+pub(crate) fn execute_init_with(
+    cfg: &ProjectConfig,
+    parent: &Path,
+    force: bool,
+    rails_offline: bool,
+    runner: &mut dyn ToolRunner,
+    console: &mut dyn Console,
+) -> CoreResult<Vec<PathBuf>> {
+    let mut env = GenerateEnv {
+        cwd: parent,
+        runner,
+        console,
+        rails_offline,
+        force,
+    };
+    generate_project_structure(cfg, &mut env).map(|r| r.created_files)
+}
+
+/// Spinner `succeed` text plus the trailing block (npm init.ts 270-318 / 421-422).
+pub(crate) fn success_message(cfg: &ProjectConfig, non_interactive: bool) -> String {
+    if non_interactive {
+        let stack = cfg.backend.map_or_else(
+            || format!("mcp-{}", cfg.mcp_language.map_or("node-ts", |l| l.as_str())),
+            |b| b.as_str().to_string(),
+        );
+        format!("✔ Project {} created.\n  Stack: {stack}", cfg.name)
     } else {
-        parent.join(&req.project_name)
+        format!(
+            "✔ Project {} created successfully!\n{}",
+            cfg.name,
+            next_steps(cfg).trim_end_matches('\n')
+        )
     }
 }
 
-fn target_exists_message(name: &str) -> String {
-    MSG_TARGET_EXISTS.replace("{name}", name)
+fn banner_allowed(opts: &InitCliOpts) -> bool {
+    !opts.json
+        && std::io::stdout().is_terminal()
+        && std::env::var("DARE_NO_BANNER").as_deref() != Ok("1")
 }
 
-fn harness_ids_sorted() -> Vec<String> {
-    HARNESS_IDS.iter().map(|s| (*s).to_string()).collect()
-}
+/// `dare init` entry point.
+pub fn run_init_cmd(opts: InitCliOpts) -> CoreResult<(String, Value)> {
+    let parent = match opts.dir.clone() {
+        Some(d) => d,
+        None => std::env::current_dir().map_err(|e| CoreError::io(e.to_string()))?,
+    };
+    // Live progress goes to stdout like npm; under --json it moves to stderr.
+    let mut console = StdConsole::new(opts.color, opts.json);
+    let non_interactive = is_non_interactive(&opts);
 
-fn check_init_report(target: &Path, req: &InitRequest) -> InitReport {
-    InitReport {
-        schema_version: INIT_REPORT_SCHEMA,
-        mode: "init".to_string(),
-        project_root: target.to_string_lossy().into_owned(),
-        project_name: req.project_name.clone(),
-        stack_id: req.stack_id.clone(),
-        frontend: req.frontend,
-        toolchain: req.toolchain,
-        transport: req.transport,
-        created: Vec::new(),
-        replaced: Vec::new(),
-        skipped: Vec::new(),
-        harnesses_installed: Vec::new(),
-        rolled_back: false,
-        check: true,
-    }
-}
-
-fn write_init_config(root: &ProjectRoot, req: &InitRequest) -> CoreResult<()> {
-    let mut cfg = json!({
-        "schemaVersion": 1,
-        "projectName": req.project_name,
-        "stack": req.stack_id,
-        "toolchain": req.toolchain,
-    });
-    if let Some(frontend) = req.frontend {
-        cfg["frontend"] = serde_json::to_value(frontend)
-            .map_err(|e| CoreError::io(format!("serialize frontend: {e}")))?;
-    }
-    if let Some(transport) = req.transport {
-        cfg["transport"] = serde_json::to_value(transport)
-            .map_err(|e| CoreError::io(format!("serialize transport: {e}")))?;
-    }
-    let body = serde_json::to_vec_pretty(&cfg)
-        .map_err(|e| CoreError::io(format!("serialize dare.config.json: {e}")))?;
-    let rel = SafeRelativePath::new(DEFAULT_CONFIG_REL)?;
-    atomic_write(root, &rel, &body)
-}
-
-fn install_all_harnesses(root: &ProjectRoot, force: bool) -> CoreResult<()> {
-    let _ = generate_claude_md(root, force);
-    install_commands(root, force)?;
-    let _ = write_settings_json(root, force);
-
-    let _ = generate_cursorrules(root, force);
-    install_cursor_commands(root, force)?;
-
-    generate_agents_md(root, force)?;
-    install_codex_skills(root, force)?;
-
-    generate_antigravityrules(root, force)?;
-    ensure_workflows_dir(root, force)?;
-    install_antigravity(root, force)?;
-    Ok(())
-}
-
-fn init_report_from_scaffold(
-    root: &ProjectRoot,
-    req: &InitRequest,
-    scaffold: ScaffoldApplyReport,
-) -> InitReport {
-    InitReport {
-        schema_version: INIT_REPORT_SCHEMA,
-        mode: "init".to_string(),
-        project_root: root.to_posix(),
-        project_name: req.project_name.clone(),
-        stack_id: req.stack_id.clone(),
-        frontend: req.frontend,
-        toolchain: req.toolchain,
-        transport: req.transport,
-        created: scaffold.created,
-        replaced: scaffold.replaced,
-        skipped: scaffold.skipped,
-        harnesses_installed: harness_ids_sorted(),
-        rolled_back: false,
-        check: false,
-    }
-}
-
-fn run_init_pipeline(root: &ProjectRoot, req: &InitRequest) -> CoreResult<InitReport> {
-    if !req.project_name.is_empty() {
-        validate_project_name(&req.project_name)?;
-    }
-
-    let scaffold_req = ScaffoldRequest {
-        project_name: req.project_name.clone(),
-        stack_id: req.stack_id.clone(),
-        toolchain: req.toolchain,
-        transport: req.transport,
-        frontend: req.frontend,
-        conflict_policy: ConflictPolicy::FailFast,
-        force: req.force,
-        check: false,
+    let cfg = if non_interactive {
+        resolve_non_interactive(&opts, &parent)?
+    } else {
+        if !std::io::stdin().is_terminal() {
+            return Err(CoreError::invalid_input(MSG_INTERACTIVE_REQUIRES_TTY));
+        }
+        if banner_allowed(&opts) {
+            if let Some(b) = crate::commands::welcome::render_banner(!opts.color) {
+                print!("{b}");
+            }
+        }
+        console.log(Tone::BlueBold, INIT_HEADER);
+        let mut prompter = DialoguerPrompter::default();
+        resolve_interactive(&opts, &parent, &mut prompter)?
     };
 
-    let scaffold_report = run_scaffold(root, &scaffold_req)?;
-    write_init_config(root, req)?;
-    install_all_harnesses(root, req.force)?;
-
-    let validation = validate_stack_output(root, &req.stack_id)?;
-    if !validation.ok {
-        return Err(CoreError::invalid_input(format!(
-            "stack validation failed: missing={:?} secret_hits={:?}",
-            validation.missing, validation.secret_hits
-        )));
+    if opts.check {
+        let data = report(&cfg, &[], true);
+        return Ok((
+            format!(
+                "init --check: {} ({}) → {}",
+                cfg.name,
+                cfg.structure,
+                cfg.output_dir.display()
+            ),
+            data,
+        ));
     }
 
-    Ok(init_report_from_scaffold(root, req, scaffold_report))
-}
-
-/// Greenfield init: scaffold + config + harnesses ×4 (BLUEPRINT-047 §5.1).
-pub fn run_init(parent: &Path, req: &InitRequest) -> CoreResult<InitReport> {
-    let target = init_target(parent, req);
-    let exists_label = if req.project_name.is_empty() {
-        target
-            .file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or("target")
-            .to_string()
-    } else {
-        req.project_name.clone()
-    };
-
-    if target.exists() && !req.force {
-        return Err(CoreError::invalid_input(target_exists_message(
-            &exists_label,
-        )));
-    }
-
-    if req.check {
-        return Ok(check_init_report(&target, req));
-    }
-
-    fs::create_dir_all(&target).map_err(|e| CoreError::io(e.to_string()))?;
-
-    match ProjectRoot::new(&target).and_then(|root| run_init_pipeline(&root, req)) {
-        Ok(report) => Ok(report),
+    console.log(Tone::Plain, &format!("- Creating project {}...", cfg.name));
+    match execute_init(&cfg, &parent, opts.force, &mut console) {
+        Ok(created) => Ok((
+            success_message(&cfg, non_interactive),
+            report(&cfg, &created, false),
+        )),
         Err(err) => {
-            let _ = fs::remove_dir_all(&target);
+            console.log(Tone::Red, "✖ Failed to create project");
             Err(err)
         }
     }
 }
 
-pub fn init_report_to_json(report: &InitReport) -> CoreResult<String> {
-    serde_json::to_string_pretty(report)
-        .map_err(|e| CoreError::io(format!("serialize init report: {e}")))
-}
-
-pub fn run_init_cmd(opts: InitCliOpts) -> CoreResult<(String, Value)> {
-    let parent = opts
-        .dir
-        .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
-
-    let flags = InitFlags {
-        name: opts.name,
-        stack: opts.stack,
-        mcp: opts.mcp,
-        fullstack: opts.fullstack,
-        transport: opts.transport,
-        toolchain: opts.toolchain,
-        non_interactive: opts.non_interactive,
-        force: opts.force,
-        check: opts.check,
-    };
-
-    let flags = prepare_init_flags(flags)?;
-    let req = resolve_init_flags(&flags)?;
-    let report = run_init(&parent, &req)?;
-    let json_str = init_report_to_json(&report)?;
-    let data: Value = serde_json::from_str(&json_str)
-        .map_err(|e| CoreError::io(format!("parse init report json: {e}")))?;
-    let human = format!(
-        "init: {} stack={} check={}",
-        report.project_name, report.stack_id, report.check
-    );
-    Ok((human, data))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::commands::init_prompts::tests::ScriptedPrompter;
     use dare_core::ErrorKind;
-    use std::fs;
+    use dare_scaffold::project::console::MemoryConsole;
 
-    fn base_flags() -> InitFlags {
-        InitFlags {
+    fn opts() -> InitCliOpts {
+        InitCliOpts {
             name: Some("demo-app".into()),
-            stack: Some("rust-axum".into()),
-            non_interactive: true,
-            ..InitFlags::default()
-        }
-    }
-
-    fn base_init_request() -> InitRequest {
-        InitRequest {
-            project_name: "demo-app".into(),
-            stack_id: "rust-axum".into(),
-            toolchain: Toolchain::None,
-            transport: None,
-            frontend: None,
-            force: false,
-            check: false,
-            non_interactive: true,
+            ..InitCliOpts::default()
         }
     }
 
     #[test]
-    fn init_noninteractive_rust_axum() {
-        let dir = tempfile::tempdir().expect("tempdir");
-        let report = run_init(dir.path(), &base_init_request()).expect("init");
-        assert!(!report.check);
-        assert!(!report.rolled_back);
+    fn non_interactive_backend_defaults_match_npm() {
+        let mut o = opts();
+        o.stack = Some("node-nestjs".into());
+        let cfg = resolve_non_interactive(&o, Path::new("/w")).expect("cfg");
+        assert_eq!(cfg.structure, Structure::Backend);
+        assert_eq!(cfg.ide, Ide::Cursor);
+        assert_eq!(cfg.graphrag, GraphragBackend::Sqlite);
+        assert!(!cfg.mcp);
+        assert_eq!(cfg.toolchain, ToolchainMode::Auto);
+    }
+
+    #[test]
+    fn non_interactive_errors_match_npm() {
+        let mut o = opts();
+        o.non_interactive = true;
         assert_eq!(
-            report.harnesses_installed,
-            vec![
-                "antigravity".to_string(),
-                "claude".to_string(),
-                "codex".to_string(),
-                "cursor".to_string(),
-            ]
+            resolve_non_interactive(&o, Path::new("/w"))
+                .unwrap_err()
+                .message(),
+            MSG_NEED_STACK_OR_MCP
         );
-        assert!(!report.created.is_empty());
-
-        let target = dir.path().join("demo-app");
-        let root = ProjectRoot::new(&target).expect("project root");
-        let validation = validate_stack_output(&root, "rust-axum").expect("validate");
-        assert!(validation.ok, "missing={:?}", validation.missing);
-
-        assert!(target.join("CLAUDE.md").exists());
-        assert!(target.join(".cursor").exists());
-        assert!(target.join("AGENTS.md").exists());
-        assert!(target.join(".antigravityrules").exists());
-
-        let cfg: Value =
-            serde_json::from_slice(&fs::read(target.join("dare.config.json")).expect("read cfg"))
-                .expect("parse cfg");
-        assert_eq!(cfg["schemaVersion"], 1);
-        assert_eq!(cfg["projectName"], "demo-app");
-        assert_eq!(cfg["stack"], "rust-axum");
-        assert_eq!(cfg["toolchain"], "none");
-        assert!(cfg.get("frontend").is_none());
-        assert!(cfg.get("transport").is_none());
-    }
-
-    #[test]
-    fn init_check_zero_write() {
-        let dir = tempfile::tempdir().expect("tempdir");
-        let mut req = base_init_request();
-        req.check = true;
-
-        let report = run_init(dir.path(), &req).expect("check init");
-        assert!(report.check);
-        assert!(report.created.is_empty());
-        assert!(report.replaced.is_empty());
-        assert!(report.skipped.is_empty());
-        assert!(report.harnesses_installed.is_empty());
-        assert!(!dir.path().join("demo-app").exists());
-    }
-
-    #[test]
-    fn init_target_exists_rejects() {
-        let dir = tempfile::tempdir().expect("tempdir");
-        fs::create_dir_all(dir.path().join("demo-app")).expect("seed target");
-
-        let err = run_init(dir.path(), &base_init_request()).unwrap_err();
-        assert_eq!(err.kind(), ErrorKind::InvalidInput);
-        assert_eq!(err.message(), target_exists_message("demo-app"));
-    }
-
-    #[test]
-    fn init_rollback_removes_target() {
-        let dir = tempfile::tempdir().expect("tempdir");
-        let mut req = base_init_request();
-        req.stack_id = "not-a-real-stack".into();
-
-        let err = run_init(dir.path(), &req).unwrap_err();
-        assert_eq!(err.kind(), ErrorKind::InvalidInput);
-        assert!(
-            !dir.path().join("demo-app").exists(),
-            "rollback must remove target after failure: {err}"
+        o.stack = Some("django".into());
+        assert_eq!(
+            resolve_non_interactive(&o, Path::new("/w")).unwrap_err().message(),
+            "Error: unknown stack 'django'. Valid: go-gin, go-stdlib, node-nestjs, php-laravel, python-fastapi, ruby-rails-8, rust-axum"
+        );
+        o.stack = Some("node-nestjs".into());
+        o.fullstack = Some(String::new());
+        assert_eq!(
+            resolve_non_interactive(&o, Path::new("/w"))
+                .unwrap_err()
+                .message(),
+            "Error: --fullstack only applies to MVC frameworks: php-laravel, ruby-rails-8"
+        );
+        o.fullstack = Some("vue".into());
+        assert_eq!(
+            resolve_non_interactive(&o, Path::new("/w"))
+                .unwrap_err()
+                .kind(),
+            ErrorKind::Usage
         );
     }
 
     #[test]
-    fn resolve_rails_alias() {
-        let mut flags = base_flags();
-        flags.stack = Some("rails".into());
-        let req = resolve_init_flags(&flags).expect("resolve");
-        assert_eq!(req.stack_id, "ruby-rails-8");
+    fn fullstack_and_mcp_paths() {
+        let mut o = opts();
+        o.stack = Some("rails".into());
+        o.fullstack = Some(String::new());
+        let cfg = resolve_non_interactive(&o, Path::new("/w")).expect("mvc");
+        assert_eq!(cfg.structure, Structure::Mvc);
+        assert_eq!(cfg.backend, Some(BackendStack::RubyRails8));
+
+        let mut o = opts();
+        o.mcp = Some("go".into());
+        o.transport = Some("http".into());
+        let cfg = resolve_non_interactive(&o, Path::new("/w")).expect("mcp");
+        assert_eq!(cfg.structure, Structure::McpServer);
+        assert_eq!(cfg.mcp_transport, Some(McpTransport::HttpStream));
+        assert_eq!(cfg.mcp_features, None);
     }
 
     #[test]
-    fn resolve_mcp_map() {
-        let cases = [
-            ("ts", "mcp-node-ts"),
-            ("TS", "mcp-node-ts"),
-            ("node", "mcp-node-ts"),
-            ("typescript", "mcp-node-ts"),
-            ("python", "mcp-python"),
-            ("py", "mcp-python"),
-            ("rust", "mcp-rust"),
-            ("go", "mcp-go"),
-        ];
-        for (input, want) in cases {
-            let mut flags = base_flags();
-            flags.stack = None;
-            flags.mcp = Some(input.into());
-            let req = resolve_init_flags(&flags).expect("resolve");
-            assert_eq!(req.stack_id, want, "input={input}");
-        }
-    }
-
-    #[test]
-    fn reject_stack_and_mcp() {
-        let mut flags = base_flags();
-        flags.mcp = Some("ts".into());
-        let err = resolve_init_flags(&flags).unwrap_err();
-        assert_eq!(err.kind(), ErrorKind::Usage);
-        assert_eq!(err.message(), MSG_STACK_AND_MCP);
-    }
-
-    #[test]
-    fn reject_noninteractive_incomplete() {
-        let flags = InitFlags {
-            name: Some("demo".into()),
-            non_interactive: true,
-            ..InitFlags::default()
+    fn reported_case_monorepo_nestjs_vue_generates_backend_dir() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let o = InitCliOpts {
+            name: Some("api-nest-validations".into()),
+            ..InitCliOpts::default()
         };
-        let err = resolve_init_flags(&flags).unwrap_err();
-        assert_eq!(err.kind(), ErrorKind::Usage);
-        assert_eq!(err.message(), MSG_NEED_STACK_OR_MCP);
+        let mut p = ScriptedPrompter::new(&[
+            "Monorepo",
+            "NestJS",
+            "Vue",
+            "Claude Code",
+            "SQLite",
+            "y",
+            "Auto",
+        ]);
+        let cfg = resolve_interactive(&o, tmp.path(), &mut p).expect("cfg");
+        // No npm on the test PATH is not guaranteed; use docker-less native with a
+        // missing tool to prove the layout up to the frontend step instead.
+        assert_eq!(cfg.output_dir, tmp.path().join("api-nest-validations"));
+        let steps = next_steps(&cfg);
+        assert!(steps.contains("Claude Code tip"));
+        let mut console = MemoryConsole::default();
+        let mut c2 = cfg.clone();
+        c2.frontend = Some(FrontendStack::None);
+        execute_init(&c2, tmp.path(), false, &mut console).expect("generate");
+        let root = tmp.path().join("api-nest-validations");
+        assert!(root.join("backend/src/app.module.ts").is_file());
+        assert!(!root.join("src").exists());
+        assert!(!root.join("frontend").exists());
     }
 
     #[test]
-    fn reject_transport_on_backend() {
-        let mut flags = base_flags();
-        flags.transport = Some("stdio".into());
-        let err = resolve_init_flags(&flags).unwrap_err();
-        assert_eq!(err.kind(), ErrorKind::InvalidInput);
-        assert_eq!(err.message(), MSG_TRANSPORT_BACKEND);
+    fn next_steps_mcp_rust_uses_cargo() {
+        let mut o = opts();
+        o.mcp = Some("rust".into());
+        let cfg = resolve_non_interactive(&o, Path::new("/w")).expect("cfg");
+        let s = next_steps(&cfg);
+        assert!(s.contains("  2. cargo build\n"));
+        assert!(!s.contains("npm install"));
     }
 }

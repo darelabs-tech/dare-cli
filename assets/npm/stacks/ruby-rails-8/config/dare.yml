@@ -1,0 +1,42 @@
+# DARE v3.0 — Application configuration
+# Access in Ruby via: Rails.configuration.dare
+# Environment-specific settings override the "default" block.
+
+default: &default
+  llm:
+    provider: dummy          # dummy | openai | local_llama
+    model: gpt-4o
+    # api_key: set via OPENAI_API_KEY env var (never in source)
+
+  rate_limit:
+    rpm: 100                 # requests per minute per IP (public API)
+    auth_rpm: 10             # requests per minute per IP (auth endpoints)
+    llm_rpm: 20              # requests per minute per user (LLM endpoints)
+
+  openapi:
+    enabled: true
+    output_path: public/openapi.json
+    title: "<%= app_name %> API"
+    version: "1.0.0"
+    description: "REST API built with Rails 8 + DARE v3.0"
+
+  realtime:
+    backend: action_cable    # action_cable | sucker_punch
+    redis_url: <%= ENV.fetch('REDIS_URL', 'redis://localhost:6379/0') %>
+
+development:
+  <<: *default
+  llm:
+    provider: dummy
+
+test:
+  <<: *default
+  llm:
+    provider: dummy
+  rate_limit:
+    rpm: 10000               # effectively unlimited in tests
+
+production:
+  <<: *default
+  llm:
+    provider: openai         # set OPENAI_API_KEY in environment

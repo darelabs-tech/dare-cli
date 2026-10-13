@@ -1,0 +1,40 @@
+{
+  "slug": "backend-ruby-rails-8-offline",
+  "description": "Rails API-only with DARE_RAILS_OFFLINE=1 (offline template runtime, no rails new).",
+  "mode": "cli",
+  "command": [
+    "dare",
+    "init",
+    "demo-api",
+    "--stack",
+    "ruby-rails-8",
+    "--toolchain",
+    "native"
+  ],
+  "generator_config": {
+    "name": "demo-api",
+    "structure": "backend",
+    "backend": "ruby-rails-8",
+    "ide": "cursor",
+    "graphrag": "sqlite",
+    "mcp": false,
+    "toolchain": "native",
+    "outputDir": "<case-root>/demo-api"
+  },
+  "toolchain": "native",
+  "env": {
+    "DARE_RAILS_OFFLINE": "1"
+  },
+  "cwd": "<case-root>",
+  "project_dir": "demo-api",
+  "covers": [],
+  "exit_code": 0,
+  "stored_files": [
+    ".cursor/rules/skill-ruby-rails-8.mdc",
+    ".cursorrules",
+    ".gitignore",
+    "DARE/README.md",
+    "dare-graph.yml",
+    "dare.config.json"
+  ]
+}

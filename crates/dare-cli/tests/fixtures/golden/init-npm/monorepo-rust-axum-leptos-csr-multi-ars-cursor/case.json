@@ -1,0 +1,66 @@
+{
+  "slug": "monorepo-rust-axum-leptos-csr-multi-ars-cursor",
+  "description": "Rust multi-crate workspace ars-{core,server,web,cli} (Leptos CSR), Cursor.",
+  "mode": "interactive",
+  "command": [
+    "dare",
+    "init",
+    "arsenal-web"
+  ],
+  "answers": {
+    "structure": "monorepo",
+    "backend": "rust-axum",
+    "frontend": "rust-leptos-csr",
+    "rustWorkspaceLayout": "multi",
+    "cratePrefix": "ars",
+    "ide": "cursor",
+    "graphrag": "sqlite",
+    "mcp": true,
+    "toolchain": "native"
+  },
+  "generator_config": {
+    "name": "arsenal-web",
+    "structure": "monorepo",
+    "backend": "rust-axum",
+    "frontend": "rust-leptos-csr",
+    "ide": "cursor",
+    "graphrag": "sqlite",
+    "mcp": true,
+    "toolchain": "native",
+    "rustWorkspaceLayout": "multi",
+    "cratePrefix": "ars",
+    "outputDir": "<case-root>/arsenal-web"
+  },
+  "toolchain": "native",
+  "env": {},
+  "cwd": "<case-root>",
+  "project_dir": "arsenal-web",
+  "covers": [
+    "B-03",
+    "B-07",
+    "B-08"
+  ],
+  "exit_code": 0,
+  "stored_files": [
+    ".cargo/config.toml",
+    ".cursor/rules/skill-rust-axum.mdc",
+    ".cursor/rules/skill-rust-leptos-csr.mdc",
+    ".cursorrules",
+    ".gitignore",
+    "Cargo.toml",
+    "DARE/README.md",
+    "crates/ars-cli/Cargo.toml",
+    "crates/ars-cli/src/main.rs",
+    "crates/ars-core/Cargo.toml",
+    "crates/ars-core/src/lib.rs",
+    "crates/ars-server/.gitignore",
+    "crates/ars-server/Cargo.toml",
+    "crates/ars-web/Cargo.toml",
+    "crates/ars-web/Trunk.toml",
+    "crates/ars-web/index.html",
+    "crates/ars-web/src/lib.rs",
+    "crates/ars-web/style/main.scss",
+    "dare-graph.yml",
+    "dare.config.json"
+  ]
+}

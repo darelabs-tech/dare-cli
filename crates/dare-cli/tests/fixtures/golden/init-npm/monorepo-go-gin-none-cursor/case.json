@@ -1,0 +1,48 @@
+{
+  "slug": "monorepo-go-gin-none-cursor",
+  "description": "Monorepo with frontend \"none\" (npm writes .cursor/rules/skill-none.mdc).",
+  "mode": "interactive",
+  "command": [
+    "dare",
+    "init",
+    "demo-api"
+  ],
+  "answers": {
+    "structure": "monorepo",
+    "backend": "go-gin",
+    "frontend": "none",
+    "ide": "cursor",
+    "graphrag": "sqlite",
+    "mcp": true,
+    "toolchain": "native"
+  },
+  "generator_config": {
+    "name": "demo-api",
+    "structure": "monorepo",
+    "backend": "go-gin",
+    "frontend": "none",
+    "ide": "cursor",
+    "graphrag": "sqlite",
+    "mcp": true,
+    "toolchain": "native",
+    "outputDir": "<case-root>/demo-api"
+  },
+  "toolchain": "native",
+  "env": {},
+  "cwd": "<case-root>",
+  "project_dir": "demo-api",
+  "covers": [
+    "B-05"
+  ],
+  "exit_code": 0,
+  "stored_files": [
+    ".cursor/rules/skill-go-gin.mdc",
+    ".cursor/rules/skill-none.mdc",
+    ".cursorrules",
+    ".gitignore",
+    "DARE/README.md",
+    "backend/.gitignore",
+    "dare-graph.yml",
+    "dare.config.json"
+  ]
+}

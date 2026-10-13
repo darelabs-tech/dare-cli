@@ -1,0 +1,299 @@
+[
+  {
+    "type": "input",
+    "name": "name",
+    "message": "Project name:",
+    "asked": false,
+    "default": "tools-server"
+  },
+  {
+    "type": "list",
+    "name": "structure",
+    "message": "Project structure:",
+    "asked": true,
+    "choices": [
+      {
+        "name": "🏗️  Monorepo (backend + frontend)",
+        "value": "monorepo"
+      },
+      {
+        "name": "⚙️  Backend only",
+        "value": "backend"
+      },
+      {
+        "name": "🎨 Frontend only",
+        "value": "frontend"
+      },
+      {
+        "name": "🏛️  MVC (Laravel ou Rails — full-stack)",
+        "value": "mvc"
+      },
+      {
+        "name": "🔌 MCP Server",
+        "value": "mcp-server"
+      }
+    ],
+    "answer": "mcp-server"
+  },
+  {
+    "type": "list",
+    "name": "backend",
+    "message": "MVC framework:",
+    "asked": false,
+    "choices": [
+      {
+        "name": "💎 Ruby / Rails 8",
+        "value": "ruby-rails-8"
+      },
+      {
+        "name": "🐘 PHP / Laravel",
+        "value": "php-laravel"
+      }
+    ]
+  },
+  {
+    "type": "list",
+    "name": "mcpLanguage",
+    "message": "MCP server language:",
+    "asked": true,
+    "choices": [
+      {
+        "name": "🟦 TypeScript / Node.js",
+        "value": "node-ts"
+      },
+      {
+        "name": "🐍 Python",
+        "value": "python"
+      },
+      {
+        "name": "🦀 Rust (beta)",
+        "value": "rust"
+      },
+      {
+        "name": "🐹 Go (beta)",
+        "value": "go"
+      }
+    ],
+    "answer": "rust"
+  },
+  {
+    "type": "list",
+    "name": "mcpTransport",
+    "message": "Transport type:",
+    "asked": true,
+    "choices": [
+      {
+        "name": "📟 stdio  (CLI tools, local agents)",
+        "value": "stdio"
+      },
+      {
+        "name": "🌐 SSE   (web integrations, remote)",
+        "value": "sse"
+      },
+      {
+        "name": "⚡ HTTP Stream (streamable HTTP)",
+        "value": "http-stream"
+      }
+    ],
+    "answer": "http-stream"
+  },
+  {
+    "type": "checkbox",
+    "name": "mcpFeatures",
+    "message": "MCP capabilities to include:",
+    "asked": true,
+    "choices": [
+      {
+        "name": "🔧 Tools     (callable functions)",
+        "value": "tools",
+        "checked": true
+      },
+      {
+        "name": "📦 Resources (readable context)",
+        "value": "resources",
+        "checked": false
+      },
+      {
+        "name": "💬 Prompts   (prompt templates)",
+        "value": "prompts",
+        "checked": false
+      }
+    ],
+    "answer": [
+      "tools",
+      "resources"
+    ]
+  },
+  {
+    "type": "list",
+    "name": "backend",
+    "message": "Backend stack:",
+    "asked": false,
+    "choices": [
+      {
+        "name": "💎 Ruby / Rails 8",
+        "value": "ruby-rails-8"
+      },
+      {
+        "name": "🦀 Rust / Axum",
+        "value": "rust-axum"
+      },
+      {
+        "name": "🟢 Node.js / NestJS",
+        "value": "node-nestjs"
+      },
+      {
+        "name": "🐍 Python / FastAPI",
+        "value": "python-fastapi"
+      },
+      {
+        "name": "🐘 PHP / Laravel",
+        "value": "php-laravel"
+      },
+      {
+        "name": "🐹 Go / Gin",
+        "value": "go-gin"
+      },
+      {
+        "name": "🐹 Go / stdlib (no framework, net/http only)",
+        "value": "go-stdlib"
+      }
+    ]
+  },
+  {
+    "type": "list",
+    "name": "frontend",
+    "message": "Frontend stack:",
+    "asked": false,
+    "choices": [
+      {
+        "name": "⚛️  React 18+ (TypeScript)",
+        "value": "react"
+      },
+      {
+        "name": "💚 Vue 3+ (Composition API)",
+        "value": "vue"
+      },
+      {
+        "name": "🦀 Leptos fullstack (Rust SSR + WASM)",
+        "value": "rust-leptos"
+      },
+      {
+        "name": "🦀 Leptos CSR-only (Rust WASM + trunk)",
+        "value": "rust-leptos-csr"
+      },
+      {
+        "name": "🚫 None (backend only)",
+        "value": "none"
+      }
+    ]
+  },
+  {
+    "type": "list",
+    "name": "rustWorkspaceLayout",
+    "message": "Cargo workspace layout:",
+    "asked": false,
+    "choices": [
+      {
+        "name": "📦 Single-crate  — crates/server + crates/web  (app simples, recomendado para começar)",
+        "value": "single"
+      },
+      {
+        "name": "🏗️  Multi-crate   — {name}-core / {name}-server / {name}-web / {name}-cli  (produto / plataforma)",
+        "value": "multi"
+      }
+    ],
+    "default": "single"
+  },
+  {
+    "type": "input",
+    "name": "cratePrefix",
+    "message": "Short crate prefix (e.g. \"ars\" → ars-core / ars-server / ars-web / ars-cli):",
+    "asked": false,
+    "default": "<function>"
+  },
+  {
+    "type": "list",
+    "name": "ide",
+    "message": "Primary IDE / Agent:",
+    "asked": true,
+    "choices": [
+      {
+        "name": "🤖 Claude Code",
+        "value": "claude-code"
+      },
+      {
+        "name": "⌨️  Codex CLI",
+        "value": "codex"
+      },
+      {
+        "name": "🖱️  Cursor",
+        "value": "cursor"
+      },
+      {
+        "name": "🚀 Antigravity",
+        "value": "antigravity"
+      },
+      {
+        "name": "🔀 Cursor + Antigravity (Hybrid)",
+        "value": "hybrid"
+      },
+      {
+        "name": "🔀 Claude Code + Cursor (Hybrid)",
+        "value": "claude-hybrid"
+      }
+    ],
+    "answer": "claude-code"
+  },
+  {
+    "type": "list",
+    "name": "graphrag",
+    "message": "GraphRAG backend:",
+    "asked": true,
+    "choices": [
+      {
+        "name": "🗄️  SQLite (recommended - fast, local)",
+        "value": "sqlite"
+      },
+      {
+        "name": "📄 JSON Graph (simple, no dependencies)",
+        "value": "json"
+      },
+      {
+        "name": "🐳 Neo4j Docker (enterprise)",
+        "value": "neo4j"
+      }
+    ],
+    "answer": "sqlite"
+  },
+  {
+    "type": "confirm",
+    "name": "mcp",
+    "message": "Enable DARE MCP Server for context queries?",
+    "asked": true,
+    "default": true,
+    "answer": true
+  },
+  {
+    "type": "list",
+    "name": "toolchain",
+    "message": "Toolchain for scaffolding (composer / npm / cargo / python / go):",
+    "asked": true,
+    "choices": [
+      {
+        "name": "🤖 Auto — use native if on PATH, else Docker (recommended)",
+        "value": "auto"
+      },
+      {
+        "name": "🔧 Native only — require the CLI on PATH (faster, no Docker pulls)",
+        "value": "native"
+      },
+      {
+        "name": "🐳 Docker only — always use the official image (hermetic, no host install)",
+        "value": "docker"
+      }
+    ],
+    "default": "auto",
+    "answer": "native"
+  }
+]

@@ -1,0 +1,17 @@
+---
+description: Go API development with stdlib only (no framework)
+---
+# Go stdlib Skill (net/http only)
+- Use `net/http` from stdlib — NO framework (no Gin, Echo, Chi, Fiber). Adding one defeats the purpose of this stack.
+- Routing: `http.NewServeMux()` with the Go 1.22+ pattern syntax: `mux.HandleFunc("GET /api/v1/users/{id}", h)`, `mux.HandleFunc("POST /api/v1/users", h)`. Use `r.PathValue("id")` to extract path params.
+- Project layout: `cmd/api/main.go` (entrypoint), `internal/handlers/`, `internal/middleware/`, `internal/services/`, `internal/repository/`.
+- Middleware = function wrapping http.Handler. Compose with `middleware.Recover(middleware.Logger(mux))` style — no framework chain.
+- JSON: `json.NewDecoder(r.Body).Decode(&dto)` for input, `json.NewEncoder(w).Encode(obj)` for output. Always set `Content-Type: application/json` and the status code explicitly.
+- Validation: prefer `github.com/go-playground/validator/v10` for struct tags (lightweight, no framework lock-in). For trivial cases, manual validation in the handler is fine.
+- Logging: `log/slog` from stdlib. `slog.Info("...", "key", val)` style. Configure JSON handler in main.
+- Context propagation: `r.Context()` flows through every layer. NEVER use context.Background() inside handlers.
+- For SQL: prefer `database/sql` + `github.com/jmoiron/sqlx` or `github.com/jackc/pgx/v5`. Parametrize ALL queries.
+- Errors: `fmt.Errorf("doing X: %w", err)`. Map domain errors to HTTP status in the handler layer, not deeper.
+- Tests: `net/http/httptest` + table-driven. `httptest.NewRequest` + `httptest.NewRecorder`. Test each handler in isolation.
+- Ralph Loop: `go build ./...`, `go test ./...`, `go vet ./...`.
+- Avoid: middleware libraries that pull in heavyweight deps; ORM (use sqlx); reflection-based DI (wire by hand in main).

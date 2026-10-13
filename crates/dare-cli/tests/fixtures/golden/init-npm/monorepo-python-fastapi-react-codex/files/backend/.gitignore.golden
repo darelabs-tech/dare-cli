@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+.env
+.env.local
+.pytest_cache/
+.ruff_cache/
+.coverage
+dist/
+*.egg-info/
+.DS_Store

@@ -77,7 +77,12 @@ fn interrupted_execution_resumes_and_exports_safe_diagnostics() {
     let out = tempfile::tempdir().unwrap();
     let exported = run(
         root,
-        &["--json", "support", "--out-dir", out.path().to_str().unwrap()],
+        &[
+            "--json",
+            "support",
+            "--out-dir",
+            out.path().to_str().unwrap(),
+        ],
         0,
     );
     assert_eq!(exported["data"]["written"], true);

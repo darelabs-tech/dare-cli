@@ -1,0 +1,12 @@
+/bin/
+/vendor/
+.env
+.env.local
+*.log
+.DS_Store
+# DARE Framework
+.dare/
+*.db
+*.db-shm
+*.db-wal
+DARE/.canvas.md

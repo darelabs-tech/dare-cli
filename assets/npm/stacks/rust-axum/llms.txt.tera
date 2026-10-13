@@ -1,0 +1,54 @@
+# {{ projectName }}
+
+DARE-shaped Rust API on Axum 0.7. Layered Design: Handler → Service → Repository → Model.
+
+## Setup
+
+```bash
+cp .env.example .env
+docker compose up -d postgres
+cargo install sqlx-cli --no-default-features --features postgres
+sqlx database create
+sqlx migrate run
+cargo run
+```
+
+## Commands
+
+- `cargo run` — dev server (port 8000)
+- `cargo test --workspace` — tests
+- `cargo clippy -- -D warnings` — lint (warnings are errors)
+- `cargo audit` — RustSec advisory audit
+- `sqlx migrate add <name>` — new migration
+- `sqlx migrate run` — apply migrations
+
+## Endpoints
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| POST | `/auth/login` | none | Exchange email+password for JWT |
+| GET | `/auth/me` | Bearer | Current user info |
+| GET | `/users` | Bearer | List users (query: page, limit) |
+| POST | `/users` | Bearer (admin) | Create user |
+| GET | `/ws` | upgrade | WebSocket echo example |
+| GET | `/openapi.json` | none | OpenAPI 3.x document (utoipa-generated at runtime) |
+| GET | `/swagger-ui` | none | Swagger UI |
+
+## Layered Design
+
+- `src/handlers/` — Axum extractors and route handlers
+- `src/services/` — business logic
+- `src/repositories/` — sqlx queries
+- `src/models/` — domain structs (FromRow / Serialize)
+- `src/middleware/` — auth + rate limit
+- `src/llm/` — provider abstraction
+
+Handlers never call sqlx directly — they go through services → repositories.
+
+## Env vars
+
+See `.env.example`. Required: `DATABASE_URL`, `JWT_SECRET`.
+
+## DARE skills
+
+See `.dare/skills.yml`.

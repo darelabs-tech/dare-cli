@@ -1,0 +1,41 @@
+{
+  "slug": "mcp-node-ts-stdio",
+  "description": "MCP server node-ts over stdio, non-interactive.",
+  "mode": "cli",
+  "command": [
+    "dare",
+    "init",
+    "demo-mcp",
+    "--mcp",
+    "node-ts",
+    "--transport",
+    "stdio",
+    "--toolchain",
+    "native"
+  ],
+  "generator_config": {
+    "name": "demo-mcp",
+    "structure": "mcp-server",
+    "mcpLanguage": "node-ts",
+    "mcpTransport": "stdio",
+    "ide": "cursor",
+    "graphrag": "sqlite",
+    "mcp": false,
+    "toolchain": "native",
+    "outputDir": "<case-root>/demo-mcp"
+  },
+  "toolchain": "native",
+  "env": {},
+  "cwd": "<case-root>",
+  "project_dir": "demo-mcp",
+  "covers": [],
+  "exit_code": 0,
+  "stored_files": [
+    ".cursor/rules/skill-mcp-server.mdc",
+    ".cursorrules",
+    ".gitignore",
+    "DARE/README.md",
+    "dare-graph.yml",
+    "dare.config.json"
+  ]
+}

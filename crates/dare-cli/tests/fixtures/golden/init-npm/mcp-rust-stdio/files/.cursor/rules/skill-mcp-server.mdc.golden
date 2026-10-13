@@ -1,0 +1,10 @@
+---
+description: Node.js/TypeScript MCP server development skill
+---
+# TypeScript MCP Skill
+- Import Server from @modelcontextprotocol/sdk/server/index.js
+- Use StdioServerTransport for CLI tools, SSEServerTransport for web integrations
+- Define tools with ListToolsRequestSchema + CallToolRequestSchema handlers
+- Keep inputSchema strict — Claude uses it to call your tools correctly
+- Test with: npm run inspect (uses @modelcontextprotocol/inspector)
+- Build before shipping: npm run build

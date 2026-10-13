@@ -1,0 +1,2 @@
+{"cwd":"web-portal","argv":["npx","-y","degit","vitejs/vite/packages/create-vite/template-react-ts",".","--force"]}
+{"cwd":"web-portal","argv":["npm","install"]}

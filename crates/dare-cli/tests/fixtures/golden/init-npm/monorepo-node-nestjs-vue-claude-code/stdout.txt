@@ -1,0 +1,27 @@
+
+🚀 DARE Framework - Project Initialization
+
+- Creating project api-nest-validations...
+
+📦 Scaffolding node-nestjs (DARE-shaped) in <case-root>/api-nest-validations/backend
+
+
+📦 Bootstrapping Vite (vue-ts) in <case-root>/api-nest-validations/frontend
+
+🔧 Using native npm — toolchain=native
+  $ npx -y degit vitejs/vite/packages/create-vite/template-vue-ts . --force
+  $ npm install
+
+✓ Stack scaffold complete.
+
+✔ Project api-nest-validations created successfully!
+
+📋 Next steps:
+
+  1. cd api-nest-validations
+  2. dare design "Describe your project here"
+  3. dare blueprint
+  4. dare execute --parallel
+
+  Claude Code tip: use /dare-design, /dare-blueprint, /dare-execute as slash commands
+

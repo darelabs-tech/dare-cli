@@ -1,0 +1,97 @@
+{
+  "name": "demo-mvc",
+  "structure": "mvc",
+  "backend": "ruby-rails-8",
+  "ide": "cursor",
+  "graphrag": {
+    "backend": "sqlite",
+    "semantic": {
+      "enabled": false,
+      "model": "all-MiniLM-L6-v2",
+      "rrfK": 60
+    }
+  },
+  "mcp": false,
+  "toolchain": "native",
+  "version": "3.18.1",
+  "review": {
+    "onComplete": true,
+    "strict": false
+  },
+  "refine": {
+    "thresholds": {
+      "low": 5,
+      "med": 12,
+      "high": 20
+    }
+  },
+  "verification": {
+    "enabled": false,
+    "mutation": {
+      "enabled": true,
+      "minScore": 0.7,
+      "incremental": true,
+      "maxMutants": 200,
+      "timeoutSeconds": 900
+    },
+    "failToPass": {
+      "required": true
+    },
+    "antiTamper": {
+      "enabled": true
+    },
+    "typeCheck": {
+      "enabled": false
+    },
+    "loop": {
+      "policy": "decay",
+      "maxAttempts": 5,
+      "maxDepth": 2,
+      "saturationWindow": 3,
+      "onSaturation": "fresh-start"
+    },
+    "bestOfN": {
+      "default": 1,
+      "max": 5,
+      "budgetTokens": null
+    },
+    "prerank": {
+      "enabled": false
+    },
+    "formal": {
+      "enabled": false,
+      "backend": "dafny",
+      "modules": [],
+      "maxRepairIterations": 5,
+      "proofTimeoutSeconds": 120,
+      "antiBypass": true
+    }
+  },
+  "hooks": {
+    "on": {},
+    "trusted": false
+  },
+  "guard": {
+    "enabled": false,
+    "onExecute": true,
+    "unicode": "strip",
+    "trustedPaths": [
+      ".dare/steering/**",
+      "DARE/TASKS.md"
+    ],
+    "signing": {
+      "enabled": false
+    }
+  },
+  "drift": {
+    "enabled": false,
+    "maxOrphanReqs": 0,
+    "maxOrphanCode": 0,
+    "failOnStale": false,
+    "ignore": [
+      "**/index.ts",
+      "**/*.generated.*",
+      "**/bin/**"
+    ]
+  }
+}

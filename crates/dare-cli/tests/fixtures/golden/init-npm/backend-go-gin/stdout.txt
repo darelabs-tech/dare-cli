@@ -1,0 +1,9 @@
+- Creating project demo-api...
+
+📦 Scaffolding go-gin (DARE-shaped) in <case-root>/demo-api
+
+
+✓ Stack scaffold complete.
+
+✔ Project demo-api created.
+  Stack: go-gin

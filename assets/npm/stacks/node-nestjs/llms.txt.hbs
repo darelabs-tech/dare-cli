@@ -1,0 +1,47 @@
+# {{projectName}}
+
+DARE-shaped NestJS 10 API. Layered Design: Handler → Service → Repository → Model.
+
+## Setup
+
+```bash
+cp .env.example .env
+docker compose up -d postgres
+pnpm install
+pnpm prisma migrate dev --name init
+pnpm prisma db seed
+pnpm start:dev
+```
+
+## Commands
+
+- `pnpm start:dev` — dev server with watch (port 3000)
+- `pnpm test` — vitest run
+- `pnpm lint` — eslint
+- `pnpm audit` — pnpm audit --audit-level=high
+- `pnpm prisma migrate dev` — apply DB migrations
+
+## Endpoints
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| POST | `/auth/login` | none | Exchange email+password for JWT |
+| GET | `/auth/me` | Bearer | Current user info |
+| GET | `/users` | Bearer | List users (query: page, limit) |
+| POST | `/users` | Bearer (admin) | Create user |
+| GET | `/openapi.json` | none | OpenAPI 3.1 document |
+| GET | `/api` | none | Swagger UI |
+
+## Layered Design
+
+- `src/auth/`, `src/users/` — feature modules
+- Each module has: controller (HTTP), service (logic), repository (DB), dto (validation)
+- Prisma is encapsulated behind repositories; controllers and services never see Prisma directly
+
+## Env vars
+
+See `.env.example`. Required: `DATABASE_URL`, `JWT_SECRET`.
+
+## DARE skills
+
+See `.dare/skills.yml`.

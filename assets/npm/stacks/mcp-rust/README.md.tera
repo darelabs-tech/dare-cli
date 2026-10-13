@@ -1,0 +1,50 @@
+# {{ projectName }}
+
+DARE-shaped MCP server in Rust using the `rmcp` SDK.
+Default transport: **{{ defaultTransport }}**.
+
+> ⚠️ **Beta.** The `rmcp` SDK API is still stabilizing. Pin a specific version
+> or git rev in `Cargo.toml` if an upstream release breaks the build.
+
+## Setup
+
+```bash
+cp .env.example .env
+cargo build
+cargo run                    # uses {{ defaultTransport }} transport by default
+```
+
+## Test with MCP Inspector
+
+```bash
+npx @modelcontextprotocol/inspector cargo run
+```
+
+## Tools
+
+- `echo` — returns its input. Canonical smoke test.
+
+## Prompts
+
+- `summarize` — placeholder prompt template taking a `text` argument.
+
+## Transports
+
+Pick at runtime via `--transport stdio|sse|http` or `MCP_TRANSPORT`:
+
+| Transport | When to use |
+|---|---|
+| `stdio` (default) | Local CLI agents |
+| `sse`             | Web clients via SSE (axum) |
+| `http`            | Streamable HTTP (axum) |
+
+## Commands
+
+- `cargo run` — start server
+- `cargo test` — tests
+- `cargo clippy -- -D warnings` — lint
+- `cargo audit` — dependency audit
+
+## DARE Method
+
+See `.dare/skills.yml` and `llms.txt`.

@@ -1,0 +1,35 @@
+# {{projectName}}
+
+DARE-shaped NestJS API. Layered Design (Handler → Service → Repository → Model).
+
+## Setup
+
+```bash
+cp .env.example .env
+docker compose up -d postgres
+pnpm install
+pnpm prisma migrate dev --name init
+pnpm prisma db seed
+pnpm start:dev
+```
+
+## Endpoints
+
+- `POST /auth/login` — exchange email/password for JWT
+- `GET /auth/me` — current user (Bearer JWT)
+- `GET /users` — list users (paginated)
+- `POST /users` — create user (admin only)
+- `GET /openapi.json` — OpenAPI 3.1 surface
+- `GET /api` — Swagger UI
+
+## Commands
+
+- `pnpm start:dev` — dev with watch
+- `pnpm test` — run tests
+- `pnpm lint` — ESLint
+- `pnpm audit` — dependency audit (fails on HIGH+)
+
+## DARE Method
+
+This project was scaffolded with the [DARE Method](https://github.com/dewtech-technologies/dare-method).
+See `.dare/skills.yml` for installed skills, `llms.txt` for agent context.

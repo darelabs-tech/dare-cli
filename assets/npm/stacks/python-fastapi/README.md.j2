@@ -1,0 +1,35 @@
+# {{ projectName }}
+
+DARE-shaped FastAPI API. Layered Design (Router → Service → Repository → Model).
+
+## Setup
+
+```bash
+cp .env.example .env
+docker compose up -d postgres
+python -m venv .venv
+source .venv/bin/activate    # or .venv\Scripts\activate on Windows
+pip install -e ".[dev]"
+alembic upgrade head
+uvicorn app.main:app --reload
+```
+
+## Endpoints
+
+- `POST /auth/login` — exchange email/password for JWT
+- `GET /auth/me` — current user (Bearer JWT)
+- `GET /users` — list users (paginated)
+- `POST /users` — create user (admin only)
+- `GET /openapi.json` — OpenAPI 3.1 surface
+- `GET /docs` — Swagger UI
+
+## Commands
+
+- `uvicorn app.main:app --reload` — dev server (port 8000)
+- `pytest` — run tests
+- `ruff check .` — lint
+- `pip-audit` — dependency audit
+
+## DARE Method
+
+See `.dare/skills.yml` for installed skills, `llms.txt` for agent context.

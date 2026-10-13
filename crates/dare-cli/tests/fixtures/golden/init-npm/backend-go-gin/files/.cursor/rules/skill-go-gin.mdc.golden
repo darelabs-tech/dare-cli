@@ -1,0 +1,12 @@
+---
+description: Go/Gin API development skill
+---
+# Go + Gin Skill
+- Use Gin for HTTP routing (github.com/gin-gonic/gin)
+- Project layout: cmd/api/main.go (entrypoint), internal/handlers, internal/middleware, internal/services, internal/repository
+- Use context.Context propagation in every handler/service
+- Use struct tags for binding/validation (binding:"required" on DTOs)
+- For SQL: prefer database/sql + sqlx, parametrize ALL queries, no string concat
+- Errors: return wrapped errors (fmt.Errorf("...: %w", err)), not panics
+- Tests: use net/http/httptest + table-driven tests; place *_test.go alongside the package
+- Ralph Loop: `go build ./...`, `go test ./...`, `go vet ./...`
