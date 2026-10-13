@@ -6,6 +6,7 @@ pub mod bench;
 pub mod best_of;
 pub mod decay;
 pub mod handoff;
+pub mod handoff_store;
 pub mod ralph;
 pub mod repair;
 pub mod report;
@@ -35,6 +36,7 @@ pub use decay::{
     apply_decay, msg_policy_unknown, signature_for, DecayAction, DECAY_MAX_ATTEMPTS, DECAY_WINDOW,
 };
 pub use handoff::{gates_satisfied, receipt_from_verification, ReceiptRequest};
+pub use handoff_store::{handoff_exists, load_handoff, supersede_handoff, write_handoff};
 pub use ralph::{run_ralph, GateAspect, GateStep, RalphReport, RALPH_TIMEOUT_SECS};
 pub use repair::{can_repair, run_repair, RepairOutcome, REPAIR_MAX};
 pub use report::{
