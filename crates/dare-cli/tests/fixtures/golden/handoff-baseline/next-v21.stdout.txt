@@ -1,0 +1,18 @@
+📦 Rank 1 — 1 task(s) ready in parallel
+
+▸ task-c — Gamma integration
+  complexity: HIGH
+  spec_file:  EXECUTION/task-c.md
+  prompt:
+    Integrate alpha and beta behind one entry point.
+    
+    
+    ## Upstream context
+    
+    ### From parent: task-a — Alpha parser
+     in crates/alpha/src/parse.rs with a round-trip test. The grammar is frozen and the tokenizer is reusable by the loader.
+
+Next steps for the IDE agent:
+  1. Execute each task above.
+  2. After each task: `dare execute --complete <id> --output "<summary>"`
+

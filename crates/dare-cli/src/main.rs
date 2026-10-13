@@ -335,6 +335,12 @@ enum Commands {
         /// Completion summary (requires `--complete`; default: Task completed.).
         #[arg(long, requires = "complete")]
         output: Option<String>,
+        /// Enforce verified handoffs before importing parent context (config `handoff.strict`).
+        #[arg(long = "strict-handoff", action = clap::ArgAction::SetTrue, overrides_with = "no_strict_handoff")]
+        strict_handoff: bool,
+        /// Disable strict handoff enforcement for this run.
+        #[arg(long = "no-strict-handoff", action = clap::ArgAction::SetTrue)]
+        no_strict_handoff: bool,
         /// Run advanced verify after Ralph (default: on / config `verify.enabled`).
         #[arg(long, action = clap::ArgAction::SetTrue, overrides_with = "no_verify")]
         verify: bool,
@@ -1178,6 +1184,8 @@ fn main() -> ExitCode {
                 best_of,
                 prerank,
                 output,
+                strict_handoff,
+                no_strict_handoff,
                 verify,
                 no_verify,
                 full_mutation,
@@ -1248,7 +1256,11 @@ fn main() -> ExitCode {
                     let _ = status; // default or explicit --status
                     ExecuteAction::Status
                 };
-                run_execute(dag, action, &renderer)
+                let handoff_flags = crate::commands::handoff_policy::HandoffFlags {
+                    strict: strict_handoff,
+                    no_strict: no_strict_handoff,
+                };
+                run_execute(dag, action, handoff_flags, &renderer)
             }
             Some(Commands::Skill { action }) => {
                 let skill_action = match action {

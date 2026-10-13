@@ -837,8 +837,11 @@ name = "dare-contracts"
 version = "4.0.0"
 dependencies = [
  "dare-core",
+ "globset",
+ "proptest",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
  "tempfile",
  "yaml_serde",
 ]
@@ -1077,7 +1080,9 @@ dependencies = [
  "dare-agent",
  "dare-contracts",
  "dare-core",
+ "dare-project",
  "globset",
+ "proptest",
  "serde",
  "serde_json",
  "tempfile",

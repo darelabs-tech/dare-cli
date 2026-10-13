@@ -1,0 +1,12 @@
+# Legacy flat DAG for cycle rust-verified-task-contracts-012, task-001:
+# no `tasks:` key, no `limits`, no `subtask_prompt`. Records that `--next`
+# on a legacy document composes an empty prompt and never emits an
+# `## Upstream context` header.
+task-a:
+  title: Legacy Alpha
+  depends_on: []
+  complexity: MED
+task-b:
+  title: Legacy Beta
+  depends_on: [task-a]
+  complexity: LOW

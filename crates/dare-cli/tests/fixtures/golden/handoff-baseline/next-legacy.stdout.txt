@@ -1,0 +1,10 @@
+📦 Rank 0 — 1 task(s) ready in parallel
+
+▸ task-a — Legacy Alpha
+  complexity: MED
+  prompt:
+
+Next steps for the IDE agent:
+  1. Execute each task above.
+  2. After each task: `dare execute --complete <id> --output "<summary>"`
+

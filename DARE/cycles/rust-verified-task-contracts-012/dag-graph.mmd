@@ -1,0 +1,38 @@
+flowchart TB
+  subgraph rank_0["Rank 0"]
+    task_001["task-001<br/>Golden baseline of execute --next and -…"]
+    task_002["task-002<br/>dare-contracts handoff module with type…"]
+    task_004["task-004<br/>Git provenance primitives head_sha, wor…"]
+  end
+  subgraph rank_1["Rank 1"]
+    task_003["task-003<br/>Deterministic digests for contract, fil…"]
+  end
+  subgraph rank_2["Rank 2"]
+    task_005["task-005<br/>Receipt emission and required-gate sati…"]
+    task_006["task-006<br/>Handoff sidecar store with atomic write…"]
+    task_008["task-008<br/>ParentEvidence port and compose_task_pr…"]
+  end
+  subgraph rank_3["Rank 3"]
+    task_007["task-007<br/>Consumer evaluation evaluate_parent wit…"]
+  end
+  subgraph rank_4["Rank 4"]
+    task_009["task-009<br/>CLI policy resolution, strict-handoff f…"]
+  end
+  subgraph rank_5["Rank 5"]
+    task_010["task-010<br/>Receipt emission on complete, supersede…"]
+  end
+  subgraph rank_6["Rank 6"]
+    task_011["task-011<br/>Negative, security and npm round-trip s…"]
+  end
+  task_001 --> task_011
+  task_002 --> task_003
+  task_003 --> task_005
+  task_003 --> task_006
+  task_003 --> task_008
+  task_004 --> task_005
+  task_005 --> task_007
+  task_006 --> task_007
+  task_007 --> task_009
+  task_008 --> task_009
+  task_009 --> task_010
+  task_010 --> task_011

@@ -2,7 +2,7 @@
 
 use std::collections::BTreeMap;
 
-use dare_contracts::{DagDocument, RuntimeStateV1};
+use dare_contracts::{DagDocument, EvidenceState, HandoffDecision, RuntimeStateV1};
 
 use crate::graph::{iter_task_views, next_executable, DagGraphError};
 use crate::status::TaskStatus;
@@ -151,6 +151,103 @@ pub fn compose_task_prompt(
             meta.subtask_prompt, upstream
         ))
     }
+}
+
+/// Source of a parent's evidence verdict (A-02).
+///
+/// The trait is declared here and implemented in `dare-cli`, which inverts the
+/// dependency: reading receipts needs `dare-verify`, and `dare-dag` depends on
+/// `dare-core` and `dare-contracts` alone. Pulling the process layer in here to
+/// read a file would invert the layering of the domain crate, so the port keeps
+/// every disk access on the implementor's side and leaves this crate's attack
+/// surface unchanged.
+pub trait ParentEvidence {
+    /// Verdict for one parent task, by id.
+    fn decide(&self, parent_id: &str) -> HandoffDecision;
+}
+
+/// A composed prompt plus the provenance of what went into it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ComposedPrompt {
+    pub prompt: String,
+    /// Parent ids whose deliverable reached the prompt, lexicographic.
+    pub imported: Vec<String>,
+    /// Decisions that kept a parent out of the prompt, lexicographic by parent.
+    pub refused: Vec<HandoffDecision>,
+}
+
+/// [`compose_task_prompt`] with the verification gate applied per parent.
+///
+/// Mirrors the legacy function step for step, including the exact
+/// `task not found: {task_id}` message, and adds one gate: a DONE parent is
+/// consulted through `ev`, and only an [`EvidenceState::Valid`] verdict may
+/// contribute. Every other verdict lands in `refused` and contributes nothing,
+/// which is the prompt-injection mitigation at the point of consumption — a
+/// parent whose evidence does not hold never reaches the model's context.
+///
+/// With an implementation that returns `Valid` carrying each DONE parent's
+/// recorded output, the `prompt` is byte-identical to [`compose_task_prompt`].
+/// That equivalence is what keeps legacy flows working, and it is asserted
+/// directly against the legacy function in the tests.
+///
+/// A `Valid` parent whose deliverable is blank is omitted exactly as the legacy
+/// function omits blank output, and is reported in neither `imported` nor
+/// `refused`: nothing was imported, and nothing was refused.
+pub fn compose_task_prompt_verified(
+    doc: &DagDocument,
+    state: &RuntimeStateV1,
+    task_id: &str,
+    ev: &dyn ParentEvidence,
+) -> Result<ComposedPrompt, DagGraphError> {
+    let meta = task_meta(doc, task_id).ok_or_else(|| DagGraphError::InvalidDag {
+        message: format!("task not found: {task_id}"),
+    })?;
+    let limit = parent_context_limit(doc);
+    let mut deps = meta.depends_on.clone();
+    deps.sort();
+
+    let mut upstream = String::new();
+    let mut imported = Vec::new();
+    let mut refused = Vec::new();
+    for dep_id in &deps {
+        let Some(rt) = state.tasks.get(dep_id) else {
+            continue;
+        };
+        if rt.status != TaskStatus::Done.as_str() {
+            continue;
+        }
+        let decision = ev.decide(dep_id);
+        if decision.state != EvidenceState::Valid {
+            refused.push(decision);
+            continue;
+        }
+        let deliverable = decision.deliverable.clone().unwrap_or_default();
+        let out = deliverable.trim();
+        if out.is_empty() {
+            continue;
+        }
+        let title = task_meta(doc, dep_id)
+            .map(|m| m.title)
+            .unwrap_or_else(|| dep_id.clone());
+        let tail = unicode_tail(out, limit);
+        upstream.push_str(&format!("### From parent: {dep_id} — {title}\n{tail}\n"));
+        imported.push(dep_id.clone());
+    }
+
+    let prompt = if upstream.is_empty() {
+        meta.subtask_prompt
+    } else {
+        format!(
+            "{}\n\n## Upstream context\n\n{}",
+            meta.subtask_prompt, upstream
+        )
+    };
+
+    Ok(ComposedPrompt {
+        prompt,
+        imported,
+        refused,
+    })
 }
 
 /// Build a status snapshot (domain leaves `dag_rel` / `canvas_path` empty for CLI to fill).
@@ -360,7 +457,7 @@ mod tests {
     use super::*;
     use crate::graph::compute_ranks;
     use crate::status::TaskStatus;
-    use dare_contracts::{parse_dag_yaml, TaskRuntimeState};
+    use dare_contracts::{parse_dag_yaml, RefusalCode, TaskRuntimeState};
     use serde_json::Map;
     use std::fs;
     use std::path::PathBuf;
@@ -562,5 +659,388 @@ task-a:
         let snap = build_status_snapshot(&doc, &state_from(&[]), &ranks);
         assert_eq!(snap.outcome, ExecuteOutcome::Empty);
         assert_eq!(snap.counts.total, 0);
+    }
+
+    // --- compose_task_prompt_verified (task-008) --------------------------
+
+    /// Returns `Valid` for every parent, carrying that parent's recorded
+    /// output. This is the implementation under which the verified function
+    /// must be byte-identical to the legacy one.
+    struct AcceptAll<'a> {
+        state: &'a RuntimeStateV1,
+    }
+
+    impl ParentEvidence for AcceptAll<'_> {
+        fn decide(&self, parent_id: &str) -> HandoffDecision {
+            let output = self
+                .state
+                .tasks
+                .get(parent_id)
+                .map(|t| t.output.clone())
+                .unwrap_or_default();
+            HandoffDecision::valid(parent_id, output, None)
+        }
+    }
+
+    /// Refuses every parent.
+    struct RefuseAll;
+
+    impl ParentEvidence for RefuseAll {
+        fn decide(&self, parent_id: &str) -> HandoffDecision {
+            HandoffDecision::refused(
+                parent_id,
+                EvidenceState::Missing,
+                RefusalCode::ReceiptMissing,
+                "no sidecar",
+            )
+        }
+    }
+
+    /// Accepts only the listed parents, refusing the rest.
+    struct AcceptOnly<'a> {
+        allowed: &'a [&'a str],
+        state: &'a RuntimeStateV1,
+    }
+
+    impl ParentEvidence for AcceptOnly<'_> {
+        fn decide(&self, parent_id: &str) -> HandoffDecision {
+            if self.allowed.contains(&parent_id) {
+                let output = self
+                    .state
+                    .tasks
+                    .get(parent_id)
+                    .map(|t| t.output.clone())
+                    .unwrap_or_default();
+                HandoffDecision::valid(parent_id, output, None)
+            } else {
+                HandoffDecision::refused(
+                    parent_id,
+                    EvidenceState::Stale,
+                    RefusalCode::ArtifactDigestMismatch,
+                    "artifact moved",
+                )
+            }
+        }
+    }
+
+    const TWO_PARENT_YAML: &str = r#"
+title: "T"
+version: "1.0.0"
+limits:
+  parent_context_chars: 5
+tasks:
+  - id: task-a
+    title: Alpha
+    depends_on: []
+    complexity: LOW
+    subtask_prompt: do-a
+  - id: task-b
+    title: Beta
+    depends_on: []
+    complexity: LOW
+    subtask_prompt: do-b
+  - id: task-c
+    title: Gamma
+    depends_on: [task-b, task-a]
+    complexity: LOW
+    subtask_prompt: do-c
+"#;
+
+    const ONE_PARENT_YAML: &str = r#"
+title: "T"
+version: "1.0.0"
+tasks:
+  - id: task-a
+    title: Alpha
+    depends_on: []
+    complexity: LOW
+    subtask_prompt: do-a
+  - id: task-b
+    title: Beta
+    depends_on: [task-a]
+    complexity: LOW
+    subtask_prompt: do-b
+"#;
+
+    #[test]
+    fn verified_matches_legacy_no_parents() {
+        let doc = parse_dag_yaml(&fixture("valid.v21.yaml")).expect("fixture parses");
+        let st = state_from(&[]);
+        let ev = AcceptAll { state: &st };
+        let ids = iter_task_views(&doc);
+        let first = ids.first().expect("fixture has tasks");
+
+        let legacy = compose_task_prompt(&doc, &st, &first.id).expect("legacy composes");
+        let verified =
+            compose_task_prompt_verified(&doc, &st, &first.id, &ev).expect("verified composes");
+        assert_eq!(verified.prompt, legacy);
+        assert!(verified.imported.is_empty());
+        assert!(verified.refused.is_empty());
+    }
+
+    #[test]
+    fn verified_matches_legacy_one_parent() {
+        let doc = parse_dag_yaml(ONE_PARENT_YAML).expect("parses");
+        let st = state_from(&[
+            ("task-a", task(TaskStatus::Done, "alpha output", &[])),
+            ("task-b", task(TaskStatus::Pending, "", &["task-a"])),
+        ]);
+        let ev = AcceptAll { state: &st };
+
+        let legacy = compose_task_prompt(&doc, &st, "task-b").expect("legacy composes");
+        let verified =
+            compose_task_prompt_verified(&doc, &st, "task-b", &ev).expect("verified composes");
+        assert_eq!(verified.prompt, legacy);
+        assert_eq!(verified.imported, vec!["task-a".to_string()]);
+        assert!(verified.refused.is_empty());
+    }
+
+    #[test]
+    fn verified_matches_legacy_two_parents_truncating() {
+        let doc = parse_dag_yaml(TWO_PARENT_YAML).expect("parses");
+        assert_eq!(parent_context_limit(&doc), 5, "the limit must force a tail");
+        let st = state_from(&[
+            ("task-a", task(TaskStatus::Done, "ABCDEFGHIJ", &[])),
+            ("task-b", task(TaskStatus::Done, "KLMNOPQRST", &[])),
+            (
+                "task-c",
+                task(TaskStatus::Pending, "", &["task-b", "task-a"]),
+            ),
+        ]);
+        let ev = AcceptAll { state: &st };
+
+        let legacy = compose_task_prompt(&doc, &st, "task-c").expect("legacy composes");
+        let verified =
+            compose_task_prompt_verified(&doc, &st, "task-c", &ev).expect("verified composes");
+        assert_eq!(verified.prompt, legacy);
+        assert!(verified.prompt.contains("FGHIJ"), "tail applied");
+        assert!(!verified.prompt.contains("ABCDE"), "head dropped");
+        assert_eq!(
+            verified.imported,
+            vec!["task-a".to_string(), "task-b".to_string()]
+        );
+    }
+
+    #[test]
+    fn all_refused_yields_bare_prompt() {
+        let doc = parse_dag_yaml(TWO_PARENT_YAML).expect("parses");
+        let st = state_from(&[
+            ("task-a", task(TaskStatus::Done, "ABCDEFGHIJ", &[])),
+            ("task-b", task(TaskStatus::Done, "KLMNOPQRST", &[])),
+            (
+                "task-c",
+                task(TaskStatus::Pending, "", &["task-b", "task-a"]),
+            ),
+        ]);
+
+        let verified = compose_task_prompt_verified(&doc, &st, "task-c", &RefuseAll)
+            .expect("verified composes");
+        assert_eq!(verified.prompt, "do-c");
+        assert!(
+            !verified.prompt.contains("## Upstream context"),
+            "a fully refused compose carries no header"
+        );
+        assert!(verified.imported.is_empty());
+        assert_eq!(verified.refused.len(), 2);
+        assert!(verified.refused.iter().all(|d| d.deliverable.is_none()));
+    }
+
+    #[test]
+    fn mixed_accept_refuse_keeps_only_accepted() {
+        let doc = parse_dag_yaml(TWO_PARENT_YAML).expect("parses");
+        let st = state_from(&[
+            ("task-a", task(TaskStatus::Done, "ALPHA", &[])),
+            ("task-b", task(TaskStatus::Done, "BETA", &[])),
+            (
+                "task-c",
+                task(TaskStatus::Pending, "", &["task-b", "task-a"]),
+            ),
+        ]);
+        let ev = AcceptOnly {
+            allowed: &["task-a"],
+            state: &st,
+        };
+
+        let verified =
+            compose_task_prompt_verified(&doc, &st, "task-c", &ev).expect("verified composes");
+        assert!(verified.prompt.contains("### From parent: task-a — Alpha"));
+        assert!(
+            !verified.prompt.contains("task-b"),
+            "a refused parent must not reach the prompt: {}",
+            verified.prompt
+        );
+        assert_eq!(verified.imported, vec!["task-a".to_string()]);
+        assert_eq!(verified.refused.len(), 1);
+        assert_eq!(verified.refused[0].parent_id, "task-b");
+    }
+
+    #[test]
+    fn done_parent_with_empty_deliverable_skipped() {
+        let doc = parse_dag_yaml(ONE_PARENT_YAML).expect("parses");
+        let st = state_from(&[
+            ("task-a", task(TaskStatus::Done, "   ", &[])),
+            ("task-b", task(TaskStatus::Pending, "", &["task-a"])),
+        ]);
+        let ev = AcceptAll { state: &st };
+
+        let legacy = compose_task_prompt(&doc, &st, "task-b").expect("legacy composes");
+        let verified =
+            compose_task_prompt_verified(&doc, &st, "task-b", &ev).expect("verified composes");
+        assert_eq!(verified.prompt, legacy);
+        assert_eq!(verified.prompt, "do-b");
+        assert!(
+            verified.imported.is_empty(),
+            "a blank deliverable imports nothing"
+        );
+        assert!(
+            verified.refused.is_empty(),
+            "a blank deliverable is not a refusal either"
+        );
+    }
+
+    #[test]
+    fn legacy_dag_behaves_as_today() {
+        let doc = parse_dag_yaml(&fixture("valid.legacy.yaml")).expect("legacy fixture parses");
+        assert!(matches!(doc, DagDocument::Legacy(_)));
+        let views = iter_task_views(&doc);
+        let st = state_from(&[]);
+        let ev = AcceptAll { state: &st };
+
+        for view in &views {
+            let legacy = compose_task_prompt(&doc, &st, &view.id).expect("legacy composes");
+            let verified =
+                compose_task_prompt_verified(&doc, &st, &view.id, &ev).expect("verified composes");
+            assert_eq!(verified.prompt, legacy, "diverged on {}", view.id);
+        }
+    }
+
+    #[test]
+    fn task_not_found_exact_legacy_message() {
+        let doc = parse_dag_yaml(&fixture("exec-blocked.v21.yaml")).expect("fixture parses");
+        let st = state_from(&[]);
+        let ev = AcceptAll { state: &st };
+
+        let legacy = compose_task_prompt(&doc, &st, "missing").expect_err("legacy refuses");
+        let verified =
+            compose_task_prompt_verified(&doc, &st, "missing", &ev).expect_err("verified refuses");
+        assert_eq!(
+            verified.to_string(),
+            legacy.to_string(),
+            "the message is character-for-character contract"
+        );
+        assert!(verified.to_string().contains("task not found: missing"));
+    }
+
+    #[test]
+    fn imported_and_refused_are_sorted() {
+        let yaml = r#"
+title: "T"
+version: "1.0.0"
+tasks:
+  - id: task-a
+    title: Alpha
+    depends_on: []
+    complexity: LOW
+    subtask_prompt: a
+  - id: task-b
+    title: Beta
+    depends_on: []
+    complexity: LOW
+    subtask_prompt: b
+  - id: task-c
+    title: Gamma
+    depends_on: []
+    complexity: LOW
+    subtask_prompt: c
+  - id: task-d
+    title: Delta
+    depends_on: []
+    complexity: LOW
+    subtask_prompt: d
+  - id: task-z
+    title: Zeta
+    depends_on: [task-d, task-b, task-c, task-a]
+    complexity: LOW
+    subtask_prompt: z
+"#;
+        let doc = parse_dag_yaml(yaml).expect("parses");
+        let st = state_from(&[
+            ("task-a", task(TaskStatus::Done, "out-a", &[])),
+            ("task-b", task(TaskStatus::Done, "out-b", &[])),
+            ("task-c", task(TaskStatus::Done, "out-c", &[])),
+            ("task-d", task(TaskStatus::Done, "out-d", &[])),
+            (
+                "task-z",
+                task(
+                    TaskStatus::Pending,
+                    "",
+                    &["task-d", "task-b", "task-c", "task-a"],
+                ),
+            ),
+        ]);
+        // Accept a and c, refuse b and d, so both lists are non-trivial.
+        let ev = AcceptOnly {
+            allowed: &["task-a", "task-c"],
+            state: &st,
+        };
+
+        let verified =
+            compose_task_prompt_verified(&doc, &st, "task-z", &ev).expect("verified composes");
+        assert_eq!(
+            verified.imported,
+            vec!["task-a".to_string(), "task-c".to_string()]
+        );
+        let refused_ids: Vec<&str> = verified
+            .refused
+            .iter()
+            .map(|d| d.parent_id.as_str())
+            .collect();
+        assert_eq!(
+            refused_ids,
+            vec!["task-b", "task-d"],
+            "declaration order in depends_on must not leak into the output"
+        );
+    }
+
+    #[test]
+    fn non_done_parent_never_consulted() {
+        /// Panics if asked, proving the DONE filter runs before the gate.
+        struct NeverCalled;
+        impl ParentEvidence for NeverCalled {
+            fn decide(&self, parent_id: &str) -> HandoffDecision {
+                panic!("evidence consulted for non-DONE parent {parent_id}");
+            }
+        }
+
+        let doc = parse_dag_yaml(ONE_PARENT_YAML).expect("parses");
+        let st = state_from(&[
+            ("task-a", task(TaskStatus::Running, "partial", &[])),
+            ("task-b", task(TaskStatus::Pending, "", &["task-a"])),
+        ]);
+
+        let verified = compose_task_prompt_verified(&doc, &st, "task-b", &NeverCalled)
+            .expect("verified composes");
+        assert_eq!(verified.prompt, "do-b");
+        assert!(verified.imported.is_empty());
+        assert!(verified.refused.is_empty());
+    }
+
+    #[test]
+    fn refused_decisions_hold_their_invariant() {
+        let doc = parse_dag_yaml(TWO_PARENT_YAML).expect("parses");
+        let st = state_from(&[
+            ("task-a", task(TaskStatus::Done, "ALPHA", &[])),
+            ("task-b", task(TaskStatus::Done, "BETA", &[])),
+            (
+                "task-c",
+                task(TaskStatus::Pending, "", &["task-b", "task-a"]),
+            ),
+        ]);
+        let verified = compose_task_prompt_verified(&doc, &st, "task-c", &RefuseAll)
+            .expect("verified composes");
+        assert!(
+            verified.refused.iter().all(|d| d.invariant_holds()),
+            "every emitted decision keeps the three-field invariant"
+        );
     }
 }

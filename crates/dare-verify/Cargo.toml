@@ -10,9 +10,11 @@ publish = false
 dare-core = { workspace = true }
 dare-contracts = { workspace = true }
 dare-agent = { workspace = true }
+dare-project = { workspace = true }
 globset = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 
 [dev-dependencies]
+proptest = { workspace = true }
 tempfile = { workspace = true }

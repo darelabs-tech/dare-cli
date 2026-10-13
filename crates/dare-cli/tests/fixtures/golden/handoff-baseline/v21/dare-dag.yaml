@@ -1,0 +1,38 @@
+# Baseline fixture for cycle rust-verified-task-contracts-012, task-001.
+#
+# task-a and task-b sit at rank 0; task-c depends on both, so `--next` only
+# reaches task-c once both parents are DONE. That is what exercises the
+# `## Upstream context` composition inside `compose_task_prompt`.
+#
+# `parent_context_chars` is deliberately small so the `unicode_tail`
+# truncation of a parent output is part of the recorded baseline as well.
+title: "Handoff baseline"
+version: "1.0.0"
+
+limits:
+  parent_context_chars: 120
+  task_output_chars: 4000
+  timeout_seconds: 900
+
+tasks:
+  - id: task-a
+    title: Alpha parser
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION/task-a.md
+    subtask_prompt: |
+      Implement the alpha parser.
+  - id: task-b
+    title: Beta loader
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION/task-b.md
+    subtask_prompt: |
+      Implement the beta loader.
+  - id: task-c
+    title: Gamma integration
+    depends_on: [task-a, task-b]
+    complexity: HIGH
+    spec_file: EXECUTION/task-c.md
+    subtask_prompt: |
+      Integrate alpha and beta behind one entry point.
