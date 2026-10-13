@@ -1,0 +1,64 @@
+//! {{ projectName }} — Axum API entrypoint.
+use std::{net::SocketAddr, sync::Arc};
+
+use axum::{routing::{get, post}, Router};
+use sqlx::postgres::PgPoolOptions;
+use tower_http::{cors::CorsLayer, trace::TraceLayer};
+use tracing_subscriber::EnvFilter;
+
+use {{ crateName }}::{
+    config::Config,
+    handlers::{auth, users, ws},
+    middleware::rate_limit::with_rate_limit,
+    AppState,
+};
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    dotenvy::dotenv().ok();
+    tracing_subscriber::fmt()
+        .with_env_filter(EnvFilter::from_default_env())
+        .init();
+
+    let cfg = Config::from_env()?;
+
+    let pool = PgPoolOptions::new()
+        .max_connections(10)
+        .connect(&cfg.database_url)
+        .await?;
+
+    sqlx::migrate!("./migrations").run(&pool).await?;
+
+    let state = Arc::new(AppState { pool, cfg: cfg.clone() });
+
+    let cors = CorsLayer::new()
+        .allow_origin(cfg.cors_layer_origins())
+        .allow_methods(tower_http::cors::Any)
+        .allow_headers(tower_http::cors::Any);
+
+    let app = Router::new()
+        .route("/healthz", get(|| async { "ok" }))
+        .route("/auth/login", post(auth::login))
+        .route("/auth/me", get(auth::me))
+        .route("/users", get(users::list).post(users::create))
+        .route("/ws", get(ws::handler))
+        .route("/openapi.json", get(serve_openapi))
+        .layer(cors)
+        .layer(TraceLayer::new_for_http())
+        .with_state(state);
+
+    // Rate limit applied via helper (avoids naming GovernorLayer generics).
+    let app = with_rate_limit(app, &cfg);
+
+    let addr: SocketAddr = ([0, 0, 0, 0], cfg.app_port).into();
+    tracing::info!("listening on {}", addr);
+    let listener = tokio::net::TcpListener::bind(addr).await?;
+    axum::serve(listener, app).await?;
+    Ok(())
+}
+
+async fn serve_openapi() -> axum::response::Json<serde_json::Value> {
+    let raw = include_str!("../openapi.json");
+    let v: serde_json::Value = serde_json::from_str(raw).unwrap_or_default();
+    axum::response::Json(v)
+}

@@ -1,0 +1,61 @@
+# {{projectName}}
+
+DARE-shaped MCP server (TypeScript). Default transport: **{{defaultTransport}}**.
+
+## Setup
+
+```bash
+cp .env.example .env
+pnpm install
+pnpm build
+pnpm start
+```
+
+## Commands
+
+- `pnpm dev` — tsx watch
+- `pnpm build` — tsc to dist/
+- `pnpm test` — vitest
+- `pnpm lint` — ESLint
+- `pnpm audit` — pnpm audit --audit-level=high
+- `pnpm inspect` — MCP Inspector for the running server
+
+## Tools (registered in src/tools/)
+
+| Name | Input | Output | Description |
+|---|---|---|---|
+| `echo` | `{ text: string }` | `{ text: string }` | Returns input verbatim. Smoke test. |
+
+## Prompts (registered in src/prompts/)
+
+| Name | Args | Description |
+|---|---|---|
+| `summarize` | `{ text }` | Summarize the input text. Placeholder. |
+
+## Transports
+
+Choose with `--transport stdio|sse|http` or `MCP_TRANSPORT`:
+
+- `stdio` (default) — local agents. No port. 1 client at a time.
+- `sse` — SSE-over-HTTP on `MCP_PORT` (default 3001).
+- `http` — Streamable HTTP on `MCP_PORT` (default 3001). Modern MCP HTTP.
+
+## Architecture
+
+- `src/server.ts` — MCP `Server` instance, tools and prompts registered here.
+- `src/cli.ts` — entrypoint. Resolves transport from CLI flag or env.
+- `src/transports/{stdio,sse,http}.ts` — one factory per transport.
+- `src/tools/`, `src/prompts/` — registries the server reads from.
+
+## Env vars
+
+See `.env.example`. None are required for stdio.
+
+## CLI inventory
+
+`node dist/cli.js --json --list-tools` returns the tool registry as JSON
+(M-03 — Agent eXperience).
+
+## DARE skills
+
+See `.dare/skills.yml`.

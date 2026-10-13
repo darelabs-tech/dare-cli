@@ -1,0 +1,72 @@
+# frozen_string_literal: true
+
+source "https://rubygems.org"
+
+ruby ">= 3.3.0"
+
+# Core — Rails 8 Omakase (full-stack MVC: model + view + controller)
+gem "rails", "~> 8.0"
+gem "puma", ">= 5.0"
+gem "bootsnap", require: false
+gem "tzinfo-data", platforms: %i[windows jruby]
+
+# Database
+gem "pg", "~> 1.1"
+
+# Asset pipeline + front-end (Rails 8 Omakase, full app)
+gem "propshaft"
+gem "importmap-rails"
+gem "turbo-rails"
+gem "stimulus-rails"
+gem "jbuilder"
+
+# Solid Suite (Rails 8 Omakase)
+gem "solid_cache"
+gem "solid_queue"
+gem "solid_cable"
+
+# Real-time
+gem "redis", "~> 5.0"
+
+# OpenAPI — single source of truth via rswag (for JSON/API endpoints, if any)
+gem "rswag-api"
+gem "rswag-ui"
+
+# Rate limiting
+gem "rack-attack"
+
+# JSON Schema validation
+gem "json_schemer"
+
+# HTTP client for LLM providers
+gem "faraday", "~> 2.0"
+gem "faraday-retry"
+
+# Deploy (Rails 8 Omakase)
+gem "kamal", require: false
+gem "thruster", require: false
+
+group :development, :test do
+  gem "debug", platforms: %i[mri windows], require: "debug/prelude"
+  gem "rspec-rails", "~> 6.0"
+  gem "factory_bot_rails", "~> 6.0"
+  gem "faker", "~> 3.0"
+  gem "rswag-specs"
+  gem "shoulda-matchers", "~> 5.0"
+  gem "simplecov", require: false
+end
+
+group :development do
+  gem "web-console"
+  gem "rack-mini-profiler"
+  gem "rubocop-rails-omakase", require: false
+end
+
+group :test do
+  # System/feature tests exercise the view layer (full-stack only)
+  gem "capybara"
+  gem "selenium-webdriver"
+  gem "database_cleaner-active_record"
+  gem "webmock"
+  gem "vcr"
+end

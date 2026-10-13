@@ -1,0 +1,53 @@
+# {{ projectName }}
+
+DARE-shaped FastAPI 0.115+ API. Layered Design: Router → Service → Repository → Model.
+
+## Setup
+
+```bash
+cp .env.example .env
+docker compose up -d postgres
+python -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+alembic upgrade head
+uvicorn app.main:app --reload
+```
+
+## Commands
+
+- `uvicorn app.main:app --reload` — dev server (port 8000)
+- `pytest` — pytest suite
+- `ruff check .` — lint
+- `pip-audit` — dependency audit
+- `alembic revision --autogenerate -m "..."` — new migration
+- `alembic upgrade head` — apply migrations
+
+## Endpoints
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| POST | `/auth/login` | none | Exchange email+password for JWT |
+| GET | `/auth/me` | Bearer | Current user info |
+| GET | `/users` | Bearer | List users (query: page, limit) |
+| POST | `/users` | Bearer (admin) | Create user |
+| GET | `/openapi.json` | none | OpenAPI 3.1 document |
+| GET | `/docs` | none | Swagger UI |
+
+## Layered Design
+
+- `app/routers/` — HTTP layer (FastAPI APIRouter)
+- `app/services/` — business logic
+- `app/repositories/` — DB queries via SQLAlchemy
+- `app/models/` — SQLAlchemy declarative
+- `app/schemas/` — Pydantic IN/OUT
+
+Routers never touch SQLAlchemy directly — they call services which call repositories.
+
+## Env vars
+
+See `.env.example`. Required: `DATABASE_URL`, `JWT_SECRET`.
+
+## DARE skills
+
+See `.dare/skills.yml`.

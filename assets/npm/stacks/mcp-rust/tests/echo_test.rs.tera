@@ -1,0 +1,27 @@
+//! Smoke tests — pure tools/prompts, no SDK or transport needed.
+use {{ crateName }}::prompts::summarize::summarize;
+use {{ crateName }}::tools::echo::{echo, EchoError};
+
+#[test]
+fn echo_returns_input() {
+    assert_eq!(echo("hello").unwrap(), "hello");
+}
+
+#[test]
+fn echo_rejects_empty() {
+    assert_eq!(echo(""), Err(EchoError::Empty));
+}
+
+#[test]
+fn summarize_includes_input() {
+    let out = summarize("long text here");
+    assert!(out.contains("long text here"));
+    assert!(out.contains("Summarize"));
+}
+
+#[test]
+fn tool_inventory_lists_echo() {
+    let inv = {{ crateName }}::tools::inventory_json();
+    let tools = inv["tools"].as_array().expect("tools array");
+    assert!(tools.iter().any(|t| t["name"] == "echo"));
+}

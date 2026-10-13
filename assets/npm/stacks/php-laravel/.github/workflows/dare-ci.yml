@@ -1,0 +1,43 @@
+name: DARE CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  audit:
+    name: Audit dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+      - uses: ramsey/composer-install@v3
+      - run: composer audit --no-dev
+
+  lint:
+    name: PHPStan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+      - uses: ramsey/composer-install@v3
+      - run: vendor/bin/phpstan analyse
+
+  test:
+    name: Pest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+      - uses: ramsey/composer-install@v3
+      - run: cp .env.example .env
+      - run: php artisan key:generate
+      - run: vendor/bin/pest

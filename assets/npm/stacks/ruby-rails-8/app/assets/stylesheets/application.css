@@ -1,0 +1,16 @@
+/*
+ * Application styles — Propshaft serves every file under app/assets.
+ * This is the entry sheet linked by the layout via stylesheet_link_tag "application".
+ */
+:root { color-scheme: light dark; }
+
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: 2rem;
+  line-height: 1.5;
+}
+
+.notice { color: #16794a; }
+.alert  { color: #b7410e; }

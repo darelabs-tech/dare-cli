@@ -1,0 +1,30 @@
+//! {{ projectName }} — MCP server entrypoint.
+use clap::Parser;
+use tracing_subscriber::EnvFilter;
+
+use {{ crateName }}::cli::{Cli, Transport};
+use {{ crateName }}::tools;
+use {{ crateName }}::transports;
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    let cli = Cli::parse();
+
+    // --json --list-tools short-circuits before starting any transport (M-03).
+    if cli.list_tools && cli.json {
+        let inventory = tools::inventory_json();
+        println!("{}", serde_json::to_string_pretty(&inventory)?);
+        return Ok(());
+    }
+
+    tracing_subscriber::fmt()
+        .with_env_filter(EnvFilter::from_default_env())
+        .with_writer(std::io::stderr)
+        .init();
+
+    match cli.transport {
+        Transport::Stdio => transports::stdio::run().await,
+        Transport::Sse => transports::sse::run(&cli.host, cli.port).await,
+        Transport::Http => transports::http::run(&cli.host, cli.port).await,
+    }
+}

@@ -1,0 +1,49 @@
+# {{ projectName }}
+
+DARE-shaped MCP server in Python 3.11+ using the FastMCP API.
+Default transport: **{{ defaultTransport }}**.
+
+## Setup
+
+```bash
+cp .env.example .env
+python -m venv .venv
+source .venv/bin/activate    # or .venv\Scripts\activate on Windows
+pip install -e ".[dev]"
+python -m src.cli            # uses {{ defaultTransport }} transport by default
+```
+
+## Test with MCP Inspector
+
+```bash
+npx @modelcontextprotocol/inspector python -m src.cli
+```
+
+## Tools
+
+- `echo` — returns its input. Canonical smoke test.
+
+## Prompts
+
+- `summarize` — placeholder prompt template that takes a `text` argument.
+
+## Transports
+
+Pick at runtime via `--transport stdio|sse|http` or `MCP_TRANSPORT` env:
+
+| Transport | When to use |
+|---|---|
+| `stdio` (default) | Local CLI agents |
+| `sse`             | Web clients via Server-Sent Events |
+| `http`            | Streamable HTTP — newest MCP transport |
+
+## Commands
+
+- `python -m src.cli` — start server
+- `pytest` — run tests
+- `ruff check .` — lint
+- `pip-audit` — dependency audit
+
+## DARE Method
+
+See `.dare/skills.yml` and `llms.txt`.

@@ -1,0 +1,71 @@
+#!/usr/bin/env node
+import { TOOLS } from './tools/index.js';
+import { createServer } from './server.js';
+import { createStdioTransport } from './transports/stdio.js';
+import { startSseTransport } from './transports/sse.js';
+import { startHttpTransport } from './transports/http.js';
+
+type Transport = 'stdio' | 'sse' | 'http';
+
+interface Args {
+  transport: Transport;
+  listToolsJson: boolean;
+}
+
+function parseArgs(argv: string[]): Args {
+  let transport: Transport =
+    (process.env.MCP_TRANSPORT as Transport | undefined) ?? '{{defaultTransport}}';
+  let listToolsJson = false;
+  let json = false;
+
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === '--transport' && argv[i + 1]) {
+      const next = argv[++i];
+      if (next === 'stdio' || next === 'sse' || next === 'http') {
+        transport = next;
+      } else {
+        throw new Error(`invalid --transport '${next}' (valid: stdio, sse, http)`);
+      }
+    } else if (a === '--json') {
+      json = true;
+    } else if (a === '--list-tools') {
+      listToolsJson = true;
+    }
+  }
+
+  return { transport, listToolsJson: listToolsJson && json };
+}
+
+async function main(): Promise<void> {
+  const args = parseArgs(process.argv.slice(2));
+
+  if (args.listToolsJson) {
+    process.stdout.write(JSON.stringify({ tools: TOOLS }, null, 2) + '\n');
+    return;
+  }
+
+  const server = createServer();
+  const port = Number(process.env.MCP_PORT ?? 3001);
+
+  switch (args.transport) {
+    case 'stdio': {
+      const transport = createStdioTransport();
+      await server.connect(transport);
+      return;
+    }
+    case 'sse': {
+      await startSseTransport(server, port);
+      return;
+    }
+    case 'http': {
+      await startHttpTransport(server, port);
+      return;
+    }
+  }
+}
+
+main().catch((err) => {
+  process.stderr.write(`[mcp] fatal: ${(err as Error).message}\n`);
+  process.exit(1);
+});

@@ -1,0 +1,43 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "{{ projectName }}",
+    "version": "0.1.0",
+    "description": "DARE-shaped FastAPI API"
+  },
+  "paths": {
+    "/auth/login": {
+      "post": {
+        "summary": "Exchange email+password for JWT",
+        "responses": {
+          "200": { "description": "JWT issued" },
+          "401": { "description": "Invalid credentials" }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "summary": "Current user",
+        "security": [{ "bearer": [] }],
+        "responses": { "200": { "description": "User" }, "401": { "description": "Unauthorized" } }
+      }
+    },
+    "/users": {
+      "get": {
+        "summary": "List users",
+        "security": [{ "bearer": [] }],
+        "responses": { "200": { "description": "Page of users" } }
+      },
+      "post": {
+        "summary": "Create user (admin)",
+        "security": [{ "bearer": [] }],
+        "responses": { "201": { "description": "Created" }, "403": { "description": "Forbidden" } }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearer": { "type": "http", "scheme": "bearer", "bearerFormat": "JWT" }
+    }
+  }
+}

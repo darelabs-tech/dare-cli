@@ -1,0 +1,33 @@
+//! CLI argument parsing — transport selection + tool inventory.
+use clap::{Parser, ValueEnum};
+
+#[derive(Debug, Clone, Copy, ValueEnum)]
+pub enum Transport {
+    Stdio,
+    Sse,
+    Http,
+}
+
+#[derive(Debug, Parser)]
+#[command(name = "{{ projectName }}", version, about = "DARE-shaped MCP server")]
+pub struct Cli {
+    /// Transport to serve on. Overridden by MCP_TRANSPORT env if that is set.
+    #[arg(long, value_enum, default_value = "{{ defaultTransport }}", env = "MCP_TRANSPORT")]
+    pub transport: Transport,
+
+    /// Bind host for sse/http transports.
+    #[arg(long, default_value = "0.0.0.0", env = "MCP_HOST")]
+    pub host: String,
+
+    /// Bind port for sse/http transports.
+    #[arg(long, default_value_t = 3001, env = "MCP_PORT")]
+    pub port: u16,
+
+    /// Emit machine-readable JSON (use with --list-tools).
+    #[arg(long)]
+    pub json: bool,
+
+    /// List registered tools as JSON and exit (M-03).
+    #[arg(long)]
+    pub list_tools: bool,
+}

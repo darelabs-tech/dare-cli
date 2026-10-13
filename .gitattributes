@@ -14,3 +14,16 @@ scripts/ci/*.ps1 text eol=lf
 
 # Golden snapshots must stay LF so parity compares match process stdout on all OS.
 tests/golden/** text eol=lf
+
+# npm init templates are synced byte-for-byte from the published package (LF).
+assets/npm/** -text
+
+# npm `dare init` parity goldens (cycle rust-init-npm-parity-011): byte-stable, never normalized.
+crates/dare-cli/tests/fixtures/golden/init-npm/** -text
+
+# Parity generator + command shims: LF for POSIX shims/scripts, CRLF for Windows .cmd shims.
+scripts/parity/*.mjs text eol=lf
+scripts/parity/*.sh text eol=lf
+scripts/parity/*.ps1 text eol=lf
+scripts/parity/shims/* text eol=lf
+scripts/parity/shims/*.cmd text eol=crlf

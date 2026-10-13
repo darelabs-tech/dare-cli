@@ -1,0 +1,38 @@
+//! MCP service definition — wires tools + prompts via the rmcp SDK.
+//!
+//! NOTE: the rmcp API is pre-1.0; the exact handler-registration surface may
+//! shift between releases. The structure below keeps the SDK glue thin and the
+//! business logic in `tools::` / `prompts::` (pure, unit-tested) so a breaking
+//! rmcp change only touches this file.
+use rmcp::{
+    handler::server::ServerHandler,
+    model::{ServerCapabilities, ServerInfo},
+};
+
+use crate::tools;
+
+#[derive(Clone, Default)]
+pub struct DareMcpService;
+
+impl ServerHandler for DareMcpService {
+    fn get_info(&self) -> ServerInfo {
+        ServerInfo {
+            instructions: Some(
+                "DARE-shaped MCP server ({{ projectName }}). Tools: echo. Prompts: summarize."
+                    .into(),
+            ),
+            capabilities: ServerCapabilities::builder()
+                .enable_tools()
+                .enable_prompts()
+                .build(),
+            ..Default::default()
+        }
+    }
+}
+
+/// Convenience constructor used by every transport.
+pub fn build_service() -> DareMcpService {
+    // Touch the tool inventory so a missing tool module is a compile error.
+    let _ = tools::inventory_json();
+    DareMcpService
+}

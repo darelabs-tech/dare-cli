@@ -7,8 +7,8 @@ Commands:
   info          Read-only installation / project diagnostics
   support       Preview or export a local redacted diagnostic support report
   discover      Brownfield project detection and DARE install
-  init          Greenfield init: scaffold + config + harnesses (microplano 047)
-  bootstrap     Re-apply scaffold on existing greenfield project (microplano 047)
+  init          Initialize a new DARE project with interactive setup
+  bootstrap     Run the official scaffold for the current project's stack (uses dare.config.json)
   reverse       Brownfield reverse engineering → IDEIA.md + REVERSE specs
   dna           Extract project DNA conventions into DARE/PROJECT-DNA.md
   patterns      Mine recurring code patterns into DARE/PATTERNS.md

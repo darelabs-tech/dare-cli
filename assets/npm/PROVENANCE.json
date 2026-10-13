@@ -1,0 +1,15 @@
+{
+  "package": "@dewtech/dare-cli",
+  "version": "3.18.1",
+  "files": 508,
+  "treeSha256": "e1585a6761a828ec1edca7da46dc87bd5a2c28413fbfdb85a67642219ccdf157",
+  "subtrees": [
+    "stacks",
+    "ide/claude/CLAUDE.md",
+    "ide/claude/.claude/commands",
+    "ide/cursor/.cursor/commands",
+    "ide/cursor/.cursor/rules",
+    "ide/cursor/templates",
+    "ide/antigravity/.agents/skills"
+  ]
+}

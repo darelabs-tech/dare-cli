@@ -1,0 +1,37 @@
+# {{ projectName }}
+
+DARE-shaped Rust API on Axum 0.7. Layered Design (Handler → Service → Repository → Model).
+
+## Setup
+
+```bash
+cp .env.example .env
+docker compose up -d postgres
+cargo install sqlx-cli --no-default-features --features postgres
+sqlx database create
+sqlx migrate run
+cargo run
+```
+
+## Endpoints
+
+- `POST /auth/login` — exchange email/password for JWT
+- `GET /auth/me` — current user (Bearer JWT)
+- `GET /users` — list users (paginated)
+- `POST /users` — create user (admin only)
+- `GET /ws` — WebSocket echo demo
+- `GET /openapi.json` — OpenAPI 3.x surface
+- `GET /swagger-ui` — Swagger UI
+
+## Commands
+
+- `cargo run` — dev server (port 8000)
+- `cargo test --workspace` — tests
+- `cargo clippy -- -D warnings` — lint
+- `cargo audit` — dependency audit
+- `sqlx migrate add <name>` — new migration
+- `sqlx migrate run` — apply migrations
+
+## DARE Method
+
+See `.dare/skills.yml` for installed skills, `llms.txt` for agent context.

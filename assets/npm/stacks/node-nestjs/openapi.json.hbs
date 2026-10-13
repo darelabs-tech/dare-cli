@@ -1,0 +1,75 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "{{projectName}}",
+    "version": "0.1.0",
+    "description": "DARE-shaped NestJS API"
+  },
+  "paths": {
+    "/auth/login": {
+      "post": {
+        "summary": "Exchange email+password for JWT",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": { "type": "string", "format": "email" },
+                  "password": { "type": "string", "minLength": 8 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JWT issued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "accessToken": { "type": "string" },
+                    "expiresIn": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Invalid credentials" }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "summary": "Current user",
+        "security": [{ "bearer": [] }],
+        "responses": { "200": { "description": "User info" }, "401": { "description": "Unauthorized" } }
+      }
+    },
+    "/users": {
+      "get": {
+        "summary": "List users",
+        "security": [{ "bearer": [] }],
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer", "minimum": 1, "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 20 } }
+        ],
+        "responses": { "200": { "description": "Page of users" } }
+      },
+      "post": {
+        "summary": "Create user (admin)",
+        "security": [{ "bearer": [] }],
+        "responses": { "201": { "description": "Created" }, "403": { "description": "Forbidden" } }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearer": { "type": "http", "scheme": "bearer", "bearerFormat": "JWT" }
+    }
+  }
+}

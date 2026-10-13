@@ -1,0 +1,11 @@
+version: 1
+skills:
+  - id: skill-go-stdlib-api
+    source: skill-go-stdlib-api
+    description: net/http stdlib + sqlc + pgx Layered Design (no framework)
+  - id: dare-ax
+    source: dare-ax
+    description: Agent eXperience invariants (llms.txt, OpenAPI, --json, rate limit)
+  - id: dare-layered-design
+    source: dare-layered-design
+    description: Handler → Service → Repository → Model 4-layer architecture

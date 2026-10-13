@@ -1,0 +1,49 @@
+# {{projectName}}
+
+DARE-shaped MCP (Model Context Protocol) server in TypeScript.
+Default transport: **{{defaultTransport}}**.
+
+## Setup
+
+```bash
+cp .env.example .env
+pnpm install
+pnpm build
+pnpm start                # uses {{defaultTransport}} transport (default)
+```
+
+## Test it with MCP Inspector
+
+```bash
+pnpm inspect              # spawns the server + opens the inspector UI
+```
+
+## Tools
+
+- `echo` — returns its input. The canonical smoke test for an MCP server.
+
+## Prompts
+
+- `summarize` — placeholder prompt template that takes a `{text}` variable.
+
+## Transports
+
+Pick at runtime via `--transport stdio|sse|http` or `MCP_TRANSPORT` env:
+
+| Transport | When to use |
+|---|---|
+| `stdio` (default) | Local CLI agents (Claude Code, Cursor, etc.) |
+| `sse`             | Web clients via Server-Sent Events |
+| `http`            | Streamable HTTP — newest MCP transport |
+
+## Commands
+
+- `pnpm dev` — watch mode via tsx
+- `pnpm build` — TypeScript → `dist/`
+- `pnpm test` — vitest
+- `pnpm lint` — ESLint
+- `pnpm audit` — `pnpm audit --audit-level=high`
+
+## DARE Method
+
+See `.dare/skills.yml` and `llms.txt`.

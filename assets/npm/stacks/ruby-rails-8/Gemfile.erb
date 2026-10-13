@@ -1,0 +1,61 @@
+# frozen_string_literal: true
+
+source "https://rubygems.org"
+
+ruby ">= 3.3.0"
+
+# Core — Rails 8 Omakase
+gem "rails", "~> 8.0"
+gem "puma", ">= 5.0"
+gem "bootsnap", require: false
+gem "tzinfo-data", platforms: %i[windows jruby]
+
+# Database
+gem "pg", "~> 1.1"
+
+# Solid Suite (Rails 8 Omakase)
+gem "solid_cache"
+gem "solid_queue"
+
+# Real-time
+gem "redis", "~> 5.0"
+gem "redis-actioncable", require: false
+
+# OpenAPI — single source of truth via rswag
+gem "rswag-api"
+gem "rswag-ui"
+
+# Rate limiting
+gem "rack-attack"
+
+# JSON Schema validation
+gem "json_schemer"
+
+# HTTP client for LLM providers
+gem "faraday", "~> 2.0"
+gem "faraday-retry"
+
+# Background processing
+gem "solid_queue"
+
+group :development, :test do
+  gem "debug", platforms: %i[mri windows], require: "debug/prelude"
+  gem "rspec-rails", "~> 6.0"
+  gem "factory_bot_rails", "~> 6.0"
+  gem "faker", "~> 3.0"
+  gem "rswag-specs"
+  gem "shoulda-matchers", "~> 5.0"
+  gem "simplecov", require: false
+end
+
+group :development do
+  gem "web-console"
+  gem "rack-mini-profiler"
+  gem "rubocop-rails-omakase", require: false
+end
+
+group :test do
+  gem "database_cleaner-active_record"
+  gem "webmock"
+  gem "vcr"
+end

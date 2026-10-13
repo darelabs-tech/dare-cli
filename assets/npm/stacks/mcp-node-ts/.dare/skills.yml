@@ -1,0 +1,8 @@
+version: 1
+skills:
+  - id: skill-mcp-server
+    source: skill-mcp-server
+    description: MCP server patterns (tools, prompts, transports)
+  - id: dare-ax
+    source: dare-ax
+    description: Agent eXperience invariants (llms.txt, OpenAPI, --json --list-tools, rate limit)

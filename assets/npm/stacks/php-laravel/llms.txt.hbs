@@ -1,0 +1,53 @@
+# {{projectName}}
+
+DARE-shaped Laravel 11 API. Layered Design: Controller → Service → Repository → Model.
+
+## Setup
+
+```bash
+cp .env.example .env
+composer install
+php artisan key:generate
+docker compose up -d postgres
+php artisan migrate --seed
+php artisan l5-swagger:generate
+php artisan serve
+```
+
+## Commands
+
+- `php artisan serve` — dev server (port 8000)
+- `php artisan pail` — tail formatted logs
+- `pest` (or `php artisan test`) — run tests
+- `vendor/bin/phpstan analyse` — static analysis
+- `composer audit` — dependency audit
+- `php artisan l5-swagger:generate` — regenerate OpenAPI from annotations
+- `php artisan reverb:start` — WebSocket server (port 8080 by default)
+
+## Endpoints
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| POST | `/api/auth/login` | none | Exchange email+password for Sanctum token |
+| GET | `/api/auth/me` | Bearer | Current user info |
+| GET | `/api/users` | Bearer | List users (query: page, limit) |
+| POST | `/api/users` | Bearer (admin) | Create user |
+| GET | `/openapi.json` | none | OpenAPI 3.x document |
+| GET | `/api/documentation` | none | Swagger UI |
+
+## Layered Design
+
+- `app/Http/Controllers/Api/` — HTTP layer
+- `app/Http/Requests/` — FormRequest validation
+- `app/Services/` — business logic
+- `app/Repositories/` — Eloquent queries (controllers/services never touch the model directly)
+- `app/Models/` — Eloquent
+- `app/Llm/` — Provider abstraction (`Contracts/LlmProvider` + `Providers/{Dummy,OpenAi}`)
+
+## Env vars
+
+See `.env.example`. Required after install: `APP_KEY` (run `php artisan key:generate`), `DB_*`.
+
+## DARE skills
+
+See `.dare/skills.yml`.
