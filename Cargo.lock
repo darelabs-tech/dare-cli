@@ -809,6 +809,7 @@ dependencies = [
  "dare-update",
  "dare-verify",
  "dialoguer",
+ "fs4",
  "predicates",
  "serde",
  "serde_json",
