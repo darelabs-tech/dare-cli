@@ -13,6 +13,8 @@ pub mod execute;
 pub mod execute_agent;
 pub mod graph;
 pub mod guard;
+pub mod handoff_policy;
+pub mod handoff_preflight;
 pub mod hooks;
 pub mod info;
 pub mod init;

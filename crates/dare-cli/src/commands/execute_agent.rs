@@ -9,13 +9,14 @@ use dare_agent::{
     apply_fixed, failure_signature, resolve_driver, AgentRequest, AgentRunStatus, BudgetTracker,
     FixedDecision, WorktreeManager, MAX_AGENT_ATTEMPTS,
 };
-use dare_contracts::{load_dag, load_runtime_state, save_runtime_state, DagDocument};
+use dare_contracts::{
+    load_dag, load_dare_config, load_runtime_state, save_runtime_state, DagDocument, DareConfig,
+};
 use dare_core::{
     CancelFlag, CoreError, CoreResult, ProjectRoot, SafeRelativePath, SystemProcessRunner,
 };
 use dare_dag::{
-    compose_task_prompt, compute_ranks, ensure_state, ready_at_min_rank, SystemClock,
-    DEFAULT_DAG_REL, STATE_REL,
+    compute_ranks, ensure_state, ready_at_min_rank, SystemClock, DEFAULT_DAG_REL, STATE_REL,
 };
 use dare_project::find_project_root;
 use dare_verify::{
@@ -24,8 +25,11 @@ use dare_verify::{
 use serde_json::{json, Value};
 
 use crate::commands::execute::{
-    complete_task_after_agent_silent, fail_task_after_agent, CompleteExit,
+    complete_task_after_agent_silent, emit_handoff_warnings, fail_task_after_agent, gated_prompt,
+    CliParentEvidence, CompleteExit,
 };
+use crate::commands::handoff_policy::{handoff_policy_from_cfg, HandoffFlags};
+use crate::commands::handoff_preflight::run_handoff_preflight;
 use crate::commands::path_resolve::resolve_project_rel;
 use crate::output::OutputRenderer;
 
@@ -74,8 +78,13 @@ fn run_cleanup_inner() -> CoreResult<(String, Value)> {
     Ok((human, data))
 }
 
-pub fn run_agent(dag: Option<PathBuf>, opts: AgentOpts, renderer: &OutputRenderer<'_>) -> ExitCode {
-    match run_agent_inner(dag.clone(), opts) {
+pub fn run_agent(
+    dag: Option<PathBuf>,
+    opts: AgentOpts,
+    handoff: HandoffFlags,
+    renderer: &OutputRenderer<'_>,
+) -> ExitCode {
+    match run_agent_inner(dag.clone(), opts, handoff) {
         Ok(AgentOutcome::DoneRalph {
             human,
             data,
@@ -152,7 +161,19 @@ enum AgentOutcome {
     },
 }
 
-fn run_agent_inner(dag: Option<PathBuf>, opts: AgentOpts) -> CoreResult<AgentOutcome> {
+/// Reads `dare.config.json`, falling back to defaults when it is absent.
+fn load_agent_config(root: &ProjectRoot) -> DareConfig {
+    let Ok(rel) = SafeRelativePath::new("dare.config.json") else {
+        return DareConfig::default();
+    };
+    load_dare_config(root, &rel).unwrap_or_default()
+}
+
+fn run_agent_inner(
+    dag: Option<PathBuf>,
+    opts: AgentOpts,
+    handoff: HandoffFlags,
+) -> CoreResult<AgentOutcome> {
     let use_decay = match opts.policy.as_str() {
         "fixed" => false,
         "decay" => true,
@@ -183,6 +204,15 @@ fn run_agent_inner(dag: Option<PathBuf>, opts: AgentOpts) -> CoreResult<AgentOut
     let driver = resolve_driver(&opts.driver)?;
     let _ = driver.doctor()?;
     dare_guard::run_preflight(&root, &dare_guard::PreflightOptions::default())?;
+
+    // Strict handoff is settled once, before the attempt loop: a
+    // misconfiguration must fail at the start rather than once per attempt.
+    let cfg = load_agent_config(&root);
+    let handoff_policy = handoff_policy_from_cfg(&cfg, &handoff);
+    if handoff_policy.strict {
+        run_handoff_preflight(&root, &dag_rel, &doc, &handoff_policy)?;
+    }
+    let evidence = CliParentEvidence::new(&root, &dag_rel, &handoff_policy);
 
     let task_id = match &opts.task {
         Some(id) => {
@@ -256,7 +286,22 @@ fn run_agent_inner(dag: Option<PathBuf>, opts: AgentOpts) -> CoreResult<AgentOut
             last_worktree = spec.rel_path.clone();
             let wt_abs = root.as_path().join(&spec.rel_path);
 
-            let prompt = compose_task_prompt(&doc, &state, &task_id)?;
+            // Re-validated per attempt: evidence is re-read here, inside the
+            // loop, so a byte changed between attempts invalidates the import.
+            let prompt = {
+                let mut warnings = Vec::new();
+                let p = gated_prompt(
+                    &root,
+                    &doc,
+                    &state,
+                    &task_id,
+                    &handoff_policy,
+                    &evidence,
+                    &mut |w| warnings.push(w),
+                )?;
+                emit_handoff_warnings(&warnings);
+                p
+            };
             let req = AgentRequest {
                 task_id: task_id.clone(),
                 prompt,

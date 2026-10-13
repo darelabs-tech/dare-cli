@@ -1,32 +1,37 @@
 //! `dare execute` — status / next / watch (028) + complete / fail / reset (029).
 
+use std::cell::Cell;
 use std::path::PathBuf;
 use std::process::ExitCode;
 use std::thread;
 use std::time::Duration;
 
 use dare_contracts::{
-    load_dag, load_dare_config, load_runtime_state, DagDocument, DareConfig, RuntimeStateV1,
+    load_dag, load_dare_config, load_runtime_state, DagDocument, DareConfig, HandoffDecision,
+    HandoffPolicy, RefusalCode, RuntimeStateV1, HANDOFF_DIR_REL,
 };
 use dare_core::{
-    truncate_chars, CoreError, CoreResult, MockProcessRunner, ProcessOutput, ProcessRunner,
+    redact, truncate_chars, CoreError, CoreResult, MockProcessRunner, ProcessOutput, ProcessRunner,
     ProjectRoot, SafeRelativePath, SystemProcessRunner,
 };
 use dare_dag::{
-    build_next_report, build_status_snapshot, compute_ranks, ensure_state, iter_task_views,
-    transition, write as write_canvas, Clock, ExecuteOutcome, NextReport, RefreshCanvas,
-    StatusSnapshot, SystemClock, TaskStatus, Transition, CANVAS_REL, DEFAULT_DAG_REL, MSG_BLOCKED,
-    MSG_EMPTY, MSG_RESOLVED, STATE_REL,
+    build_next_report, build_status_snapshot, compose_task_prompt, compose_task_prompt_verified,
+    compute_ranks, ensure_state, iter_task_views, transition, write as write_canvas, Clock,
+    ExecuteOutcome, NextReport, ParentEvidence, RefreshCanvas, StatusSnapshot, SystemClock,
+    TaskStatus, Transition, CANVAS_REL, DEFAULT_DAG_REL, MSG_BLOCKED, MSG_EMPTY, MSG_RESOLVED,
+    STATE_REL,
 };
 use dare_project::find_project_root;
 use dare_verify::{
-    attach_best_of, formal_enabled_from_cfg, metrics_from_verdict, resolve_stack,
+    attach_best_of, evaluate_parent, formal_enabled_from_cfg, metrics_from_verdict, resolve_stack,
     run_advanced_verify, run_ralph, task_id_is_path_safe, validate_best_of,
     verification_from_ralph, verify_enabled_from_cfg, write_advanced_verdict, write_verification,
     AdvancedVerifyRequest, FormalBackend, LoopVerdict, RalphReport, VERIFICATION_DIR_REL,
 };
 use serde_json::{json, Map, Value};
 
+use crate::commands::handoff_policy::{handoff_policy_from_cfg, HandoffFlags};
+use crate::commands::handoff_preflight::run_handoff_preflight;
 use crate::commands::path_resolve::resolve_project_rel;
 use crate::output::OutputRenderer;
 
@@ -105,6 +110,7 @@ pub enum ExecuteAction {
 pub fn run_execute(
     dag: Option<PathBuf>,
     action: ExecuteAction,
+    handoff: HandoffFlags,
     renderer: &OutputRenderer<'_>,
 ) -> ExitCode {
     match action {
@@ -132,12 +138,13 @@ pub fn run_execute(
                 best_of,
                 prerank,
             },
+            handoff,
             renderer,
         ),
         ExecuteAction::CleanupWorktrees => {
             crate::commands::execute_agent::run_cleanup_worktrees(renderer)
         }
-        other => match run_execute_inner(dag, other, renderer) {
+        other => match run_execute_inner(dag, other, handoff, renderer) {
             Ok(Some((human, data))) => {
                 if let Err(e) = renderer.write_success(&human, data) {
                     return ExitCode::from(renderer.write_error(&e) as u8);
@@ -153,6 +160,7 @@ pub fn run_execute(
 fn run_execute_inner(
     dag: Option<PathBuf>,
     action: ExecuteAction,
+    handoff: HandoffFlags,
     renderer: &OutputRenderer<'_>,
 ) -> CoreResult<Option<(String, Value)>> {
     let cwd = std::env::current_dir().map_err(|e| CoreError::io(e.to_string()))?;
@@ -182,7 +190,11 @@ fn run_execute_inner(
             let state = ensure_state(&root, &doc, &clock)?;
             let ranks = compute_ranks(&doc)?;
             write_canvas(&root, &doc, &state, Some(&ranks), &clock)?;
-            let report = build_next_report(&doc, &state, &ranks).map_err(CoreError::from)?;
+            let mut report = build_next_report(&doc, &state, &ranks).map_err(CoreError::from)?;
+            let cfg = load_config_soft(&root);
+            let policy = handoff_policy_from_cfg(&cfg, &handoff);
+            let warnings = apply_handoff_gate(&root, &dag_rel, &doc, &state, &mut report, &policy)?;
+            emit_handoff_warnings(&warnings);
             let human = format_next_human(&report);
             let data = next_json(&report, &dag_display);
             Ok(Some((human, data)))
@@ -846,4 +858,468 @@ fn next_json(report: &NextReport, dag: &str) -> Value {
         "ready": ready,
         "resolved": report.outcome == ExecuteOutcome::Resolved,
     })
+}
+
+/// Writes compatibility-mode warnings to stderr, redacted.
+///
+/// stdout is deliberately untouched: the golden baseline of task-001 asserts it
+/// byte for byte, and a warning must never change what a pipe receives.
+pub fn emit_handoff_warnings(warnings: &[String]) {
+    use std::io::Write as _;
+    for w in warnings {
+        let _ = writeln!(std::io::stderr(), "{}", redact(w));
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Handoff gate (task-009)
+// ---------------------------------------------------------------------------
+
+/// Warning printed in compatibility mode, where a refusal informs but never
+/// blocks. It states plainly that it is not verification, so nobody reads a
+/// successful run as a verified one.
+const MSG_COMPAT_WARN_TMPL: &str = concat!(
+    "warning: handoff from {id} not verified ({code}); imported anyway\n",
+    "         (compatibility mode — this is not verification; ",
+    "enable handoff.strict to block)"
+);
+
+/// Prefix of a strict refusal, which is a hard error (exit 6).
+const MSG_STRICT_REFUSED_TMPL: &str = "handoff refused: {id} ({code})";
+
+/// [`ParentEvidence`] backed by the evidence on disk.
+///
+/// Delegates straight to [`evaluate_parent`] and re-implements no check of its
+/// own, so the twelve ordered checks have exactly one home.
+pub struct CliParentEvidence<'a> {
+    root: &'a ProjectRoot,
+    dag_rel: &'a SafeRelativePath,
+    policy: &'a HandoffPolicy,
+    calls: Cell<u32>,
+}
+
+impl<'a> CliParentEvidence<'a> {
+    pub fn new(
+        root: &'a ProjectRoot,
+        dag_rel: &'a SafeRelativePath,
+        policy: &'a HandoffPolicy,
+    ) -> Self {
+        Self {
+            root,
+            dag_rel,
+            policy,
+            calls: Cell::new(0),
+        }
+    }
+
+    /// How many times evidence was consulted.
+    ///
+    /// Only the zero-cost assertions need this, so it does not exist in a
+    /// release build.
+    #[cfg(test)]
+    pub fn calls(&self) -> u32 {
+        self.calls.get()
+    }
+}
+
+impl ParentEvidence for CliParentEvidence<'_> {
+    fn decide(&self, parent_id: &str) -> HandoffDecision {
+        self.calls.set(self.calls.get().saturating_add(1));
+        evaluate_parent(self.root, self.dag_rel, parent_id, self.policy)
+    }
+}
+
+/// Whether this project produces handoffs at all.
+///
+/// A project that has never written a sidecar gets no evaluation and no
+/// warning: the default path must not pay for a feature it does not use. Once
+/// any sidecar exists the project has opted in, and from then on a parent
+/// *without* one is exactly what compatibility mode should report — so the
+/// question is about the directory, not about any one task.
+fn handoff_in_use(root: &ProjectRoot) -> bool {
+    let Ok(rel) = SafeRelativePath::new(HANDOFF_DIR_REL) else {
+        return false;
+    };
+    let Ok(abs) = root.resolve(&rel) else {
+        return false;
+    };
+    let Ok(entries) = std::fs::read_dir(abs.as_path().as_std_path()) else {
+        return false;
+    };
+    entries.flatten().any(|e| {
+        e.path()
+            .extension()
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("json"))
+    })
+}
+
+/// Composes one task's prompt under the resolved policy.
+///
+/// Strict refuses the whole run with [`CoreError::GuardFail`] — exit 6 — on the
+/// first parent whose evidence does not hold, because importing unverified
+/// context is the thing strict mode exists to prevent.
+///
+/// Compatibility mode composes exactly as today and routes any refusal to
+/// `warn`, which the caller sends to stderr. stdout is untouched, which is what
+/// the golden baseline asserts.
+pub fn gated_prompt(
+    root: &ProjectRoot,
+    doc: &DagDocument,
+    state: &RuntimeStateV1,
+    task_id: &str,
+    policy: &HandoffPolicy,
+    ev: &dyn ParentEvidence,
+    warn: &mut dyn FnMut(String),
+) -> CoreResult<String> {
+    if policy.strict {
+        let composed = compose_task_prompt_verified(doc, state, task_id, ev)?;
+        if let Some(refusal) = composed.refused.first() {
+            return Err(CoreError::guard_fail(
+                MSG_STRICT_REFUSED_TMPL
+                    .replace("{id}", &refusal.parent_id)
+                    .replace("{code}", &refusal_code_str(refusal)),
+            ));
+        }
+        return Ok(composed.prompt);
+    }
+
+    // Default path: today's composition, byte for byte.
+    let prompt = compose_task_prompt(doc, state, task_id)?;
+    if handoff_in_use(root) {
+        let composed = compose_task_prompt_verified(doc, state, task_id, ev)?;
+        for refusal in &composed.refused {
+            warn(
+                MSG_COMPAT_WARN_TMPL
+                    .replace("{id}", &refusal.parent_id)
+                    .replace("{code}", &refusal_code_str(refusal)),
+            );
+        }
+    }
+    Ok(prompt)
+}
+
+/// Stable wire code of a refusal, or `ReceiptInvalid` for the impossible case
+/// of a refusal without one — never a silent empty string.
+fn refusal_code_str(decision: &HandoffDecision) -> String {
+    decision
+        .refusal
+        .unwrap_or(RefusalCode::ReceiptInvalid)
+        .as_str()
+        .to_string()
+}
+
+/// Rewrites a next-report's prompts under the policy, after the preflight.
+///
+/// The report arrives with prompts already composed the legacy way; strict mode
+/// replaces them with verified ones. Returns the warnings for stderr.
+pub fn apply_handoff_gate(
+    root: &ProjectRoot,
+    dag_rel: &SafeRelativePath,
+    doc: &DagDocument,
+    state: &RuntimeStateV1,
+    report: &mut NextReport,
+    policy: &HandoffPolicy,
+) -> CoreResult<Vec<String>> {
+    if policy.strict {
+        run_handoff_preflight(root, dag_rel, doc, policy)?;
+    }
+    let ev = CliParentEvidence::new(root, dag_rel, policy);
+    let mut warnings = Vec::new();
+    let mut sink = |w: String| warnings.push(w);
+    for task in &mut report.ready {
+        task.prompt = gated_prompt(root, doc, state, &task.id, policy, &ev, &mut sink)?;
+    }
+    Ok(warnings)
+}
+
+#[cfg(test)]
+mod handoff_gate_tests {
+    use super::*;
+    use dare_contracts::{
+        parse_dag_yaml, EvidenceState, HandoffKind, HandoffRecord, Producer, RepoRevision,
+        RevisionState, SourceRevision, TaskRuntimeState, Verdict, VerificationReceipt,
+        HANDOFF_SCHEMA_VERSION,
+    };
+    use dare_verify::write_handoff;
+    use std::collections::BTreeMap;
+    use tempfile::tempdir;
+
+    const DAG: &str = r#"
+title: "T"
+version: "1.0.0"
+tasks:
+  - id: task-a
+    title: Alpha
+    depends_on: []
+    complexity: LOW
+    subtask_prompt: do-a
+  - id: task-b
+    title: Beta
+    depends_on: [task-a]
+    complexity: LOW
+    subtask_prompt: do-b
+"#;
+
+    /// Counts how often evidence is consulted and always refuses, so a single
+    /// call is visible both in the counter and in the output.
+    struct CountingEvidence {
+        calls: Cell<u32>,
+    }
+
+    impl CountingEvidence {
+        fn new() -> Self {
+            Self {
+                calls: Cell::new(0),
+            }
+        }
+    }
+
+    impl ParentEvidence for CountingEvidence {
+        fn decide(&self, parent_id: &str) -> HandoffDecision {
+            self.calls.set(self.calls.get() + 1);
+            HandoffDecision::refused(
+                parent_id,
+                EvidenceState::Missing,
+                RefusalCode::ReceiptMissing,
+                "no sidecar",
+            )
+        }
+    }
+
+    fn temp_root() -> (tempfile::TempDir, ProjectRoot) {
+        let dir = tempdir().expect("tempdir");
+        let root = ProjectRoot::new(dir.path()).expect("project root");
+        (dir, root)
+    }
+
+    fn state_with_done_parent() -> RuntimeStateV1 {
+        let mut tasks = BTreeMap::new();
+        tasks.insert(
+            "task-a".to_string(),
+            TaskRuntimeState {
+                status: TaskStatus::Done.as_str().to_string(),
+                output: "alpha output".to_string(),
+                error: String::new(),
+                tokens: None,
+                duration: None,
+                attempts: Vec::new(),
+                parent_id: None,
+                depends_on: Vec::new(),
+                extra: Map::new(),
+            },
+        );
+        tasks.insert(
+            "task-b".to_string(),
+            TaskRuntimeState {
+                status: TaskStatus::Pending.as_str().to_string(),
+                output: String::new(),
+                error: String::new(),
+                tokens: None,
+                duration: None,
+                attempts: Vec::new(),
+                parent_id: None,
+                depends_on: vec!["task-a".to_string()],
+                extra: Map::new(),
+            },
+        );
+        RuntimeStateV1 {
+            version: 1,
+            updated_at: "2026-01-01T00:00:00Z".to_string(),
+            tasks,
+            extra: Map::new(),
+        }
+    }
+
+    fn seed_sidecar(root: &ProjectRoot, task_id: &str) {
+        let receipt = VerificationReceipt {
+            schema_version: HANDOFF_SCHEMA_VERSION,
+            task_id: task_id.to_string(),
+            contract_digest: "a".repeat(64),
+            contract_full_digest: "b".repeat(64),
+            source_revision: SourceRevision {
+                state: RevisionState::Clean,
+                repositories: vec![RepoRevision {
+                    alias: "dare-cli".to_string(),
+                    commit_sha: Some("0".repeat(40)),
+                    worktree_digest: None,
+                }],
+            },
+            artifact_refs: Vec::new(),
+            artifact_digests: Vec::new(),
+            verification_ref: format!(".dare/verification/{task_id}.json"),
+            verification_digest: "d".repeat(64),
+            verdict: Verdict::Passed,
+            created_at: "2026-10-13T12:00:00Z".to_string(),
+            producer: Producer {
+                cli_version: "4.0.0".to_string(),
+                driver: "cli".to_string(),
+            },
+        };
+        let record = HandoffRecord {
+            schema_version: HANDOFF_SCHEMA_VERSION,
+            task_id: task_id.to_string(),
+            kind: HandoffKind::VerifiedDeliverable,
+            receipt,
+            deliverable: "seeded".to_string(),
+            context_bounds: 2000,
+            next_steps: Vec::new(),
+            open_items: Vec::new(),
+            superseded: Vec::new(),
+            extra: Map::new(),
+        };
+        write_handoff(root, &record).expect("sidecar written");
+    }
+
+    #[test]
+    fn preflight_not_called_when_not_strict() {
+        let (_dir, root) = temp_root();
+        let doc = parse_dag_yaml(DAG).expect("dag parses");
+        let state = state_with_done_parent();
+        let policy = HandoffPolicy::default();
+        assert!(!policy.strict);
+
+        let ev = CountingEvidence::new();
+        let mut warnings = Vec::new();
+        let prompt = gated_prompt(&root, &doc, &state, "task-b", &policy, &ev, &mut |w| {
+            warnings.push(w)
+        })
+        .expect("compat composes");
+
+        assert_eq!(
+            ev.calls.get(),
+            0,
+            "a project with no sidecar must not consult evidence at all"
+        );
+        assert!(warnings.is_empty(), "nothing to warn about: {warnings:?}");
+        assert_eq!(
+            prompt,
+            compose_task_prompt(&doc, &state, "task-b").expect("legacy composes"),
+            "the default path composes exactly as today"
+        );
+    }
+
+    #[test]
+    fn cli_evidence_not_constructed_into_calls_when_not_strict() {
+        // The real evidence type, not the fake: proves `evaluate_parent` is
+        // never reached on the default path.
+        let (_dir, root) = temp_root();
+        let doc = parse_dag_yaml(DAG).expect("dag parses");
+        let state = state_with_done_parent();
+        let policy = HandoffPolicy::default();
+        let dag_rel = SafeRelativePath::new("DARE/dare-dag.yaml").expect("rel");
+        let ev = CliParentEvidence::new(&root, &dag_rel, &policy);
+
+        let mut warnings = Vec::new();
+        gated_prompt(&root, &doc, &state, "task-b", &policy, &ev, &mut |w| {
+            warnings.push(w)
+        })
+        .expect("compat composes");
+        assert_eq!(
+            ev.calls(),
+            0,
+            "evaluate_parent was reached on the default path"
+        );
+    }
+
+    #[test]
+    fn compat_warns_once_a_sidecar_exists() {
+        let (_dir, root) = temp_root();
+        let doc = parse_dag_yaml(DAG).expect("dag parses");
+        let state = state_with_done_parent();
+        let policy = HandoffPolicy::default();
+        // The project has opted into handoffs by producing one.
+        seed_sidecar(&root, "task-a");
+
+        let ev = CountingEvidence::new();
+        let mut warnings = Vec::new();
+        let prompt = gated_prompt(&root, &doc, &state, "task-b", &policy, &ev, &mut |w| {
+            warnings.push(w)
+        })
+        .expect("compat never blocks");
+
+        assert_eq!(ev.calls.get(), 1, "the DONE parent was evaluated");
+        assert_eq!(warnings.len(), 1, "{warnings:?}");
+        let w = &warnings[0];
+        assert!(w.contains("handoff from task-a not verified"), "{w}");
+        assert!(w.contains("HANDOFF_RECEIPT_MISSING"), "{w}");
+        assert!(w.contains("imported anyway"), "{w}");
+        assert!(
+            w.contains("this is not verification"),
+            "the warning must never read as a verification: {w}"
+        );
+        assert_eq!(
+            prompt,
+            compose_task_prompt(&doc, &state, "task-b").expect("legacy composes"),
+            "compat mode imports anyway, so the prompt is unchanged"
+        );
+    }
+
+    #[test]
+    fn strict_refusal_is_guard_fail_exit_6() {
+        let (_dir, root) = temp_root();
+        let doc = parse_dag_yaml(DAG).expect("dag parses");
+        let state = state_with_done_parent();
+        let policy = HandoffPolicy {
+            strict: true,
+            ..HandoffPolicy::default()
+        };
+
+        let ev = CountingEvidence::new();
+        let mut warnings = Vec::new();
+        let err = gated_prompt(&root, &doc, &state, "task-b", &policy, &ev, &mut |w| {
+            warnings.push(w)
+        })
+        .expect_err("strict blocks an unverified parent");
+
+        assert_eq!(err.exit_code(), 6, "got {err:?}");
+        assert!(matches!(err, CoreError::GuardFail(_)), "got {err:?}");
+        assert!(
+            err.message().contains("handoff refused: task-a"),
+            "got {}",
+            err.message()
+        );
+        assert!(
+            err.message().contains("HANDOFF_RECEIPT_MISSING"),
+            "the stable code belongs in the message: {}",
+            err.message()
+        );
+        assert!(warnings.is_empty(), "strict refuses instead of warning");
+    }
+
+    #[test]
+    fn strict_imports_a_valid_parent() {
+        struct AcceptAll;
+        impl ParentEvidence for AcceptAll {
+            fn decide(&self, parent_id: &str) -> HandoffDecision {
+                HandoffDecision::valid(parent_id, "alpha output", None)
+            }
+        }
+
+        let (_dir, root) = temp_root();
+        let doc = parse_dag_yaml(DAG).expect("dag parses");
+        let state = state_with_done_parent();
+        let policy = HandoffPolicy {
+            strict: true,
+            ..HandoffPolicy::default()
+        };
+
+        let mut warnings = Vec::new();
+        let prompt = gated_prompt(
+            &root,
+            &doc,
+            &state,
+            "task-b",
+            &policy,
+            &AcceptAll,
+            &mut |w| warnings.push(w),
+        )
+        .expect("a valid parent imports");
+
+        assert_eq!(
+            prompt,
+            compose_task_prompt(&doc, &state, "task-b").expect("legacy composes"),
+            "verified evidence carrying the recorded output is byte-identical"
+        );
+        assert!(warnings.is_empty());
+    }
 }
