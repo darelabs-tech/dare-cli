@@ -20,6 +20,11 @@ yarn-error.log*
 # --- DARE CLI local runtime + methodology artifacts (keep local only; repo is public) ---
 DARE/
 DARE-RUST-MICRO-PLANOS/
+.dare/
+
+# --- Agent / IDE workspace config (local only; repo is public) ---
+.agents/skills/
+.claude/
 
 # --- Golden parity report (SHOULD overwrite; do not commit) ---
 tests/golden/last-report.json
