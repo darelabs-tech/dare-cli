@@ -1080,6 +1080,7 @@ dependencies = [
  "dare-agent",
  "dare-contracts",
  "dare-core",
+ "dare-project",
  "globset",
  "serde",
  "serde_json",
