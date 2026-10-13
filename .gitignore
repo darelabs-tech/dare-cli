@@ -45,3 +45,7 @@ dist/
 # --- mdBook build output ---
 book/book/
 
+
+# npm init parity (cycle rust-init-npm-parity-011): templates and goldens must be tracked
+!assets/npm/stacks/*/.env.example
+!crates/dare-cli/tests/fixtures/golden/init-npm/*/files/DARE/
