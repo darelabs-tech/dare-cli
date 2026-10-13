@@ -1,0 +1,11 @@
+- Creating project demo-api...
+
+📦 Bootstrapping Rails 8 (API-only) in <case-root>/demo-api
+
+🔧 Using native rails — toolchain=native
+  $ rails new . --database=postgresql --skip-bundle --skip-git --skip-test --skip-ci --api
+
+✓ Stack scaffold complete.
+
+✔ Project demo-api created.
+  Stack: ruby-rails-8

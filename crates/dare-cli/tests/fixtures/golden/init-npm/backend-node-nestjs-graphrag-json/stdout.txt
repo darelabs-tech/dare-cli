@@ -1,0 +1,19 @@
+
+🚀 DARE Framework - Project Initialization
+
+- Creating project demo-api...
+
+📦 Scaffolding node-nestjs (DARE-shaped) in <case-root>/demo-api
+
+
+✓ Stack scaffold complete.
+
+✔ Project demo-api created successfully!
+
+📋 Next steps:
+
+  1. cd demo-api
+  2. dare design "Describe your project here"
+  3. dare blueprint
+  4. dare execute --parallel
+

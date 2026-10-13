@@ -1,0 +1,38 @@
+{
+  "slug": "backend-ruby-rails-8",
+  "description": "Backend only, ruby-rails-8, non-interactive (ide=cursor, graphrag=sqlite, mcp=false).",
+  "mode": "cli",
+  "command": [
+    "dare",
+    "init",
+    "demo-api",
+    "--stack",
+    "ruby-rails-8",
+    "--toolchain",
+    "native"
+  ],
+  "generator_config": {
+    "name": "demo-api",
+    "structure": "backend",
+    "backend": "ruby-rails-8",
+    "ide": "cursor",
+    "graphrag": "sqlite",
+    "mcp": false,
+    "toolchain": "native",
+    "outputDir": "<case-root>/demo-api"
+  },
+  "toolchain": "native",
+  "env": {},
+  "cwd": "<case-root>",
+  "project_dir": "demo-api",
+  "covers": [],
+  "exit_code": 0,
+  "stored_files": [
+    ".cursor/rules/skill-ruby-rails-8.mdc",
+    ".cursorrules",
+    ".gitignore",
+    "DARE/README.md",
+    "dare-graph.yml",
+    "dare.config.json"
+  ]
+}

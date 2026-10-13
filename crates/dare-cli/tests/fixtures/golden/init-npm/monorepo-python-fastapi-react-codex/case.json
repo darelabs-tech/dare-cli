@@ -1,0 +1,44 @@
+{
+  "slug": "monorepo-python-fastapi-react-codex",
+  "description": "Monorepo FastAPI + React, Codex CLI.",
+  "mode": "interactive",
+  "command": [
+    "dare",
+    "init",
+    "shop-platform"
+  ],
+  "answers": {
+    "structure": "monorepo",
+    "backend": "python-fastapi",
+    "frontend": "react",
+    "ide": "codex",
+    "graphrag": "sqlite",
+    "mcp": true,
+    "toolchain": "native"
+  },
+  "generator_config": {
+    "name": "shop-platform",
+    "structure": "monorepo",
+    "backend": "python-fastapi",
+    "frontend": "react",
+    "ide": "codex",
+    "graphrag": "sqlite",
+    "mcp": true,
+    "toolchain": "native",
+    "outputDir": "<case-root>/shop-platform"
+  },
+  "toolchain": "native",
+  "env": {},
+  "cwd": "<case-root>",
+  "project_dir": "shop-platform",
+  "covers": [],
+  "exit_code": 0,
+  "stored_files": [
+    ".gitignore",
+    "AGENTS.md",
+    "DARE/README.md",
+    "backend/.gitignore",
+    "dare-graph.yml",
+    "dare.config.json"
+  ]
+}

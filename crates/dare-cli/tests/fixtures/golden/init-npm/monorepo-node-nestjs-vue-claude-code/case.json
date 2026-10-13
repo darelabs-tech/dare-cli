@@ -1,0 +1,46 @@
+{
+  "slug": "monorepo-node-nestjs-vue-claude-code",
+  "description": "User-reported case: monorepo NestJS backend/ + Vue frontend/, Claude Code.",
+  "mode": "interactive",
+  "command": [
+    "dare",
+    "init",
+    "api-nest-validations"
+  ],
+  "answers": {
+    "structure": "monorepo",
+    "backend": "node-nestjs",
+    "frontend": "vue",
+    "ide": "claude-code",
+    "graphrag": "sqlite",
+    "mcp": true,
+    "toolchain": "native"
+  },
+  "generator_config": {
+    "name": "api-nest-validations",
+    "structure": "monorepo",
+    "backend": "node-nestjs",
+    "frontend": "vue",
+    "ide": "claude-code",
+    "graphrag": "sqlite",
+    "mcp": true,
+    "toolchain": "native",
+    "outputDir": "<case-root>/api-nest-validations"
+  },
+  "toolchain": "native",
+  "env": {},
+  "cwd": "<case-root>",
+  "project_dir": "api-nest-validations",
+  "covers": [
+    "B-03"
+  ],
+  "exit_code": 0,
+  "stored_files": [
+    ".claude/settings.json",
+    ".gitignore",
+    "DARE/README.md",
+    "backend/.gitignore",
+    "dare-graph.yml",
+    "dare.config.json"
+  ]
+}

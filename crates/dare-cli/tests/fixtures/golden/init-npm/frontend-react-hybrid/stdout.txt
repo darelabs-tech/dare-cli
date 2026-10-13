@@ -1,0 +1,22 @@
+
+🚀 DARE Framework - Project Initialization
+
+- Creating project web-portal...
+
+📦 Bootstrapping Vite (react-ts) in <case-root>/web-portal
+
+🔧 Using native npm — toolchain=native
+  $ npx -y degit vitejs/vite/packages/create-vite/template-react-ts . --force
+  $ npm install
+
+✓ Stack scaffold complete.
+
+✔ Project web-portal created successfully!
+
+📋 Next steps:
+
+  1. cd web-portal
+  2. dare design "Describe your project here"
+  3. dare blueprint
+  4. dare execute --parallel
+

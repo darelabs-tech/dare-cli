@@ -1,0 +1,38 @@
+{
+  "slug": "backend-go-stdlib",
+  "description": "Backend only, go-stdlib, non-interactive (ide=cursor, graphrag=sqlite, mcp=false).",
+  "mode": "cli",
+  "command": [
+    "dare",
+    "init",
+    "demo-api",
+    "--stack",
+    "go-stdlib",
+    "--toolchain",
+    "native"
+  ],
+  "generator_config": {
+    "name": "demo-api",
+    "structure": "backend",
+    "backend": "go-stdlib",
+    "ide": "cursor",
+    "graphrag": "sqlite",
+    "mcp": false,
+    "toolchain": "native",
+    "outputDir": "<case-root>/demo-api"
+  },
+  "toolchain": "native",
+  "env": {},
+  "cwd": "<case-root>",
+  "project_dir": "demo-api",
+  "covers": [],
+  "exit_code": 0,
+  "stored_files": [
+    ".cursor/rules/skill-go-stdlib.mdc",
+    ".cursorrules",
+    ".gitignore",
+    "DARE/README.md",
+    "dare-graph.yml",
+    "dare.config.json"
+  ]
+}

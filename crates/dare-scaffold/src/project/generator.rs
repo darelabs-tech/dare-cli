@@ -3,8 +3,6 @@
 use std::path::{Path, PathBuf};
 
 use dare_core::{CoreError, CoreResult};
-use serde::Serialize;
-use serde_json::{json, Value};
 
 use super::bootstrap::{bootstrap_backend, bootstrap_frontend, bootstrap_mcp, BootstrapCtx};
 use super::config::{
@@ -13,6 +11,7 @@ use super::config::{
 };
 use super::console::{Console, Tone};
 use super::ide::{install_ide_files, write_dare_templates};
+use super::ordered_json::{arr, b, int, null, num, obj, s, OrderedJson};
 use super::tools::ToolRunner;
 use super::writer::ProjectWriter;
 
@@ -431,121 +430,152 @@ fn create_rust_fullstack_workspace(
 
 // ─── dare.config.json ────────────────────────────────────────────────────────
 
-/// Key order matches the npm object literal; `None` fields are dropped
-/// (npm `fs.writeJSON` omits `undefined`).
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct DareConfigJson<'a> {
-    name: &'a str,
-    structure: &'a str,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    backend: Option<&'a str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    frontend: Option<&'a str>,
-    ide: &'a str,
-    graphrag: Value,
-    mcp: bool,
-    toolchain: &'a str,
-    version: &'a str,
-    review: Value,
-    refine: Value,
-    verification: Value,
-    hooks: Value,
-    guard: Value,
-    drift: Value,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    mcp_transport: Option<&'a str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    mcp_language: Option<&'a str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    mcp_features: Option<Vec<&'a str>>,
+/// Default `verification` block (`verification/config.ts` `DEFAULTS`), npm key order.
+pub fn default_verification_config() -> OrderedJson {
+    obj(vec![
+        ("enabled", b(false)),
+        (
+            "mutation",
+            obj(vec![
+                ("enabled", b(true)),
+                ("minScore", num(0.7)),
+                ("incremental", b(true)),
+                ("maxMutants", int(200)),
+                ("timeoutSeconds", int(900)),
+            ]),
+        ),
+        ("failToPass", obj(vec![("required", b(true))])),
+        ("antiTamper", obj(vec![("enabled", b(true))])),
+        ("typeCheck", obj(vec![("enabled", b(false))])),
+        (
+            "loop",
+            obj(vec![
+                ("policy", s("decay")),
+                ("maxAttempts", int(5)),
+                ("maxDepth", int(2)),
+                ("saturationWindow", int(3)),
+                ("onSaturation", s("fresh-start")),
+            ]),
+        ),
+        (
+            "bestOfN",
+            obj(vec![
+                ("default", int(1)),
+                ("max", int(5)),
+                ("budgetTokens", null()),
+            ]),
+        ),
+        ("prerank", obj(vec![("enabled", b(false))])),
+        (
+            "formal",
+            obj(vec![
+                ("enabled", b(false)),
+                ("backend", s("dafny")),
+                ("modules", arr(vec![])),
+                ("maxRepairIterations", int(5)),
+                ("proofTimeoutSeconds", int(120)),
+                ("antiBypass", b(true)),
+            ]),
+        ),
+    ])
 }
 
-/// Default `verification` block (`verification/config.ts` `DEFAULTS`).
-pub fn default_verification_config() -> Value {
-    json!({
-        "enabled": false,
-        "mutation": {
-            "enabled": true,
-            "minScore": 0.7,
-            "incremental": true,
-            "maxMutants": 200,
-            "timeoutSeconds": 900
-        },
-        "failToPass": { "required": true },
-        "antiTamper": { "enabled": true },
-        "typeCheck": { "enabled": false },
-        "loop": {
-            "policy": "decay",
-            "maxAttempts": 5,
-            "maxDepth": 2,
-            "saturationWindow": 3,
-            "onSaturation": "fresh-start"
-        },
-        "bestOfN": { "default": 1, "max": 5, "budgetTokens": null },
-        "prerank": { "enabled": false },
-        "formal": {
-            "enabled": false,
-            "backend": "dafny",
-            "modules": [],
-            "maxRepairIterations": 5,
-            "proofTimeoutSeconds": 120,
-            "antiBypass": true
-        }
-    })
-}
-
-/// `dare.config.json` body (2-space JSON + trailing newline, like `fs.writeJSON`).
+/// `dare.config.json` body: npm object-literal key order, `undefined` fields
+/// dropped, 2-space JSON + trailing newline (`fs.writeJSON`).
 pub fn dare_config_json(cfg: &ProjectConfig) -> CoreResult<String> {
-    let is_mcp = cfg.structure == Structure::McpServer;
-    let body = DareConfigJson {
-        name: &cfg.name,
-        structure: cfg.structure.as_str(),
-        backend: cfg.backend.map(|b| b.as_str()),
-        frontend: cfg.frontend.map(|f| f.as_str()),
-        ide: cfg.ide.as_str(),
-        graphrag: json!({
-            "backend": cfg.graphrag.as_str(),
-            "semantic": { "enabled": false, "model": "all-MiniLM-L6-v2", "rrfK": 60 }
-        }),
-        mcp: cfg.mcp,
-        toolchain: cfg.toolchain.as_str(),
-        version: FRAMEWORK_VERSION,
-        review: json!({ "onComplete": true, "strict": false }),
-        refine: json!({ "thresholds": { "low": 5, "med": 12, "high": 20 } }),
-        verification: default_verification_config(),
-        hooks: json!({ "on": {}, "trusted": false }),
-        guard: json!({
-            "enabled": false,
-            "onExecute": true,
-            "unicode": "strip",
-            "trustedPaths": [".dare/steering/**", "DARE/TASKS.md"],
-            "signing": { "enabled": false }
-        }),
-        drift: json!({
-            "enabled": false,
-            "maxOrphanReqs": 0,
-            "maxOrphanCode": 0,
-            "failOnStale": false,
-            "ignore": ["**/index.ts", "**/*.generated.*", "**/bin/**"]
-        }),
-        mcp_transport: is_mcp
-            .then(|| cfg.mcp_transport.map(|t| t.as_str()))
-            .flatten(),
-        mcp_language: is_mcp
-            .then(|| cfg.mcp_language.map(|l| l.as_str()))
-            .flatten(),
-        mcp_features: is_mcp
-            .then(|| {
-                cfg.mcp_features
-                    .as_ref()
-                    .map(|fs| fs.iter().map(|f| f.as_str()).collect())
-            })
-            .flatten(),
-    };
-    let s = serde_json::to_string_pretty(&body)
+    let mut entries: Vec<(&str, OrderedJson)> = vec![
+        ("name", s(&cfg.name)),
+        ("structure", s(cfg.structure.as_str())),
+    ];
+    if let Some(backend) = cfg.backend {
+        entries.push(("backend", s(backend.as_str())));
+    }
+    if let Some(frontend) = cfg.frontend {
+        entries.push(("frontend", s(frontend.as_str())));
+    }
+    entries.extend([
+        ("ide", s(cfg.ide.as_str())),
+        (
+            "graphrag",
+            obj(vec![
+                ("backend", s(cfg.graphrag.as_str())),
+                (
+                    "semantic",
+                    obj(vec![
+                        ("enabled", b(false)),
+                        ("model", s("all-MiniLM-L6-v2")),
+                        ("rrfK", int(60)),
+                    ]),
+                ),
+            ]),
+        ),
+        ("mcp", b(cfg.mcp)),
+        ("toolchain", s(cfg.toolchain.as_str())),
+        ("version", s(FRAMEWORK_VERSION)),
+        (
+            "review",
+            obj(vec![("onComplete", b(true)), ("strict", b(false))]),
+        ),
+        (
+            "refine",
+            obj(vec![(
+                "thresholds",
+                obj(vec![("low", int(5)), ("med", int(12)), ("high", int(20))]),
+            )]),
+        ),
+        ("verification", default_verification_config()),
+        (
+            "hooks",
+            obj(vec![("on", obj(vec![])), ("trusted", b(false))]),
+        ),
+        (
+            "guard",
+            obj(vec![
+                ("enabled", b(false)),
+                ("onExecute", b(true)),
+                ("unicode", s("strip")),
+                (
+                    "trustedPaths",
+                    arr(vec![s(".dare/steering/**"), s("DARE/TASKS.md")]),
+                ),
+                ("signing", obj(vec![("enabled", b(false))])),
+            ]),
+        ),
+        (
+            "drift",
+            obj(vec![
+                ("enabled", b(false)),
+                ("maxOrphanReqs", int(0)),
+                ("maxOrphanCode", int(0)),
+                ("failOnStale", b(false)),
+                (
+                    "ignore",
+                    arr(vec![
+                        s("**/index.ts"),
+                        s("**/*.generated.*"),
+                        s("**/bin/**"),
+                    ]),
+                ),
+            ]),
+        ),
+    ]);
+    if cfg.structure == Structure::McpServer {
+        if let Some(t) = cfg.mcp_transport {
+            entries.push(("mcpTransport", s(t.as_str())));
+        }
+        if let Some(l) = cfg.mcp_language {
+            entries.push(("mcpLanguage", s(l.as_str())));
+        }
+        if let Some(fs) = &cfg.mcp_features {
+            entries.push((
+                "mcpFeatures",
+                arr(fs.iter().map(|f| s(f.as_str())).collect()),
+            ));
+        }
+    }
+    let out = serde_json::to_string_pretty(&obj(entries))
         .map_err(|e| CoreError::internal(format!("serialize dare.config.json: {e}")))?;
-    Ok(format!("{s}\n"))
+    Ok(format!("{out}\n"))
 }
 
 // ─── .gitignore, README, dare-graph.yml ─────────────────────────────────────
@@ -691,6 +721,7 @@ mod tests {
     use crate::project::config::{BackendStack, Ide, McpTransport, ToolchainMode};
     use crate::project::console::MemoryConsole;
     use crate::project::tools::RecordingToolRunner;
+    use serde_json::Value;
 
     fn cfg(root: &Path, structure: Structure) -> ProjectConfig {
         ProjectConfig {

@@ -1,0 +1,1 @@
+{"cwd":"demo-api","argv":["rails","new",".","--database=postgresql","--skip-bundle","--skip-git","--skip-test","--skip-ci","--api"]}

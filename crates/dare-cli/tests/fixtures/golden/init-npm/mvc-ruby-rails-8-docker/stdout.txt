@@ -1,0 +1,11 @@
+- Creating project demo-mvc...
+
+📦 Bootstrapping Rails 8 (full-stack) in <case-root>/demo-mvc
+
+🐳 Using Docker (ruby:3.3) — toolchain=docker
+  $ docker run --rm -v <case-root>/demo-mvc:/app -w /app --user <uid>:<gid> ruby:3.3 sh -c export GEM_HOME=/tmp/.dare-gems GEM_PATH=/tmp/.dare-gems PATH="/tmp/.dare-gems/bin:$PATH" && gem install rails -v '~> 8.0' --no-document && rails new . --database=postgresql --skip-bundle --skip-git --skip-test --skip-ci
+
+✓ Stack scaffold complete.
+
+✔ Project demo-mvc created.
+  Stack: ruby-rails-8

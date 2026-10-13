@@ -31,6 +31,40 @@ impl OrderedJson {
     }
 }
 
+/// Object with keys in the given order.
+pub fn obj(entries: Vec<(&str, OrderedJson)>) -> OrderedJson {
+    OrderedJson::Object(
+        entries
+            .into_iter()
+            .map(|(k, v)| (k.to_string(), v))
+            .collect(),
+    )
+}
+
+pub fn arr(items: Vec<OrderedJson>) -> OrderedJson {
+    OrderedJson::Array(items)
+}
+
+pub fn s(v: &str) -> OrderedJson {
+    OrderedJson::Scalar(Value::String(v.to_string()))
+}
+
+pub fn b(v: bool) -> OrderedJson {
+    OrderedJson::Scalar(Value::Bool(v))
+}
+
+pub fn int(v: i64) -> OrderedJson {
+    OrderedJson::Scalar(Value::from(v))
+}
+
+pub fn num(v: f64) -> OrderedJson {
+    OrderedJson::Scalar(Value::from(v))
+}
+
+pub fn null() -> OrderedJson {
+    OrderedJson::Scalar(Value::Null)
+}
+
 impl Serialize for OrderedJson {
     fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
         match self {

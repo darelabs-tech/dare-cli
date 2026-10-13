@@ -16,6 +16,8 @@ pub mod guard;
 pub mod hooks;
 pub mod info;
 pub mod init;
+#[cfg(test)]
+mod init_npm_parity_tests;
 mod init_prompts;
 pub mod lock_diagnostics;
 pub mod mcp;

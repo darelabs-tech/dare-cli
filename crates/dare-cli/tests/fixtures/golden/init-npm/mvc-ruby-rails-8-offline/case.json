@@ -1,0 +1,41 @@
+{
+  "slug": "mvc-ruby-rails-8-offline",
+  "description": "Rails full-stack MVC, offline templates (DARE_RAILS_OFFLINE=1).",
+  "mode": "cli",
+  "command": [
+    "dare",
+    "init",
+    "demo-mvc",
+    "--stack",
+    "ruby-rails-8",
+    "--fullstack",
+    "--toolchain",
+    "native"
+  ],
+  "generator_config": {
+    "name": "demo-mvc",
+    "structure": "mvc",
+    "backend": "ruby-rails-8",
+    "ide": "cursor",
+    "graphrag": "sqlite",
+    "mcp": false,
+    "toolchain": "native",
+    "outputDir": "<case-root>/demo-mvc"
+  },
+  "toolchain": "native",
+  "env": {
+    "DARE_RAILS_OFFLINE": "1"
+  },
+  "cwd": "<case-root>",
+  "project_dir": "demo-mvc",
+  "covers": [],
+  "exit_code": 0,
+  "stored_files": [
+    ".cursor/rules/skill-ruby-rails-8.mdc",
+    ".cursorrules",
+    ".gitignore",
+    "DARE/README.md",
+    "dare-graph.yml",
+    "dare.config.json"
+  ]
+}

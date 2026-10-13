@@ -1,0 +1,45 @@
+{
+  "slug": "frontend-react-hybrid",
+  "description": "Frontend only, React at the root, Cursor + Antigravity hybrid.",
+  "mode": "interactive",
+  "command": [
+    "dare",
+    "init",
+    "web-portal"
+  ],
+  "answers": {
+    "structure": "frontend",
+    "frontend": "react",
+    "ide": "hybrid",
+    "graphrag": "sqlite",
+    "mcp": true,
+    "toolchain": "native"
+  },
+  "generator_config": {
+    "name": "web-portal",
+    "structure": "frontend",
+    "frontend": "react",
+    "ide": "hybrid",
+    "graphrag": "sqlite",
+    "mcp": true,
+    "toolchain": "native",
+    "outputDir": "<case-root>/web-portal"
+  },
+  "toolchain": "native",
+  "env": {},
+  "cwd": "<case-root>",
+  "project_dir": "web-portal",
+  "covers": [
+    "B-03"
+  ],
+  "exit_code": 0,
+  "stored_files": [
+    ".antigravityrules",
+    ".cursor/rules/skill-react.mdc",
+    ".cursorrules",
+    ".gitignore",
+    "DARE/README.md",
+    "dare-graph.yml",
+    "dare.config.json"
+  ]
+}

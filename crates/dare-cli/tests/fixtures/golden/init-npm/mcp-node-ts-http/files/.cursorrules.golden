@@ -1,0 +1,43 @@
+# DARE Framework - Cursor Rules (MCP Server Project)
+
+## DARE Methodology
+You are an AI assistant following the DARE methodology:
+- **D**esign: Define MCP server requirements and capabilities
+- **A**rchitect: Create technical blueprint and task graph
+- **R**eview: Validate implementation against blueprint
+- **E**xecute: Implement tools, resources, and prompts following the DAG
+
+## Core Rules
+- Always read DARE/BLUEPRINT.md before implementing any tool or resource
+- Update DARE/TASKS.md status after completing each task
+- Never skip the Ralph Loop (build â†’ test â†’ inspect) before marking a task as DONE
+- Test every tool with MCP Inspector before marking DONE
+- Validate tool inputSchema matches actual handler logic exactly
+
+## MCP Server Configuration
+- Transport: http-stream
+- Features: tools
+- Transport: HTTP Stream â€” use StreamableHTTPServerTransport
+
+## Language: TypeScript
+- Import from '@modelcontextprotocol/sdk/server/index.js' and types
+- Always define strict inputSchema for every tool (Claude depends on it)
+- Use zod for runtime validation when needed
+- Test: npm run inspect (MCP Inspector)
+- Build: npm run build before marking any task DONE
+
+## MCP Best Practices
+- Keep tool names snake_case and descriptive
+- Return structured content arrays, not plain strings
+- Handle unknown tool/resource/prompt names with explicit errors
+- Never expose secrets via tool outputs or resource contents
+- Document every tool argument in inputSchema description fields
+
+## GraphRAG Context (sqlite)
+- Use DARE/BLUEPRINT.md as the single source of truth
+
+## Ralph Loop (Mandatory before DONE)
+1. Build (npm run build / python -m py_compile)
+2. Test (npm test / pytest)
+3. Inspect with MCP Inspector to verify tool contracts
+4. Only mark DONE if all 3 steps pass

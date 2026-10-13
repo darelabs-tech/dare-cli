@@ -1,0 +1,41 @@
+
+🚀 DARE Framework - Project Initialization
+
+- Creating project leptos-app...
+
+📦 Scaffolding rust-axum (DARE-shaped) in <case-root>/leptos-app/crates/server
+
+
+📦 Bootstrapping Leptos fullstack (SSR + WASM) in <case-root>/leptos-app/crates/web
+
+🔧 Using native cargo — toolchain=native
+  $ cargo fetch
+
+🦀 Creating unified Cargo workspace (rust-axum + rust-leptos, single)...
+
+  ✓ Cargo workspace root created
+    crates/server/
+    crates/web/
+
+  ⚠  Cargo.lock gitignored — commit it for binary deployments.
+
+
+✓ Stack scaffold complete.
+
+✔ Project leptos-app created successfully!
+
+📋 Next steps:
+
+  1. cd leptos-app
+  2. dare design "Describe your project here"
+  3. dare blueprint
+  4. dare execute --parallel
+
+  Claude Code tip: use /dare-design, /dare-blueprint, /dare-execute as slash commands
+
+🦀 Rust workspace created!
+   crates/server/  (rust-axum)  +  crates/web/  (rust-leptos)
+   See .cargo/config.toml — do NOT add a global [build] target (breaks WASM + native crates).
+
+   Tip: /dare-rust-leptos for Leptos idioms · /dare-rust-workspace for workspace decisions.
+

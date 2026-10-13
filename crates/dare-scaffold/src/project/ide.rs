@@ -11,9 +11,9 @@ use std::path::Path;
 
 use dare_assets::EmbeddedAssets;
 use dare_core::{CoreError, CoreResult};
-use serde_json::json;
 
 use super::config::{FrontendStack, Ide, McpLanguage, ProjectConfig, Structure};
+use super::ordered_json::{arr, obj, s};
 use super::writer::ProjectWriter;
 
 const NPM_IDE_PREFIX: &str = "npm/ide/";
@@ -589,35 +589,42 @@ pub fn generate_claude_settings(cfg: &ProjectConfig) -> String {
         ("npm run build", "npm test", "npx eslint src")
     };
 
-    let value = json!({
-        "permissions": {
-            "allow": [
-                "Bash(git:*)",
-                format!("Bash({build})"),
-                format!("Bash({test})"),
-                format!("Bash({lint})"),
-                "Read(DARE/**)",
-                "Write(DARE/**)",
-                "Read(src/**)",
-                "Write(src/**)",
-            ],
-        },
-        "hooks": {
-            "PostToolUse": [
-                {
-                    "matcher": "Write",
-                    "hooks": [
-                        {
-                            "type": "command",
-                            "command": format!(
-                                "echo \"✅ File saved. Remember to run Ralph Loop: {build} && {test} && {lint}\""
-                            ),
-                        },
-                    ],
-                },
-            ],
-        },
-    });
+    let echo =
+        format!("echo \"✅ File saved. Remember to run Ralph Loop: {build} && {test} && {lint}\"");
+    let value = obj(vec![
+        (
+            "permissions",
+            obj(vec![(
+                "allow",
+                arr(vec![
+                    s("Bash(git:*)"),
+                    s(&format!("Bash({build})")),
+                    s(&format!("Bash({test})")),
+                    s(&format!("Bash({lint})")),
+                    s("Read(DARE/**)"),
+                    s("Write(DARE/**)"),
+                    s("Read(src/**)"),
+                    s("Write(src/**)"),
+                ]),
+            )]),
+        ),
+        (
+            "hooks",
+            obj(vec![(
+                "PostToolUse",
+                arr(vec![obj(vec![
+                    ("matcher", s("Write")),
+                    (
+                        "hooks",
+                        arr(vec![obj(vec![
+                            ("type", s("command")),
+                            ("command", s(&echo)),
+                        ])]),
+                    ),
+                ])]),
+            )]),
+        ),
+    ]);
     serde_json::to_string_pretty(&value).unwrap_or_default()
 }
 

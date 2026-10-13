@@ -1,0 +1,14 @@
+---
+description: Leptos CSR (WASM + trunk) development skill
+---
+# Leptos CSR Skill
+- Pure client-side WASM — no server rendering, no `#[server]` functions
+- Use `#[component]` macro for all components
+- State: `signal()`, `create_memo()` for derived state
+- Async data: `Resource` — never `Effect` that calls fetch
+- Entry point: `leptos::mount::mount_to_body(App)` called from `main()`
+- Build tool: `trunk build` (NOT `cargo leptos build` — wrong tool for CSR)
+- Dev server: `trunk serve` (port 3001 by default, configured in Trunk.toml)
+- Test: `cargo test --workspace`
+- Lint: `cargo clippy --all-targets --all-features -- -D warnings && cargo fmt --check`
+- Deploy: `trunk build --release` produces `dist/` — static files, deployable to any CDN

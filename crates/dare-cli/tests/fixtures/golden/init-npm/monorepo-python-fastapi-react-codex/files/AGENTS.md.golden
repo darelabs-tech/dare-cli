@@ -1,0 +1,37 @@
+# AGENTS.md
+
+## DARE Methodology
+You are Codex working in a DARE project from the terminal.
+
+- Design lives in `DARE/DESIGN.md`
+- Architecture and task graph live in `DARE/BLUEPRINT.md`, `DARE/TASKS.md`, and `DARE/dare-dag.yaml`
+- Execution details live in `DARE/EXECUTION/`
+- Repository skills live in `.agents/skills` and may be invoked explicitly with `$skill-name`
+
+## Terminal-First Workflow
+- Prefer `dare <command>` over IDE chat workflows.
+- For autonomous execution, use `dare execute --agent --driver codex`.
+- For one-off Codex runs, use `codex exec --sandbox workspace-write --ask-for-approval never "<task>"`.
+- Keep changes scoped to the selected task and summarize what changed.
+
+## Core Rules
+- Always read `DARE/BLUEPRINT.md` before implementing a feature.
+- Check `DARE/dare-dag.yaml` task dependencies before editing.
+- Never mark a task DONE unless the Ralph Loop passes.
+- Do not fabricate implementation progress. If blocked, report the blocker.
+- Use `dare review`, `dare validate`, and `dare guard` when the task touches shared behavior, task state, or agent-facing artifacts.
+
+## Stack
+- Backend: python-fastapi
+- Frontend: react
+
+## Context (sqlite)
+- Prefer querying the DARE MCP/context server for targeted context.
+- Avoid reading large files when a focused graph/context query is enough.
+
+## Ralph Loop
+Before completing a task:
+1. Build
+2. Test
+3. Lint
+4. Mark DONE only after all gates pass

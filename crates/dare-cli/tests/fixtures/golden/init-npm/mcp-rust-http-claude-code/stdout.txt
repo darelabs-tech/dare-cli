@@ -1,0 +1,24 @@
+
+🚀 DARE Framework - Project Initialization
+
+- Creating project tools-server...
+
+📦 Scaffolding mcp-rust (DARE-shaped) in <case-root>/tools-server
+
+
+✓ Stack scaffold complete.
+
+✔ Project tools-server created successfully!
+
+📋 Next steps:
+
+  1. cd tools-server
+  2. npm install
+  3. dare design "Describe what this MCP server exposes"
+  4. dare blueprint
+  5. dare execute --parallel
+  6. npm run inspect  ← test with MCP Inspector
+  7. npm run dev
+
+  Claude Code tip: use /dare-design, /dare-blueprint, /dare-execute as slash commands
+

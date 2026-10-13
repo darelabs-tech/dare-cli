@@ -1,0 +1,11 @@
+- Creating project demo-api...
+
+📦 Bootstrapping Rails 8 (API-only) in <case-root>/demo-api
+
+⚠  --toolchain=native selected but `rails` is not on PATH — using DARE's offline Rails templates (less complete than `rails new`).
+   Install Ruby+Rails or Docker, or re-run with --toolchain docker, for a full app.
+
+✓ Stack scaffold complete.
+
+✔ Project demo-api created.
+  Stack: ruby-rails-8

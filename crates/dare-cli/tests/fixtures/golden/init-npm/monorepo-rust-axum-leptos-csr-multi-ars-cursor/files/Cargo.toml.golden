@@ -1,0 +1,23 @@
+[workspace]
+resolver = "2"
+members = [
+  "crates/ars-core",
+  "crates/ars-server",
+  "crates/ars-web",
+  "crates/ars-cli",
+]
+
+# CRÍTICO: NÃO definir [build] target global aqui.
+# Este workspace mistura crates WASM (crates/ars-web/Leptos)
+# com crates nativos (crates/ars-server/Axum).
+# cargo-leptos gerencia wasm32-unknown-unknown internamente.
+
+# Shared dependencies — reference in crates via { workspace = true }
+[workspace.dependencies]
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tracing = "0.1"
+anyhow = "1.0"
+thiserror = "1.0"
+uuid = { version = "1.10", features = ["v4", "serde"] }

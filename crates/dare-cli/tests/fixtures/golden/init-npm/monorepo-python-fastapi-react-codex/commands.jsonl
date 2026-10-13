@@ -1,0 +1,2 @@
+{"cwd":"shop-platform/frontend","argv":["npx","-y","degit","vitejs/vite/packages/create-vite/template-react-ts",".","--force"]}
+{"cwd":"shop-platform/frontend","argv":["npm","install"]}

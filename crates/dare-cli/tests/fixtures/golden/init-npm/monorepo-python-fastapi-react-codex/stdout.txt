@@ -1,0 +1,25 @@
+
+🚀 DARE Framework - Project Initialization
+
+- Creating project shop-platform...
+
+📦 Scaffolding python-fastapi (DARE-shaped) in <case-root>/shop-platform/backend
+
+
+📦 Bootstrapping Vite (react-ts) in <case-root>/shop-platform/frontend
+
+🔧 Using native npm — toolchain=native
+  $ npx -y degit vitejs/vite/packages/create-vite/template-react-ts . --force
+  $ npm install
+
+✓ Stack scaffold complete.
+
+✔ Project shop-platform created successfully!
+
+📋 Next steps:
+
+  1. cd shop-platform
+  2. dare design "Describe your project here"
+  3. dare blueprint
+  4. dare execute --parallel
+

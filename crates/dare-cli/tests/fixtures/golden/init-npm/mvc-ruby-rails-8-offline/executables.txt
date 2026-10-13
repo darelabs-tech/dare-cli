@@ -1,0 +1,5 @@
+bin/bundle
+bin/dev
+bin/rails
+bin/rake
+bin/setup

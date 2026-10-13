@@ -1,0 +1,3 @@
+# DARE: Do NOT add a global [build] target here.
+# This workspace mixes Leptos WASM crates with native Axum crates.
+# A global target breaks one or the other — cargo-leptos manages wasm32 internally.

@@ -1,0 +1,9 @@
+---
+description: Python MCP server development skill
+---
+# Python MCP Skill
+- Use FastMCP for rapid server development
+- Decorate tools with @mcp.tool(), resources with @mcp.resource(), prompts with @mcp.prompt()
+- Use type hints — FastMCP derives the JSON schema automatically
+- Test with: npx @modelcontextprotocol/inspector python main.py
+- Use mcp.run() for stdio, mcp.run(transport="sse") for SSE

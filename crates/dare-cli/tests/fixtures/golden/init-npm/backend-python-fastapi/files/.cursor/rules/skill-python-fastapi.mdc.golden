@@ -1,0 +1,7 @@
+---
+description: Python/FastAPI development skill
+---
+# FastAPI Skill
+- Use Pydantic for validation
+- Use async endpoints
+- Write pytest tests

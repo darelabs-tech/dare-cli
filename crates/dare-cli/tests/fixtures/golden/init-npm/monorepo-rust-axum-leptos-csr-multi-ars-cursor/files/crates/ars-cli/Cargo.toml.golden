@@ -1,0 +1,14 @@
+[package]
+name = "ars-cli"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "ars-cli"
+path = "src/main.rs"
+
+[dependencies]
+ars-core = { path = "../ars-core" }
+clap = { version = "4", features = ["derive"] }
+anyhow = { workspace = true }
+tokio = { workspace = true }

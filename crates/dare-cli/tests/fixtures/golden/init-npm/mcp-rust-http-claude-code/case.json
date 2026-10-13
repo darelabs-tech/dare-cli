@@ -1,0 +1,56 @@
+{
+  "slug": "mcp-rust-http-claude-code",
+  "description": "Interactive MCP (Rust, HTTP stream, tools+resources), Claude Code.",
+  "mode": "interactive",
+  "command": [
+    "dare",
+    "init",
+    "tools-server"
+  ],
+  "answers": {
+    "structure": "mcp-server",
+    "mcpLanguage": "rust",
+    "mcpTransport": "http-stream",
+    "mcpFeatures": [
+      "tools",
+      "resources"
+    ],
+    "ide": "claude-code",
+    "graphrag": "sqlite",
+    "mcp": true,
+    "toolchain": "native"
+  },
+  "generator_config": {
+    "name": "tools-server",
+    "structure": "mcp-server",
+    "mcpTransport": "http-stream",
+    "mcpLanguage": "rust",
+    "mcpFeatures": [
+      "tools",
+      "resources"
+    ],
+    "ide": "claude-code",
+    "graphrag": "sqlite",
+    "mcp": true,
+    "toolchain": "native",
+    "outputDir": "<case-root>/tools-server"
+  },
+  "toolchain": "native",
+  "env": {},
+  "cwd": "<case-root>",
+  "project_dir": "tools-server",
+  "covers": [
+    "B-02",
+    "B-03",
+    "B-06"
+  ],
+  "exit_code": 0,
+  "stored_files": [
+    ".claude/settings.json",
+    ".gitignore",
+    "Cargo.toml",
+    "DARE/README.md",
+    "dare-graph.yml",
+    "dare.config.json"
+  ]
+}

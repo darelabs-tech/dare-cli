@@ -1,0 +1,22 @@
+
+🚀 DARE Framework - Project Initialization
+
+- Creating project web-portal...
+
+📦 Bootstrapping Vite (vue-ts) in <case-root>/web-portal
+
+🐳 Using Docker (node:20-alpine) — toolchain=docker
+  $ docker run --rm -v <case-root>/web-portal:/app -w /app --user <uid>:<gid> node:20-alpine npx -y degit vitejs/vite/packages/create-vite/template-vue-ts . --force
+  $ docker run --rm -v <case-root>/web-portal:/app -w /app --user <uid>:<gid> node:20-alpine npm install
+
+✓ Stack scaffold complete.
+
+✔ Project web-portal created successfully!
+
+📋 Next steps:
+
+  1. cd web-portal
+  2. dare design "Describe your project here"
+  3. dare blueprint
+  4. dare execute --parallel
+

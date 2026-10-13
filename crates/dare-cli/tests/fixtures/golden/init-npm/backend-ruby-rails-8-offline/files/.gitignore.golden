@@ -1,0 +1,13 @@
+node_modules/
+dist/
+build/
+.env
+.env.local
+logs/
+*.log
+# DARE Framework
+.dare/
+*.db
+*.db-shm
+*.db-wal
+DARE/.canvas.md

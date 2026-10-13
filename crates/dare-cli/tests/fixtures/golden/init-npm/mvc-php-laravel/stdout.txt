@@ -1,0 +1,9 @@
+- Creating project demo-mvc...
+
+📦 Scaffolding php-laravel (DARE-shaped) in <case-root>/demo-mvc
+
+
+✓ Stack scaffold complete.
+
+✔ Project demo-mvc created.
+  Stack: php-laravel

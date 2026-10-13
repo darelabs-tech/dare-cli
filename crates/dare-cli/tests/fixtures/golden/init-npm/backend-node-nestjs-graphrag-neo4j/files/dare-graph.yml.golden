@@ -1,0 +1,33 @@
+# DARE Knowledge Graph — Neo4j
+backend: neo4j
+
+neo4j:
+  url: http://localhost:7474   # Neo4j HTTP API endpoint (not Bolt)
+  database: dare               # database name
+  username: neo4j
+  password: password
+  # auth: "Bearer <token>"     # alternative to username/password
+
+# Node types tracked in the graph
+nodes:
+  - task
+  - file
+  - schema
+  - endpoint
+  - component
+  - entity
+  - concept
+  - code_symbol
+  - requirement
+
+# Relationship types
+edges:
+  - depends_on
+  - implements
+  - uses
+  - references
+  - related_to
+  - contains
+  - extends
+  - affects
+  - derives_from

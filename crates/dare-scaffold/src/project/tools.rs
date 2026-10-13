@@ -117,6 +117,8 @@ pub struct RecordedCommand {
 pub struct RecordingToolRunner {
     pub available: Vec<String>,
     pub commands: Vec<RecordedCommand>,
+    /// Value returned by `docker_user` (POSIX hosts pass `--user uid:gid`).
+    pub docker_user: Option<String>,
 }
 
 impl RecordingToolRunner {
@@ -124,6 +126,7 @@ impl RecordingToolRunner {
         Self {
             available: tools.iter().map(|s| (*s).to_string()).collect(),
             commands: Vec::new(),
+            docker_user: None,
         }
     }
 }
@@ -144,7 +147,7 @@ impl ToolRunner for RecordingToolRunner {
     }
 
     fn docker_user(&self, _dir: &Path) -> Option<String> {
-        None
+        self.docker_user.clone()
     }
 }
 

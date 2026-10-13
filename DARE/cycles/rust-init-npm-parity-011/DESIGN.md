@@ -70,6 +70,7 @@ Decisão do usuário: replicar o npm, mas **corrigir os bugs**. Cada correção 
 | B-07 | Next steps multi-crate usam o slug do nome, não o `cratePrefix` | Usam o `cratePrefix` |
 | B-08 | Em monorepo Leptos, `.cargo/` fica vazio no crate web | Diretório não é criado |
 | B-09 | `--force` do Rust apaga um diretório pré-existente se o init falhar | Rollback remove só o que o init criou |
+| B-10 | Com nome posicional, o default de `Short crate prefix` é sempre `app` (npm lê `answers.name`, não perguntado) | Iniciais do nome do projeto |
 
 Outros desvios aceitos:
 - `dare.config.json.version` recebe a versão do binário Rust (`4.x`).

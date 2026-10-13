@@ -1,0 +1,9 @@
+- Creating project demo-api...
+
+📦 Scaffolding rust-axum (DARE-shaped) in <case-root>/demo-api
+
+
+✓ Stack scaffold complete.
+
+✔ Project demo-api created.
+  Stack: rust-axum

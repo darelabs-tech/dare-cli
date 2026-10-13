@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 use dare_core::{CoreError, CoreResult};
 use dare_scaffold::project::console::{Console, StdConsole, Tone};
 use dare_scaffold::project::generator::{generate_project_structure, GenerateEnv};
-use dare_scaffold::project::tools::SystemToolRunner;
+use dare_scaffold::project::tools::{SystemToolRunner, ToolRunner};
 use dare_scaffold::project::{
     npm_slug, resolve_project_output_dir, validate_npm_project_name, BackendStack, FrontendStack,
     GraphragBackend, Ide, McpLanguage, McpTransport, ProjectConfig, RustWorkspaceLayout, Structure,
@@ -100,7 +100,7 @@ fn parse_transport(input: Option<&str>) -> CoreResult<McpTransport> {
     }
 }
 
-fn is_non_interactive(opts: &InitCliOpts) -> bool {
+pub(crate) fn is_non_interactive(opts: &InitCliOpts) -> bool {
     opts.non_interactive || opts.stack.is_some() || opts.mcp.is_some()
 }
 
@@ -169,7 +169,7 @@ pub fn resolve_non_interactive(opts: &InitCliOpts, parent: &Path) -> CoreResult<
     })
 }
 
-fn config_from_answers(a: InitAnswers, parent: &Path) -> CoreResult<ProjectConfig> {
+pub(crate) fn config_from_answers(a: InitAnswers, parent: &Path) -> CoreResult<ProjectConfig> {
     let name = validate_npm_project_name(&a.name)?;
     let output_dir = resolve_project_output_dir(parent, &name)?;
     Ok(ProjectConfig {
@@ -309,22 +309,61 @@ fn report(cfg: &ProjectConfig, created: &[PathBuf], check: bool) -> Value {
     })
 }
 
-/// Generate the project for a resolved config (shared by CLI and tests).
+/// Header printed before the interactive prompts.
+pub(crate) const INIT_HEADER: &str = "\n🚀 DARE Framework - Project Initialization\n";
+
+/// Generate the project for a resolved config (real external tools).
 pub fn execute_init(
     cfg: &ProjectConfig,
     parent: &Path,
     force: bool,
     console: &mut dyn Console,
 ) -> CoreResult<Vec<PathBuf>> {
-    let mut runner = SystemToolRunner;
+    let rails_offline = std::env::var("DARE_RAILS_OFFLINE").as_deref() == Ok("1");
+    execute_init_with(
+        cfg,
+        parent,
+        force,
+        rails_offline,
+        &mut SystemToolRunner,
+        console,
+    )
+}
+
+/// Same as [`execute_init`] with an injectable tool runner (parity tests).
+pub(crate) fn execute_init_with(
+    cfg: &ProjectConfig,
+    parent: &Path,
+    force: bool,
+    rails_offline: bool,
+    runner: &mut dyn ToolRunner,
+    console: &mut dyn Console,
+) -> CoreResult<Vec<PathBuf>> {
     let mut env = GenerateEnv {
         cwd: parent,
-        runner: &mut runner,
+        runner,
         console,
-        rails_offline: std::env::var("DARE_RAILS_OFFLINE").as_deref() == Ok("1"),
+        rails_offline,
         force,
     };
     generate_project_structure(cfg, &mut env).map(|r| r.created_files)
+}
+
+/// Spinner `succeed` text plus the trailing block (npm init.ts 270-318 / 421-422).
+pub(crate) fn success_message(cfg: &ProjectConfig, non_interactive: bool) -> String {
+    if non_interactive {
+        let stack = cfg.backend.map_or_else(
+            || format!("mcp-{}", cfg.mcp_language.map_or("node-ts", |l| l.as_str())),
+            |b| b.as_str().to_string(),
+        );
+        format!("✔ Project {} created.\n  Stack: {stack}", cfg.name)
+    } else {
+        format!(
+            "✔ Project {} created successfully!\n{}",
+            cfg.name,
+            next_steps(cfg).trim_end_matches('\n')
+        )
+    }
 }
 
 fn banner_allowed(opts: &InitCliOpts) -> bool {
@@ -354,10 +393,7 @@ pub fn run_init_cmd(opts: InitCliOpts) -> CoreResult<(String, Value)> {
                 print!("{b}");
             }
         }
-        console.log(
-            Tone::BlueBold,
-            "\n🚀 DARE Framework - Project Initialization\n",
-        );
+        console.log(Tone::BlueBold, INIT_HEADER);
         let mut prompter = DialoguerPrompter::default();
         resolve_interactive(&opts, &parent, &mut prompter)?
     };
@@ -377,22 +413,10 @@ pub fn run_init_cmd(opts: InitCliOpts) -> CoreResult<(String, Value)> {
 
     console.log(Tone::Plain, &format!("- Creating project {}...", cfg.name));
     match execute_init(&cfg, &parent, opts.force, &mut console) {
-        Ok(created) => {
-            let human = if non_interactive {
-                let stack = cfg.backend.map_or_else(
-                    || format!("mcp-{}", cfg.mcp_language.map_or("node-ts", |l| l.as_str())),
-                    |b| b.as_str().to_string(),
-                );
-                format!("✔ Project {} created.\n  Stack: {stack}", cfg.name)
-            } else {
-                format!(
-                    "✔ Project {} created successfully!\n{}",
-                    cfg.name,
-                    next_steps(&cfg).trim_end_matches('\n')
-                )
-            };
-            Ok((human, report(&cfg, &created, false)))
-        }
+        Ok(created) => Ok((
+            success_message(&cfg, non_interactive),
+            report(&cfg, &created, false),
+        )),
         Err(err) => {
             console.log(Tone::Red, "✖ Failed to create project");
             Err(err)
