@@ -300,7 +300,7 @@ fn run_agent_inner(
                     &mut |w| warnings.push(w),
                 )?;
                 emit_handoff_warnings(&warnings);
-                p
+                p.prompt
             };
             let req = AgentRequest {
                 task_id: task_id.clone(),
