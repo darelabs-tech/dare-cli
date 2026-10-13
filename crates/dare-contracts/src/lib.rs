@@ -21,14 +21,14 @@ pub use graph::{
     GraphDocument, GraphEdge, GraphNode,
 };
 pub use handoff::{
-    contract_dir_for_dag, contract_rel, handoff_rel, load_contract, parse_contract_yaml,
-    validate_contract, validate_handoff_record, AcceptanceCriterion, ContractScope,
-    ContractVerification, ContractViolation, EvidenceState, ExitCriteria, HandoffDecision,
-    HandoffKind, HandoffPolicy, HandoffRecord, Producer, RefusalCode, RepoRef, RepoRevision,
-    RevisionState, SourceRevision, StartingContext, SupersededReceipt, TaskContract, Verdict,
-    VerificationReceipt, ViolationSeverity, CONTRACT_DIR_NAME, CONTRACT_SCHEMA_VERSION,
-    HANDOFF_DIR_REL, HANDOFF_SCHEMA_VERSION, MAX_ARTIFACT_REFS, MAX_SUPERSEDED,
-    MAX_TREE_DIGEST_BYTES,
+    contract_dir_for_dag, contract_rel, digest_bytes, digest_file, digest_tree, full_digest,
+    handoff_rel, load_contract, material_digest, parse_contract_yaml, validate_contract,
+    validate_handoff_record, AcceptanceCriterion, ContractScope, ContractVerification,
+    ContractViolation, EvidenceState, ExitCriteria, HandoffDecision, HandoffKind, HandoffPolicy,
+    HandoffRecord, Producer, RefusalCode, RepoRef, RepoRevision, RevisionState, SourceRevision,
+    StartingContext, SupersededReceipt, TaskContract, TreeDigest, Verdict, VerificationReceipt,
+    ViolationSeverity, CONTRACT_DIR_NAME, CONTRACT_SCHEMA_VERSION, HANDOFF_DIR_REL,
+    HANDOFF_SCHEMA_VERSION, MAX_ARTIFACT_REFS, MAX_SUPERSEDED, MAX_TREE_DIGEST_BYTES,
 };
 pub use io::{from_json_slice, from_yaml_str, read_limited, write_json_atomic, write_yaml_atomic};
 pub use skills::{load_skills_manifest, save_skills_manifest, SkillEntry, SkillsManifest};

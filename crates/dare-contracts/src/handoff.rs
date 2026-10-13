@@ -12,11 +12,15 @@
 
 use std::collections::BTreeSet;
 use std::fmt;
+use std::fs::File;
+use std::io::{BufReader, Read};
+use std::path::{Path, PathBuf};
 
-use dare_core::{CoreError, CoreResult, ProjectRoot, SafeRelativePath};
-use globset::Glob;
+use dare_core::{to_canonical_json_string, CoreError, CoreResult, ProjectRoot, SafeRelativePath};
+use globset::{Glob, GlobSet, GlobSetBuilder};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
+use sha2::{Digest, Sha256};
 
 use crate::io::read_limited;
 
@@ -57,6 +61,25 @@ const MAX_ALIAS_CHARS: usize = 32;
 
 /// Gate aspects a contract may require, in canonical order.
 const GATE_ASPECTS: [&str; 3] = ["build", "test", "lint"];
+
+/// Block size of the streaming file hasher: 64 KiB.
+const DIGEST_BLOCK_BYTES: usize = 64 * 1024;
+
+/// The fixed set of material contract keys (A-05).
+///
+/// This is a closed list, not "everything except the optional fields": a field
+/// added to [`TaskContract`] later cannot enter the material projection by
+/// accident, so a non-material change can never invalidate an import.
+const MATERIAL_KEYS: [&str; 8] = [
+    "schemaVersion",
+    "taskId",
+    "goal",
+    "scope",
+    "acceptance",
+    "verification",
+    "exitCriteria",
+    "startingContext",
+];
 
 /// Accepted values of `startingContext.source` (BLUEPRINT §2.1).
 const STARTING_CONTEXT_SOURCES: [&str; 3] = ["project-revision", "parent-handoff", "none"];
@@ -1000,6 +1023,236 @@ pub fn load_contract(
 }
 
 // ---------------------------------------------------------------------------
+// Digest layer
+// ---------------------------------------------------------------------------
+
+/// Result of hashing a set of files as one tree (A-06).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TreeDigest {
+    /// Hex lowercase SHA-256 over the canonical `"{path}\n{file_digest}\n"` stream.
+    pub digest: String,
+    /// Regular files that entered the digest.
+    pub file_count: u32,
+    /// Sum of the byte lengths of those files.
+    pub total_bytes: u64,
+    /// Symlinks found and deliberately excluded.
+    pub skipped_symlinks: u32,
+}
+
+/// Hex lowercase SHA-256 of `data`, always 64 characters.
+///
+/// This is an integrity digest, not a signature: it proves a byte sequence has
+/// not changed, and says nothing about who produced it (D-04).
+pub fn digest_bytes(data: &[u8]) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(data);
+    hex_lower(&hasher.finalize())
+}
+
+/// Digest over the fixed material key set of a contract (A-05).
+///
+/// Only the eight keys in `MATERIAL_KEYS` are hashed. A change to `owner`,
+/// `requirementRefs` or any `extra` key leaves this digest untouched, so such
+/// an edit is an auditable trail rather than a refusal. Divergence here maps to
+/// `HANDOFF_CONTRACT_DIGEST_MISMATCH`.
+pub fn material_digest(c: &TaskContract) -> CoreResult<String> {
+    let whole = serde_json::to_value(c)
+        .map_err(|e| CoreError::internal(format!("contract is not serializable: {e}")))?;
+    let Value::Object(fields) = whole else {
+        return Err(CoreError::internal(
+            "contract did not serialize to an object",
+        ));
+    };
+    let mut projection = Map::new();
+    for key in MATERIAL_KEYS {
+        if let Some(v) = fields.get(key) {
+            projection.insert(key.to_string(), v.clone());
+        }
+    }
+    let canonical = to_canonical_json_string(&Value::Object(projection))?;
+    Ok(digest_bytes(canonical.as_bytes()))
+}
+
+/// Digest over the whole canonical contract, `extra` included.
+///
+/// Divergence is recorded for audit and never refuses an import on its own.
+pub fn full_digest(c: &TaskContract) -> CoreResult<String> {
+    let whole = serde_json::to_value(c)
+        .map_err(|e| CoreError::internal(format!("contract is not serializable: {e}")))?;
+    let canonical = to_canonical_json_string(&whole)?;
+    Ok(digest_bytes(canonical.as_bytes()))
+}
+
+/// Streaming SHA-256 of one file under the project root.
+///
+/// Reads in `DIGEST_BLOCK_BYTES` blocks and never holds the whole artifact in
+/// memory, so a large deliverable cannot exhaust the process. A file above
+/// `MAX_TREE_DIGEST_BYTES` is refused before any byte is hashed.
+pub fn digest_file(root: &ProjectRoot, rel: &SafeRelativePath) -> CoreResult<String> {
+    let abs = root.resolve(rel)?;
+    digest_path(abs.as_path().as_std_path(), rel.as_str()).map(|(digest, _)| digest)
+}
+
+/// Streaming digest of an already-resolved path, plus the byte length consumed.
+fn digest_path(path: &Path, label: &str) -> CoreResult<(String, u64)> {
+    let meta = std::fs::metadata(path).map_err(|e| map_read_err(e, label))?;
+    if meta.len() > MAX_TREE_DIGEST_BYTES {
+        return Err(CoreError::config("artifact exceeds digest size limit"));
+    }
+    let file = File::open(path).map_err(|e| map_read_err(e, label))?;
+    let mut reader = BufReader::with_capacity(DIGEST_BLOCK_BYTES, file);
+    let mut hasher = Sha256::new();
+    let mut buf = vec![0u8; DIGEST_BLOCK_BYTES];
+    let mut read_total: u64 = 0;
+    loop {
+        let n = reader
+            .read(&mut buf)
+            .map_err(|e| CoreError::io(e.to_string()))?;
+        if n == 0 {
+            break;
+        }
+        read_total = read_total.saturating_add(n as u64);
+        if read_total > MAX_TREE_DIGEST_BYTES {
+            return Err(CoreError::config("artifact exceeds digest size limit"));
+        }
+        hasher.update(&buf[..n]);
+    }
+    Ok((hex_lower(&hasher.finalize()), read_total))
+}
+
+/// Maps a read failure to `NotFound` for a missing artifact, `Io` otherwise.
+fn map_read_err(e: std::io::Error, label: &str) -> CoreError {
+    if e.kind() == std::io::ErrorKind::NotFound {
+        CoreError::not_found(format!("artifact not found: {label}"))
+    } else {
+        CoreError::io(e.to_string())
+    }
+}
+
+/// Deterministic digest over every regular file matching `globs`.
+///
+/// The result depends only on the set of matched paths and their bytes — never
+/// on `read_dir` order, on the host OS or on the path separator. Paths are
+/// normalised to `/` before sorting and hashing.
+///
+/// Symlinks are counted in `TreeDigest::skipped_symlinks` and excluded: a
+/// followed symlink is exactly the escape vector §7 of the DESIGN forbids. Zero
+/// matches is a legitimate, deterministic outcome — the digest of the empty
+/// stream with `file_count == 0`, not an error.
+pub fn digest_tree(root: &ProjectRoot, globs: &[String]) -> CoreResult<TreeDigest> {
+    let set = build_glob_set(globs)?;
+    let root_std = root.as_path().as_std_path().to_path_buf();
+    let mut matched: Vec<(String, u64)> = Vec::new();
+    let mut skipped_symlinks: u32 = 0;
+    let mut total_bytes: u64 = 0;
+
+    if !globs.is_empty() {
+        let mut stack: Vec<PathBuf> = vec![root_std.clone()];
+        while let Some(dir) = stack.pop() {
+            let read = match std::fs::read_dir(&dir) {
+                Ok(r) => r,
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => continue,
+                Err(e) => return Err(CoreError::io(e.to_string())),
+            };
+            for entry in read {
+                let entry = entry.map_err(|e| CoreError::io(e.to_string()))?;
+                let path = entry.path();
+                // `symlink_metadata` describes the link itself, never its target.
+                let meta =
+                    std::fs::symlink_metadata(&path).map_err(|e| CoreError::io(e.to_string()))?;
+                let Some(rel_posix) = tree_rel_posix(&root_std, &path) else {
+                    continue;
+                };
+                if meta.file_type().is_symlink() {
+                    if set.is_match(rel_posix.as_str()) {
+                        skipped_symlinks = skipped_symlinks.saturating_add(1);
+                    }
+                    continue;
+                }
+                if meta.is_dir() {
+                    stack.push(path);
+                    continue;
+                }
+                if !meta.is_file() || !set.is_match(rel_posix.as_str()) {
+                    continue;
+                }
+                if matched.len() >= MAX_ARTIFACT_REFS {
+                    return Err(CoreError::config(
+                        "artifact tree exceeds file count size limit",
+                    ));
+                }
+                total_bytes = total_bytes.saturating_add(meta.len());
+                if total_bytes > MAX_TREE_DIGEST_BYTES {
+                    return Err(CoreError::config("artifact tree exceeds byte size limit"));
+                }
+                matched.push((rel_posix, meta.len()));
+            }
+        }
+    }
+
+    // Sort by POSIX path so the hashed stream is independent of traversal order.
+    matched.sort_by(|a, b| a.0.cmp(&b.0));
+
+    let mut hasher = Sha256::new();
+    let mut file_count: u32 = 0;
+    for (rel_posix, _) in &matched {
+        let rel = SafeRelativePath::new(rel_posix)?;
+        let abs = root.resolve(&rel)?;
+        let (file_digest, _) = digest_path(abs.as_path().as_std_path(), rel_posix)?;
+        hasher.update(rel_posix.as_bytes());
+        hasher.update(b"\n");
+        hasher.update(file_digest.as_bytes());
+        hasher.update(b"\n");
+        file_count = file_count.saturating_add(1);
+    }
+
+    Ok(TreeDigest {
+        digest: hex_lower(&hasher.finalize()),
+        file_count,
+        total_bytes,
+        skipped_symlinks,
+    })
+}
+
+/// Compiles `globs` into a matcher, rejecting absolute or escaping patterns.
+fn build_glob_set(globs: &[String]) -> CoreResult<GlobSet> {
+    let mut builder = GlobSetBuilder::new();
+    for pattern in globs {
+        if !path_is_relative_glob(pattern) {
+            return Err(CoreError::invalid_input(format!(
+                "glob must be a relative project path: {pattern}"
+            )));
+        }
+        let glob = Glob::new(pattern)
+            .map_err(|e| CoreError::invalid_input(format!("invalid glob {pattern}: {e}")))?;
+        builder.add(glob);
+    }
+    builder
+        .build()
+        .map_err(|e| CoreError::internal(format!("glob set did not build: {e}")))
+}
+
+/// Project-relative POSIX path of `candidate`, or `None` if it is outside root
+/// or not valid UTF-8.
+fn tree_rel_posix(root_std: &Path, candidate: &Path) -> Option<String> {
+    candidate
+        .strip_prefix(root_std)
+        .ok()
+        .and_then(|rel| rel.to_str())
+        .map(|rel| rel.replace('\\', "/"))
+        .filter(|rel| !rel.is_empty())
+}
+
+/// Lowercase hex of a digest, two characters per byte.
+fn hex_lower(bytes: &[u8]) -> String {
+    use fmt::Write as _;
+    let mut out = String::with_capacity(bytes.len() * 2);
+    for b in bytes {
+        let _ = write!(out, "{b:02x}");
+    }
+    out
+}
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
@@ -1656,5 +1909,344 @@ startingContext:
         assert_eq!(MAX_ARTIFACT_REFS, 512);
         assert_eq!(MAX_TREE_DIGEST_BYTES, 64 * 1024 * 1024);
         assert_eq!(MAX_SUPERSEDED, 16);
+    }
+
+    // --- digests: contract projection ------------------------------------
+
+    /// A contract whose non-material fields are all populated, so a test that
+    /// mutates one of them is provably changing something.
+    fn contract_with_non_material() -> TaskContract {
+        let mut c = minimal_contract();
+        c.owner = Some("alice".to_string());
+        c.requirement_refs = vec!["REQ-1".to_string()];
+        c.extra.insert("customKey".to_string(), Value::from(1));
+        c
+    }
+
+    #[test]
+    fn material_digest_stable_on_non_material_change() {
+        let base = contract_with_non_material();
+        let before = material_digest(&base).expect("digests");
+
+        let mut after = base.clone();
+        after.owner = Some("bob".to_string());
+        after.requirement_refs = vec!["REQ-2".to_string(), "REQ-3".to_string()];
+        after.extra.insert("customKey".to_string(), Value::from(99));
+        after.task_type = Some("refactor".to_string());
+
+        assert_eq!(
+            before,
+            material_digest(&after).expect("digests"),
+            "owner / requirementRefs / extra are outside the material projection"
+        );
+    }
+
+    #[test]
+    fn material_digest_changes_on_goal() {
+        let base = minimal_contract();
+        let mut changed = base.clone();
+        changed.goal = "Do a different thing".to_string();
+        assert_ne!(
+            material_digest(&base).expect("digests"),
+            material_digest(&changed).expect("digests")
+        );
+    }
+
+    #[test]
+    fn material_digest_changes_on_scope() {
+        let base = minimal_contract();
+        let mut changed = base.clone();
+        changed
+            .scope
+            .denied_paths
+            .push("crates/dare-core/**".to_string());
+        assert_ne!(
+            material_digest(&base).expect("digests"),
+            material_digest(&changed).expect("digests")
+        );
+    }
+
+    #[test]
+    fn material_digest_changes_on_acceptance() {
+        let base = minimal_contract();
+        let mut changed = base.clone();
+        changed.acceptance.push(AcceptanceCriterion {
+            id: "A-02".to_string(),
+            assertion: "It also does the other thing".to_string(),
+        });
+        assert_ne!(
+            material_digest(&base).expect("digests"),
+            material_digest(&changed).expect("digests")
+        );
+    }
+
+    #[test]
+    fn material_digest_changes_on_exit_criteria() {
+        let base = minimal_contract();
+        let mut changed = base.clone();
+        changed.exit_criteria.kind = HandoffKind::FollowUpHandoff;
+        assert_ne!(
+            material_digest(&base).expect("digests"),
+            material_digest(&changed).expect("digests")
+        );
+    }
+
+    #[test]
+    fn full_digest_changes_on_both() {
+        let base = contract_with_non_material();
+
+        let mut non_material = base.clone();
+        non_material.owner = Some("bob".to_string());
+        assert_ne!(
+            full_digest(&base).expect("digests"),
+            full_digest(&non_material).expect("digests"),
+            "full_digest covers the whole contract, so owner moves it"
+        );
+
+        let mut material = base.clone();
+        material.goal = "Do a different thing".to_string();
+        assert_ne!(
+            full_digest(&base).expect("digests"),
+            full_digest(&material).expect("digests"),
+            "full_digest moves on a material change too"
+        );
+    }
+
+    #[test]
+    fn material_digest_stable_across_yaml_key_order() {
+        let reordered = r#"
+startingContext:
+  repositories:
+    - alias: dare-cli
+  source: project-revision
+exitCriteria:
+  kind: verified-deliverable
+verification:
+  requiredGates: ["build", "test"]
+acceptance:
+  - assertion: "It does the thing"
+    id: A-01
+scope:
+  allowedPaths:
+    - "crates/dare-contracts/src/handoff.rs"
+goal: "Do the thing"
+taskId: task-001
+schemaVersion: 1
+"#;
+        let a = minimal_contract();
+        let b = parse_contract_yaml(reordered).expect("reordered contract parses");
+        assert_eq!(
+            material_digest(&a).expect("digests"),
+            material_digest(&b).expect("digests"),
+            "canonical JSON sorts keys, so source key order cannot matter"
+        );
+    }
+
+    #[test]
+    fn digest_bytes_known_vector() {
+        // SHA-256("abc"), FIPS 180-4 test vector.
+        assert_eq!(
+            digest_bytes(b"abc"),
+            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        );
+        assert_eq!(digest_bytes(b"abc").len(), 64);
+    }
+
+    // --- digests: files ---------------------------------------------------
+
+    /// A project root over a fresh temp dir, plus the dir guard to keep alive.
+    fn temp_root() -> (tempfile::TempDir, ProjectRoot) {
+        let dir = tempdir().expect("tempdir");
+        let root = ProjectRoot::new(dir.path()).expect("project root");
+        (dir, root)
+    }
+
+    fn write_at(root: &ProjectRoot, rel: &str, bytes: &[u8]) {
+        let path = root.as_path().as_std_path().join(rel);
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent).expect("create parent");
+        }
+        std::fs::write(&path, bytes).expect("write fixture");
+    }
+
+    #[test]
+    fn digest_file_known_vector() {
+        let (_dir, root) = temp_root();
+        write_at(&root, "a.txt", b"abc");
+        let rel = SafeRelativePath::new("a.txt").expect("rel");
+        assert_eq!(
+            digest_file(&root, &rel).expect("digests"),
+            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        );
+    }
+
+    #[test]
+    fn digest_file_streams_large() {
+        let (_dir, root) = temp_root();
+        // 5 MiB — more than one 64 KiB block, so the streaming path is exercised.
+        let payload = vec![b'x'; 5 * 1024 * 1024];
+        write_at(&root, "big.bin", &payload);
+        let rel = SafeRelativePath::new("big.bin").expect("rel");
+        let streamed = digest_file(&root, &rel).expect("digests");
+        assert_eq!(streamed, digest_bytes(&payload));
+        assert_eq!(streamed.len(), 64);
+    }
+
+    #[test]
+    fn digest_file_missing_is_not_found() {
+        let (_dir, root) = temp_root();
+        let rel = SafeRelativePath::new("nope.txt").expect("rel");
+        let err = digest_file(&root, &rel).expect_err("missing file refuses");
+        assert_eq!(
+            discriminant(&err),
+            discriminant(&CoreError::not_found("x")),
+            "got {err:?}"
+        );
+    }
+
+    // --- digests: trees ---------------------------------------------------
+
+    #[test]
+    fn digest_tree_stable_under_shuffle() {
+        let globs = vec!["**/*.txt".to_string()];
+
+        let (_d1, root1) = temp_root();
+        for name in ["a.txt", "b.txt", "nested/c.txt"] {
+            write_at(&root1, name, name.as_bytes());
+        }
+        let first = digest_tree(&root1, &globs).expect("digests");
+
+        let (_d2, root2) = temp_root();
+        for name in ["nested/c.txt", "b.txt", "a.txt"] {
+            write_at(&root2, name, name.as_bytes());
+        }
+        let second = digest_tree(&root2, &globs).expect("digests");
+
+        assert_eq!(
+            first.digest, second.digest,
+            "insertion order must not matter"
+        );
+        assert_eq!(first.file_count, 3);
+        assert_eq!(second.file_count, 3);
+        assert_eq!(first.total_bytes, second.total_bytes);
+    }
+
+    #[test]
+    fn digest_tree_zero_matches() {
+        let (_dir, root) = temp_root();
+        write_at(&root, "a.md", b"not matched");
+        let out = digest_tree(&root, &["**/*.txt".to_string()]).expect("zero matches is ok");
+        assert_eq!(out.file_count, 0);
+        assert_eq!(out.total_bytes, 0);
+        assert_eq!(out.skipped_symlinks, 0);
+        // Deterministic: the digest of the empty stream.
+        assert_eq!(out.digest, digest_bytes(b""));
+    }
+
+    #[test]
+    fn digest_tree_rejects_file_count_cap() {
+        let (_dir, root) = temp_root();
+        for i in 0..=MAX_ARTIFACT_REFS {
+            write_at(&root, &format!("f{i}.txt"), b"x");
+        }
+        let err = digest_tree(&root, &["**/*.txt".to_string()]).expect_err("cap refuses");
+        assert_eq!(
+            discriminant(&err),
+            discriminant(&CoreError::config("x")),
+            "got {err:?}"
+        );
+        assert!(err.message().contains("size limit"), "got {err:?}");
+    }
+
+    #[test]
+    fn digest_tree_rejects_bytes_cap() {
+        let (_dir, root) = temp_root();
+        // 9 files of 8 MiB = 72 MiB, past the 64 MiB tree cap, while staying
+        // under the per-file cap so it is the tree total that refuses.
+        let chunk = vec![b'y'; 8 * 1024 * 1024];
+        for i in 0..9 {
+            write_at(&root, &format!("big{i}.bin"), &chunk);
+        }
+        let err = digest_tree(&root, &["**/*.bin".to_string()]).expect_err("cap refuses");
+        assert_eq!(
+            discriminant(&err),
+            discriminant(&CoreError::config("x")),
+            "got {err:?}"
+        );
+        assert!(err.message().contains("size limit"), "got {err:?}");
+    }
+
+    #[test]
+    fn digest_tree_rejects_absolute_glob() {
+        let (_dir, root) = temp_root();
+        let err =
+            digest_tree(&root, &["/etc/passwd".to_string()]).expect_err("absolute glob refuses");
+        assert_eq!(
+            discriminant(&err),
+            discriminant(&CoreError::invalid_input("x")),
+            "got {err:?}"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn digest_tree_skips_symlink() {
+        let (_dir, root) = temp_root();
+        write_at(&root, "real.txt", b"real");
+        let base = root.as_path().as_std_path();
+        std::os::unix::fs::symlink(base.join("real.txt"), base.join("link.txt"))
+            .expect("symlink created");
+
+        let out = digest_tree(&root, &["**/*.txt".to_string()]).expect("digests");
+        assert_eq!(out.skipped_symlinks, 1, "the link is counted");
+        assert_eq!(out.file_count, 1, "only the regular file is hashed");
+
+        // The digest must equal a tree holding the regular file alone.
+        let (_d2, plain) = temp_root();
+        write_at(&plain, "real.txt", b"real");
+        let expected = digest_tree(&plain, &["**/*.txt".to_string()]).expect("digests");
+        assert_eq!(
+            out.digest, expected.digest,
+            "a followed symlink would change the digest"
+        );
+    }
+
+    // --- digests: property ------------------------------------------------
+
+    proptest::proptest! {
+        /// `material_digest` is invariant under permutation of the source map
+        /// keys: canonical JSON re-sorts them before hashing.
+        #[test]
+        fn material_digest_invariant_under_key_permutation(
+            keys in proptest::collection::vec(proptest::prelude::any::<u32>(), 8..=8)
+        ) {
+            let fields = [
+                ("schemaVersion", "schemaVersion: 1"),
+                ("taskId", "taskId: task-001"),
+                ("goal", "goal: \"Do the thing\""),
+                ("scope", "scope:\n  allowedPaths:\n    - \"crates/dare-contracts/src/handoff.rs\""),
+                ("acceptance", "acceptance:\n  - id: A-01\n    assertion: \"It does the thing\""),
+                ("verification", "verification:\n  requiredGates: [\"build\", \"test\"]"),
+                ("exitCriteria", "exitCriteria:\n  kind: verified-deliverable"),
+                ("startingContext", "startingContext:\n  source: project-revision\n  repositories:\n    - alias: dare-cli"),
+            ];
+
+            // Sorting the indices by sampled keys always yields a genuine
+            // permutation — no index repeated, none dropped.
+            let mut perm: Vec<usize> = (0..fields.len()).collect();
+            perm.sort_by_key(|i| keys[*i]);
+
+            let yaml: String = perm
+                .iter()
+                .map(|i| fields[*i].1)
+                .collect::<Vec<_>>()
+                .join("\n");
+
+            let permuted = parse_contract_yaml(&yaml).expect("permuted contract parses");
+            proptest::prop_assert_eq!(
+                material_digest(&permuted).expect("digests"),
+                material_digest(&minimal_contract()).expect("digests")
+            );
+        }
     }
 }
