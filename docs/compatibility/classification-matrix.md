@@ -18,9 +18,11 @@ Classes: **A** (preservar), **B** (corrigir sem ADR), **C** (ADR obrigatória), 
 | CI-012 | D | Secret leakage em logs/erros | must_fix | — | Doc Mestre |
 | CI-013 | D | Extração insegura de arquivo (zip-slip) | must_fix | — | Doc Mestre |
 | CI-014 | D | Assinatura ausente/inválida em releases/skills | must_fix | — | Doc Mestre |
+| CI-015 | B | Exit **6** em `dare execute` sob `handoff.strict` (inalcançável no default; flags `--strict-handoff` / `--no-strict-handoff`) | fix | — | Ciclo `rust-verified-task-contracts-012` |
 
 ## Regras de validação
 
 - Itens **Classe C** exigem `adr_ref` preenchido (CI-007..CI-009).
 - Itens **Classe D** exigem correção imediata (`must_fix`); não preservar comportamento inseguro legado.
 - Alterações em itens Classe A seguem `breaking-change-process.md`.
+- **CI-015**: o exit code novo só é alcançável com `handoff.strict` ligado; o caminho default é verificado byte a byte contra os goldens gravados antes do ciclo. Contrato em [`handoff-contracts.md`](handoff-contracts.md).
