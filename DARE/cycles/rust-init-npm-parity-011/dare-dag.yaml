@@ -1,0 +1,69 @@
+title: Rust init parity with npm 3.18.1
+version: "1.0.0"
+tasks:
+  - id: task-001
+    title: Generate npm golden fixtures with command shims
+    depends_on: []
+    complexity: MED
+    subtask_prompt: Write scripts/parity/gen-init-golden.mjs and shim PATH; build dare-method dist; record tree, sha256 and argv for every matrix case in BLUEPRINT section 6
+    spec_file: EXECUTION/task-001.md
+  - id: task-002
+    title: Import npm stack, IDE and method templates into assets
+    depends_on: []
+    complexity: MED
+    subtask_prompt: Sync templates/stacks, templates/ide and method templates from dare-method into assets with a reproducible sync script and provenance manifest
+    spec_file: EXECUTION/task-002.md
+  - id: task-003
+    title: ProjectConfig model and npm-compatible validation
+    depends_on: []
+    complexity: LOW
+    subtask_prompt: Add dare-scaffold project module with enums serialized to npm values, name validation and output-dir rules
+    spec_file: EXECUTION/task-003.md
+  - id: task-004
+    title: Template renderer and backend/MCP stack scaffolders
+    depends_on: [task-002, task-003]
+    complexity: HIGH
+    subtask_prompt: Port the 11 registry scaffolders (file lists, vars, gitignore rename, env secret emit) including Rails overlay and offline skeleton
+    spec_file: EXECUTION/task-004.md
+  - id: task-005
+    title: StackTool toolchain resolution and external scaffolders
+    depends_on: [task-003]
+    complexity: HIGH
+    subtask_prompt: Port StackTool auto/native/docker with PATHEXT fix; Vite degit+npm install, Rails new/docker/offline plan, Leptos SSR/CSR files and cargo fetch via SafeCommand
+    spec_file: EXECUTION/task-005.md
+  - id: task-006
+    title: Structure layout, Rust workspace root and common files
+    depends_on: [task-004, task-005]
+    complexity: HIGH
+    subtask_prompt: Implement generate_project_structure order, empty-dir checks, rust workspace single/multi, DARE dir, dare.config.json schema, gitignore merge, templates dir, dare-graph.yml, scoped rollback
+    spec_file: EXECUTION/task-006.md
+  - id: task-007
+    title: IDE-selective installers and rule generators
+    depends_on: [task-002, task-003]
+    complexity: HIGH
+    subtask_prompt: Port cursor/claude/codex/antigravity installers and text generators with fixes B-01, B-02, B-03, B-05
+    spec_file: EXECUTION/task-007.md
+  - id: task-008
+    title: Interactive prompts and non-interactive flags identical to npm
+    depends_on: [task-003]
+    complexity: MED
+    subtask_prompt: Replace init_prompts with npm prompt tree behind a Prompter trait; align clap flags, defaults and error messages
+    spec_file: EXECUTION/task-008.md
+  - id: task-009
+    title: Wire init pipeline, console output and bootstrap compatibility
+    depends_on: [task-006, task-007, task-008]
+    complexity: MED
+    subtask_prompt: Connect init command to the new pipeline, port next-steps output with B-06/B-07, update bootstrap/verify config reading with stack fallback
+    spec_file: EXECUTION/task-009.md
+  - id: task-010
+    title: Parity test suite against npm golden
+    depends_on: [task-001, task-009]
+    complexity: HIGH
+    subtask_prompt: Add tests/init_npm_parity.rs comparing tree, content and argv for every matrix case with explicit B-xx expected patches; prompt-tree tests
+    spec_file: EXECUTION/task-010.md
+  - id: task-011
+    title: Docs, quality gates and review evidence
+    depends_on: [task-010]
+    complexity: MED
+    subtask_prompt: Update compatibility doc and decision log; run fmt, build, test, clippy, audit, deny; record PROOF and REVIEW
+    spec_file: EXECUTION/task-011.md
